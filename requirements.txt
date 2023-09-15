@@ -1,0 +1,2 @@
+setuptools==67.8.0
+pandas~=1.5.3
