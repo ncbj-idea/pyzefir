@@ -1,63 +1,144 @@
-"""
-PyZefir
-Copyright (C) 2023 Narodowe Centrum Badań Jądrowych
+from dataclasses import dataclass
+from types import UnionType
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+import numpy as np
+import pandas as pd
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-
-import itertools
+from pyzefir.model.exceptions import NetworkValidatorException
 
 
-class ClassCounter:
-    counters = {}
-    names = {}
+@dataclass(frozen=True)
+class NetworkConstants:
+    n_years: int
+    n_hours: int
+    relative_emission_limits: dict[str, pd.Series]
+    base_total_emission: dict[str, float | int]
+    binary_fraction: bool = False
 
-    @classmethod
-    def get_counter(cls, class_to_count):
-        cls.counters.setdefault(class_to_count, itertools.count())
-        return next(cls.counters[class_to_count])
 
-    @classmethod
-    def check_name_uniqueness(cls, class_to_check, name_to_check):
-        if class_to_check not in cls.names:
-            cls.names[class_to_check] = set()
+def _check_if_series_has_numeric_values(series: pd.Series) -> bool:
+    return not pd.api.types.is_numeric_dtype(series) and not pd.isnull(series).all()
 
-        if name_to_check in cls.names[class_to_check]:
-            raise NameError(
-                f"you are trying to create an instance of a class {class_to_check} with name "
-                f"{name_to_check}, however an instance of a class {class_to_check} with this name "
-                f"already exist."
+
+def _validate_series(
+    name: str,
+    series: pd.Series,
+    length: int,
+    exception_list: list[NetworkValidatorException],
+    is_numeric: bool = True,
+    index_type: type | None = None,
+    values_type: type | None = None,
+    allow_null: bool = True,
+) -> bool:
+    is_validation_ok = True
+    if is_numeric and _check_if_series_has_numeric_values(series):
+        exception_list.append(
+            NetworkValidatorException(f"{name} must have only numeric values")
+        )
+        is_validation_ok = False
+    if len(series) != length:
+        exception_list.append(
+            NetworkValidatorException(f"{name} must have {length} values")
+        )
+        is_validation_ok = False
+    if index_type and not np.issubdtype(series.index.dtype, index_type):
+        exception_list.append(
+            NetworkValidatorException(
+                f"{name} index type is {series.index.dtype} but should be {index_type.__name__}"
             )
+        )
+        is_validation_ok = False
+    if values_type and not np.issubdtype(series.dtype, values_type):
+        exception_list.append(
+            NetworkValidatorException(
+                f"{name} type is {series.dtype} but should be {values_type.__name__}"
+            )
+        )
+        is_validation_ok = False
+    if not allow_null and pd.isnull(series).any():
+        exception_list.append(
+            NetworkValidatorException(f"{name} must not contain null values")
+        )
+        is_validation_ok = False
+    return is_validation_ok
 
 
-class IdElement:
+def validate_series(
+    name: str,
+    series: pd.Series,
+    length: int,
+    exception_list: list[NetworkValidatorException],
+    is_numeric: bool = True,
+    index_type: type | None = None,
+    values_type: type | None = None,
+    allow_null: bool = True,
+) -> bool:
+    """
+    Validation procedure checking:
+    - if series is a pandas series
+    - if series has only numeric values
+    - if series has correct length
 
-    def __init__(self, name: str):
-        self.__id = ClassCounter.get_counter(self.__class__)
-        ClassCounter.check_name_uniqueness(self.__class__, name)
-        self.__name = name
+    (Optional) Validation procedure also checking:
+    - if series.index has provided type
+    - if series has provided type
+    - if series has null values
+    """
+    if isinstance(series, pd.Series):
+        is_validation_ok = _validate_series(
+            name=name,
+            series=series,
+            length=length,
+            exception_list=exception_list,
+            is_numeric=is_numeric,
+            index_type=index_type,
+            values_type=values_type,
+            allow_null=allow_null,
+        )
+    else:
+        exception_list.append(
+            NetworkValidatorException(
+                f"{name} must be a pandas Series, but {type(series).__name__} given"
+            )
+        )
+        is_validation_ok = False
+    return is_validation_ok
 
-    @property
-    def id(self) -> int:
-        return self.__id
 
-    @property
-    def name(self) -> str:
-        return self.__name
+def validate_dict_type(
+    dict_to_validate: dict,
+    key_type: type | UnionType,
+    value_type: type | UnionType,
+    parameter_name: str,
+    key_parameter_name: str,
+    value_parameter_name: str,
+    exception_list: list[NetworkValidatorException],
+) -> bool:
+    if not isinstance(dict_to_validate, dict):
+        exception_list.append(
+            NetworkValidatorException(
+                f"{parameter_name.capitalize()} must be of dict type"
+            )
+        )
+        return False
 
-    def __eq__(self, other):
-        return isinstance(other, IdElement) and other.id == self.id and other.name == self.name
+    is_validation_ok = True
+    if not all(isinstance(key, key_type) for key in dict_to_validate.keys()):
+        exception_list.append(
+            NetworkValidatorException(
+                f"{key_parameter_name.capitalize()} in {parameter_name} must be of "
+                f"{key_type} type"
+            )
+        )
+        is_validation_ok = False
 
-    def __hash__(self):
-        return hash(self.__name)
+    if not all(isinstance(value, value_type) for value in dict_to_validate.values()):
+        exception_list.append(
+            NetworkValidatorException(
+                f"{value_parameter_name.capitalize()} in {parameter_name} must be "
+                f"of {value_type} type"
+            )
+        )
+        is_validation_ok = False
+
+    return is_validation_ok

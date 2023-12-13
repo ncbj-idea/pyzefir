@@ -1,0 +1,10 @@
+name,ramp,build_time,life_time,power_utilization,example_t_tag
+BOILER_COAL,0.02,0,20,0.9,False
+CHP_BIOMASS,0.01,1,25,0.9,True
+CHP_COAL,0.01,2,25,0.9,True
+HEAT_PLANT_COAL,0.01,2,30,0.9,False
+HEAT_PLANT_GAS,0.01,3,30,0.9,False
+HEAT_PUMP,0.01,0,15,0.9,False
+POWER_PLANT_COAL,0.01,2,35,0.9,False
+PV_FARM,0.02,1,20,0.9,False
+SMALL_PV,0.09,0,15,0.9,False
