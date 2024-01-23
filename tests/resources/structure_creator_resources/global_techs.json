@@ -1,0 +1,14 @@
+{
+  "HEAT_PLANT_COAL": {
+    "type": "DISTRICT_HEAT_COAL_BIG",
+    "base_cap": 6000,
+    "class": "GENERATOR",
+    "tags": ["DH"],
+    "emission_fees": ["ETS1"]
+  },
+  "KSE_VIRTUAL_GENERATOR": {
+    "type": "KSE",
+    "base_cap": 1200,
+    "class": "GENERATOR"
+  }
+}

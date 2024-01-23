@@ -1,0 +1,13 @@
+{
+  "subsystem_name": "kse_subsystem",
+  "energy_type": "ELECTRICITY_END",
+  "technologies": [
+    "CHP_COAL_SIEKIERKI",
+    "CHP_COAL_ZERAN",
+    "BIG_HEAT_PUMP_FUTURE",
+    "KSE_VIRTUAL_GENERATOR",
+    "WIND_FARM_BIG",
+    "PV_FARM_BIG"
+  ],
+  "transmission_loss": 0.04
+}

@@ -1,0 +1,55 @@
+{
+  "name": "boiler_coal_old_lkt",
+  "energy_tech_mapping": {
+    "HEAT_END": [],
+    "HEAT_USABLE": [
+      "COAL_BOILER_OLD"
+    ],
+    "ELECTRICITY_END": [
+      "EE_SUBSTATION"
+    ],
+    "ELECTRICITY_USABLE": [
+      "EE_SUBSTATION",
+      "AIR_CONDITION"
+    ],
+    "COLD": [
+      "AIR_CONDITION"
+    ]
+  },
+  "device_capacity_range": {
+    "EE_SUBSTATION": {
+      "TECH_CLASS": "GENERATOR",
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    },
+    "COAL_BOILER_OLD": {
+      "TECH_CLASS": "GENERATOR",
+      "EMISSION_FEES": ["ETS2"],
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    },
+    "AIR_CONDITION": {
+      "TECH_CLASS": "GENERATOR",
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    }
+  },
+  "energy_types_in": [
+    "HEAT_END",
+    "ELECTRICITY_END"
+  ],
+  "energy_types_out": [
+    "HEAT_USABLE",
+    "ELECTRICITY_USABLE",
+    "COLD"
+  ]
+}

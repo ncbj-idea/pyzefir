@@ -1,0 +1,33 @@
+{
+  "CO2": {
+    "base_total_emission": null,
+    "emission_fees": [
+      "ETS1",
+      "ETS2"
+    ]
+  },
+  "CO": {
+    "base_total_emission": null,
+    "emission_fees": []
+  },
+  "NOx": {
+    "base_total_emission": null,
+    "emission_fees": []
+  },
+  "SOx": {
+    "base_total_emission": null,
+    "emission_fees": []
+  },
+  "PM10": {
+    "base_total_emission": null,
+    "emission_fees": []
+  },
+  "PM2.5": {
+    "base_total_emission": null,
+    "emission_fees": []
+  },
+  "Benzo(a)piren": {
+    "base_total_emission": null,
+    "emission_fees": []
+  }
+}

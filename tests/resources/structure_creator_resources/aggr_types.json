@@ -1,0 +1,102 @@
+{
+  "SINGLE_FAMILY_AB": {
+    "n_consumers_base": 4302,
+    "average_area": 180,
+    "demand_type": "SINGLE_FAMILY"
+  },
+  "SINGLE_FAMILY_C": {
+    "n_consumers_base": 22253,
+    "average_area": 140,
+    "demand_type": "SINGLE_FAMILY"
+  },
+  "SINGLE_FAMILY_D": {
+    "n_consumers_base": 59115,
+    "average_area": 120,
+    "demand_type": "SINGLE_FAMILY"
+  },
+  "SINGLE_FAMILY_EF": {
+    "n_consumers_base": 19513,
+    "average_area": 120,
+    "demand_type": "SINGLE_FAMILY"
+  },
+  "MULTI_FAMILY_AB": {
+    "n_consumers_base": 641,
+    "average_area": 7000,
+    "demand_type": "MULTI_FAMILY"
+  },
+  "MULTI_FAMILY_C": {
+    "n_consumers_base": 2272,
+    "average_area": 6000,
+    "demand_type": "MULTI_FAMILY"
+  },
+  "MULTI_FAMILY_D": {
+    "n_consumers_base": 4311,
+    "average_area": 6000,
+    "demand_type": "MULTI_FAMILY"
+  },
+  "MULTI_FAMILY_EF": {
+    "n_consumers_base": 732,
+    "average_area": 7000,
+    "demand_type": "MULTI_FAMILY"
+  },
+  "SHOP_SERVICE_AB":{
+    "n_consumers_base": 178,
+    "average_area": 350,
+    "demand_type": "SHOP_SERVICE"
+  },
+  "SHOP_SERVICE_C": {
+    "n_consumers_base": 4053,
+    "average_area": 400,
+    "demand_type": "SHOP_SERVICE"
+  },
+  "SHOP_SERVICE_D": {
+    "n_consumers_base": 5644,
+    "average_area": 370,
+    "demand_type": "SHOP_SERVICE"
+  },
+  "SHOP_SERVICE_EF": {
+    "n_consumers_base": 2065,
+    "average_area": 320,
+    "demand_type": "SHOP_SERVICE"
+  },
+  "OFFICE_AB": {
+    "n_consumers_base": 52,
+    "average_area": 30000,
+    "demand_type": "OFFICE"
+  },
+  "OFFICE_C": {
+    "n_consumers_base": 86,
+    "average_area": 20000,
+    "demand_type": "OFFICE"
+  },
+  "OFFICE_D": {
+    "n_consumers_base": 844,
+    "average_area": 8000,
+    "demand_type": "OFFICE"
+  },
+  "OFFICE_EF": {
+    "n_consumers_base": 440,
+    "average_area": 5000,
+    "demand_type": "OFFICE"
+  },
+  "OTHER_AB": {
+    "n_consumers_base": 916,
+    "average_area": 150,
+    "demand_type": "OTHER"
+  },
+  "OTHER_C": {
+    "n_consumers_base": 24194,
+    "average_area": 150,
+    "demand_type": "OTHER"
+  },
+  "OTHER_D": {
+    "n_consumers_base": 41513,
+    "average_area": 150,
+    "demand_type": "OTHER"
+  },
+  "OTHER_EF": {
+    "n_consumers_base": 16698,
+    "average_area": 150,
+    "demand_type": "OTHER"
+  }
+}

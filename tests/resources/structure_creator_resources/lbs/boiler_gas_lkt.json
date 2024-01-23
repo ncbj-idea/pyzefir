@@ -1,0 +1,65 @@
+{
+  "name": "boiler_gas_lkt",
+  "energy_tech_mapping": {
+    "HEAT_END": [],
+    "HEAT_USABLE": [
+      "GAS_BOILER",
+      "SMALL_HEAT_STORAGE"
+    ],
+    "ELECTRICITY_END": [
+      "EE_SUBSTATION"
+    ],
+    "ELECTRICITY_USABLE": [
+      "EE_SUBSTATION",
+      "AIR_CONDITION"
+    ],
+    "COLD": [
+      "AIR_CONDITION"
+    ]
+  },
+  "device_capacity_range": {
+    "SMALL_HEAT_STORAGE": {
+      "TECH_CLASS": "STORAGE",
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    },
+    "EE_SUBSTATION": {
+      "TECH_CLASS": "GENERATOR",
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    },
+    "GAS_BOILER": {
+      "TECH_CLASS": "GENERATOR",
+      "EMISSION_FEES": ["ETS2"],
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    },
+    "AIR_CONDITION": {
+      "TECH_CLASS": "GENERATOR",
+      "SINGLE_FAMILY": {},
+      "MULTI_FAMILY": {},
+      "SHOP_SERVICE": {},
+      "OFFICE": {},
+      "OTHER": {}
+    }
+  },
+  "override_max_capacity_range": {},
+  "energy_types_in": [
+    "HEAT_END",
+    "ELECTRICITY_END"
+  ],
+  "energy_types_out": [
+    "HEAT_USABLE",
+    "ELECTRICITY_USABLE",
+    "COLD"
+  ]
+}

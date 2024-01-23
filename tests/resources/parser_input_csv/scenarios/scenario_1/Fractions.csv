@@ -1,0 +1,7 @@
+technology_stack,aggregate,year,min_fraction,max_fraction,max_fraction_increase,max_fraction_decrease
+LKT1,DOMKI,1,1.0,1.0,1,1
+LKT1,DOMKI,2,1.0,1.0,1,1
+LKT2,BLOKI,1,0.9,0.9,1,1
+LKT2,BLOKI,2,0.4,0.4,1,1
+LKT2,BLOKI,3,1.0,1.0,1,1
+LKT3,BLOKI,2,0.6,0.6,1,1

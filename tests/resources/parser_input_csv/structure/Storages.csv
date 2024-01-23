@@ -1,0 +1,4 @@
+name,storage_type,min_device_nom_power,max_device_nom_power
+BATTERY_EE_LKT3,BATTERY_EE,2.0,15.0
+HEAT_STORAGE_HS2,BIG_HEAT_STORAGE,,
+SMALL_HEAT_STORAGE_LKT3,SMALL_HEAT_STORAGE,7.0,22.0

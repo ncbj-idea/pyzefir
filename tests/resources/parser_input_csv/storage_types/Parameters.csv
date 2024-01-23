@@ -1,0 +1,4 @@
+storage_type,load_efficiency,gen_efficiency,cycle_length,power_to_capacity,energy_type,energy_loss,build_time,life_time,power_utilization
+SMALL_HEAT_STORAGE,0.88,0.92,24,5,HEAT,,0,15,0.9
+BIG_HEAT_STORAGE,0.91,0.93,2190,10,HEAT,,1,10,0.9
+BATTERY_EE,0.87,0.85,48,10,ELECTRICITY,,0,15,0.9
