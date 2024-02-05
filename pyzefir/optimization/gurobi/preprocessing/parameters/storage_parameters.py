@@ -77,10 +77,6 @@ class StorageParameters(ModelParameters):
             storages, indices.STOR, "max_device_nom_power"
         )
         """ storage maximum device nominal power """
-        self.power_utilization = self.fetch_energy_source_type_prop(
-            storages, storage_types, indices.STOR, "power_utilization"
-        )
-        """ storage power utilization """
         self.tstor = {
             i: indices.TSTOR.inverse[storages[gen].energy_source_type]
             for i, gen in indices.STOR.mapping.items()

@@ -20,6 +20,7 @@ from pyzefir.model.network_elements.bus import Bus
 from pyzefir.model.network_elements.capacity_factor import CapacityFactor
 from pyzefir.model.network_elements.demand_chunk import DemandChunk
 from pyzefir.model.network_elements.demand_profile import DemandProfile
+from pyzefir.model.network_elements.dsr import DSR
 from pyzefir.model.network_elements.emission_fee import EmissionFee
 from pyzefir.model.network_elements.energy_source_types.energy_source_type_base import (
     EnergySourceType,
@@ -56,4 +57,5 @@ __all__ = [
     "TransmissionFee",
     "EmissionFee",
     "DemandChunk",
+    "DSR",
 ]

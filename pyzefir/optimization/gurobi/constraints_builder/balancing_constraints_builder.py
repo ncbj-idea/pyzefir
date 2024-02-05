@@ -26,6 +26,7 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
         self.balancing_constraint()
         self.demand_chunk_balancing_constraint()
+        self.load_shifting_constraints()
 
     def balancing_constraint(self) -> None:
         for bus_idx, bus_name in self.indices.BUS.mapping.items():
@@ -34,10 +35,30 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
             net_injection = self._bus_net_injection(bus_idx)
             net_inflow = self._bus_net_inflow(bus_idx)
             ens = self.variables.bus.bus_ens[bus_idx]
+            shift = self._shift(bus_idx)
             self.model.addConstr(
-                net_load + net_outflow == net_inflow + net_injection + ens,
+                shift + net_load + net_outflow == net_inflow + net_injection + ens,
                 name=f"{bus_name}_BALANCING_CONSTRAINT",
             )
+
+    def load_shifting_constraints(self) -> None:
+        if len(self.parameters.bus.dsr_type):
+            balancing_periods = self.parameters.dsr.balancing_periods
+            for bus_idx, dsr_idx in self.parameters.bus.dsr_type.items():
+                if bus_idx in self.parameters.bus.lbs_mapping:
+                    intervals = balancing_periods[dsr_idx]
+                    for interval in intervals:
+                        self._gen_compensation_constraint(interval, bus_idx, dsr_idx)
+                        self._gen_relative_shift_limit(interval, bus_idx, dsr_idx)
+                        self._gen_abs_shift_limit(interval, bus_idx, dsr_idx)
+
+    def _shift(self, bus_idx: int) -> MLinExpr | float:
+        return (
+            self.variables.bus.shift_plus[bus_idx, :, :]
+            - self.variables.bus.shift_minus[bus_idx, :, :]
+            if bus_idx in self.parameters.bus.dsr_type
+            else 0.0
+        )
 
     def _bus_net_inflow(self, bus_idx: int) -> MLinExpr:
         return quicksum(
@@ -130,3 +151,40 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
                     name=f"DEMCH_{dem_idx}_START_{p_start}_END_{p_end}_BALANCING_CONSTRAINT",
                 )
                 time_period_idx += 1
+
+    def _gen_compensation_constraint(
+        self, interval: range, bus_idx: int, dsr_idx: int
+    ) -> None:
+        shift_minus = self.variables.bus.shift_minus
+        shift_plus = self.variables.bus.shift_plus
+        compensation_factor = self.parameters.dsr.compensation_factor
+        self.model.addConstr(
+            quicksum(shift_plus[bus_idx, h, :] for h in interval)
+            == compensation_factor[dsr_idx]
+            * quicksum(shift_minus[bus_idx, h, :] for h in interval),
+            name=f"DSR_{dsr_idx}_BUS_{bus_idx}_COMPENSATION_CONSTRAINT",
+        )
+
+    def _gen_relative_shift_limit(
+        self, interval: range, bus_idx: int, dsr_idx: int
+    ) -> None:
+        relative_shift_limit = self.parameters.dsr.relative_shift_limit
+        shift_minus = self.variables.bus.shift_minus
+        net_load = self._bus_net_load(bus_idx)
+        if len(relative_shift_limit):
+            self.model.addConstr(
+                quicksum(shift_minus[bus_idx, h, :] for h in interval)
+                <= relative_shift_limit[dsr_idx]
+                * quicksum(net_load[h, :] for h in interval),
+                name=f"DSR_{dsr_idx}_BUS_{bus_idx}_RELATIVE_SHIFT_CONSTRAINT",
+            )
+
+    def _gen_abs_shift_limit(self, interval: range, bus_idx: int, dsr_idx: int) -> None:
+        abs_shift_limit = self.parameters.dsr.abs_shift_limit
+        shift_minus = self.variables.bus.shift_minus
+        if len(abs_shift_limit):
+            self.model.addConstr(
+                quicksum(shift_minus[bus_idx, h, :] for h in interval)
+                <= abs_shift_limit[dsr_idx],
+                name=f"DSR_{dsr_idx}_BUS_{bus_idx}_ABSOLUTE_SHIFT_CONSTRAINT",
+            )

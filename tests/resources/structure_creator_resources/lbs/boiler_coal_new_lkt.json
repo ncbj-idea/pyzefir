@@ -51,5 +51,9 @@
     "HEAT_USABLE",
     "ELECTRICITY_USABLE",
     "COLD"
-  ]
+  ],
+  "dsr_types": {
+    "HEAT_USABLE": "dsr_heat",
+    "ELECTRICITY_USABLE": "dsr_ee"
+  }
 }

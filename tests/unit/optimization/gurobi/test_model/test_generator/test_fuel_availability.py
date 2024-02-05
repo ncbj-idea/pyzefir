@@ -86,6 +86,15 @@ def network_with_additional_gen(
             },
             {"coal": 1.2, "biomass": 150},
         ),
+        (
+            np.arange(3),
+            np.arange(50),
+            {
+                "coal": np.array([np.nan, np.nan, np.nan, np.nan, np.nan]),
+                "biomass": np.array([300, 900, 800, 200, 300]),
+            },
+            {"coal": 1.2, "biomass": 150},
+        ),
     ],
 )
 def test_fuel_availability(
@@ -124,7 +133,7 @@ def test_fuel_availability(
         / network_with_additional_gen.fuels["coal"].energy_per_unit
     ) * opt_config.hourly_scale
     index_nan = np.argwhere(np.isnan(fuel_availability["coal"][year_sample])).flatten()
-    if index_nan:
+    if index_nan.any():
         fuel_avail = np.delete(fuel_availability["coal"][year_sample], index_nan)
         coal_usage.drop(index_nan, inplace=True)
         assert np.allclose(coal_usage, fuel_avail)

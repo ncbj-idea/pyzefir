@@ -34,6 +34,8 @@ class XlsxFileName(StrEnum):
     initial_state = auto()
     demand_chunks = auto()
     relative_emission_limits = auto()
+    generation_fraction = auto()
+    power_reserve = auto()
 
     def __str__(self) -> LiteralString:
         return f"{self.name}.xlsx"

@@ -17,13 +17,15 @@
 from abc import ABC
 from typing import Any, Iterable, TypeVar
 
+import numpy as np
 from numpy import ndarray
 from pandas import Series
 
 from pyzefir.model.network import NetworkElementsDict
 from pyzefir.model.network_element import NetworkElement
 from pyzefir.model.network_elements import EnergySource, EnergySourceType
-from pyzefir.optimization.gurobi.preprocessing.indices import IndexingSet
+from pyzefir.optimization.gurobi.preprocessing.indices import IndexingSet, Indices
+from pyzefir.utils.functions import is_none_general
 
 T = TypeVar("T")
 
@@ -54,6 +56,7 @@ class ModelParameters(ABC):
         return {
             ii: ModelParameters.sample_series(getattr(d[name], prop), sample)
             for ii, name in II.mapping.items()
+            if not is_none_general(getattr(d[name], prop))
         }
 
     @staticmethod
@@ -73,6 +76,19 @@ class ModelParameters(ABC):
         return {
             ii: idx_to_get.inverse[getattr(elements[name], prop)]
             for ii, name in element_idx.mapping.items()
+        }
+
+    @staticmethod
+    def get_index_from_prop_if_not_none(
+        elements: NetworkElementsDict[NetworkElement],
+        element_idx: IndexingSet,
+        idx_to_get: IndexingSet,
+        prop: str,
+    ) -> dict[int, int]:
+        return {
+            ii: idx_to_get.inverse[getattr(elements[name], prop)]
+            for ii, name in element_idx.mapping.items()
+            if getattr(elements[name], prop) is not None
         }
 
     @staticmethod
@@ -119,3 +135,18 @@ class ModelParameters(ABC):
             ii: {prop_idx.inverse[el_name] for el_name in getattr(elements[name], prop)}
             for ii, name in element_idx.mapping.items()
         }
+
+    @staticmethod
+    def get_balancing_periods(
+        dsr: NetworkElementsDict[NetworkElement], indices: Indices
+    ) -> dict[int, list[range]]:
+        hours = indices.H.ord
+        res = dict()
+        for dsr_name, dsr_content in dsr.items():
+            markers = np.asarray(hours)[:: dsr_content.balancing_period_len]
+            if hours[-1] not in markers:
+                markers = np.append(markers, hours[-1])
+            res[indices.DSR.inverse[dsr_name]] = [
+                range(markers[idx], markers[idx + 1]) for idx in range(len(markers) - 1)
+            ]
+        return res

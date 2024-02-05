@@ -113,6 +113,11 @@ class DataSubCategories:
     GENERATOR_EMISSION_FEES: str = "Generator_Emission_Fees"
     EMISSION_FEES: str = "Emission_Fees"
     DEMAND_CHUNKS: str = "Demand_Chunks"
+    GENERATION_FRACTION: str = "Generation_Fraction"
+    CURTAILMENT_COST: str = "Curtailment_Cost"
+    DSR: str = "DSR"
+    POWER_RESERVE: str = "Power_Reserve"
+    POWER_UTILIZATION: str = "Power_Utilization"
 
     @classmethod
     def check_directory_name(cls, value: str) -> None:
@@ -138,6 +143,7 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.EMISSION_REDUCTION,
             DataSubCategories.GENERATOR_TYPE_ENERGY_CARRIER,
             DataSubCategories.GENERATOR_TYPE_ENERGY_TYPE,
+            DataSubCategories.POWER_UTILIZATION,
         ],
         DataCategories.STORAGE: [DataSubCategories.PARAMETERS],
         DataCategories.INITIAL_STATE: [
@@ -159,6 +165,8 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.TRANSMISSION_FEES,
             DataSubCategories.EMISSION_FEES_EMISSION_TYPES,
             DataSubCategories.GENERATOR_EMISSION_FEES,
+            DataSubCategories.DSR,
+            DataSubCategories.POWER_RESERVE,
         ],
         DataCategories.SCENARIO: [
             DataSubCategories.ELEMENT_ENERGY_EVOLUTION_LIMITS,
@@ -172,6 +180,8 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.FRACTIONS,
             DataSubCategories.N_CONSUMERS,
             DataSubCategories.EMISSION_FEES,
+            DataSubCategories.GENERATION_FRACTION,
+            DataSubCategories.CURTAILMENT_COST,
         ],
         DataCategories.DEMAND_CHUNKS: [DataSubCategories.DEMAND_CHUNKS],
     }

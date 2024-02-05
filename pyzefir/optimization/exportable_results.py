@@ -57,6 +57,8 @@ class ExportableFractionsResults(ExportableResultsGroup):
 @dataclass
 class ExportableBusResults(ExportableResultsGroup):
     generation_ens: dict[str, pd.DataFrame]
+    shift_minus: dict[str, pd.DataFrame]
+    shift_plus: dict[str, pd.DataFrame]
 
 
 @dataclass

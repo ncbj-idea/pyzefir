@@ -4,5 +4,6 @@
   "technologies": [
     "KSE_VIRTUAL_GENERATOR"
   ],
-  "transmission_loss": 0.04
+  "transmission_loss": 0.04,
+  "dsr_type": "dsr_subsystem"
 }

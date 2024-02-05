@@ -19,6 +19,7 @@ from typing import Generic, Iterator, TypeVar
 
 from pyzefir.model.exceptions import NetworkValidatorException
 from pyzefir.model.network_elements import (
+    DSR,
     AggregatedConsumer,
     Bus,
     CapacityFactor,
@@ -177,6 +178,7 @@ class Network:
         self.storage_types: NetworkElementsDict[StorageType] = NetworkElementsDict()
         self.demand_profiles: NetworkElementsDict[DemandProfile] = NetworkElementsDict()
         self.demand_chunks: NetworkElementsDict[DemandChunk] = NetworkElementsDict()
+        self.dsr: NetworkElementsDict[DSR] = NetworkElementsDict()
 
         self.constants = network_constants
 
@@ -431,3 +433,18 @@ class Network:
             raise NetworkValidatorException("DemandChunk cannot be None")
         demand_chunk.validate(self)
         self.demand_chunks[demand_chunk.name] = demand_chunk
+
+    def add_dsr(self, dsr: DSR) -> None:
+        """
+        Adds DSR to the network.
+
+        Raises:
+            NetworkValidatorException:
+
+        Args:
+            dsr (DSR): The DSR to add.
+        """
+        if dsr is None:
+            raise NetworkValidatorException("DSR cannot be None")
+        dsr.validate(self)
+        self.dsr[dsr.name] = dsr

@@ -58,6 +58,10 @@ class Bus(NetworkElement):
     """
     Set of lines oriented negative (outflow orientation)
     """
+    dsr_type: str | None = None
+    """
+    Name of DSR type
+    """
 
     def _validate_energy_type(
         self,
@@ -83,6 +87,8 @@ class Bus(NetworkElement):
         """
         Validation procedure checking:
         - whether the Bus energy_type is in the energy_type of the Network
+        - type of bus name
+        - whether the Bus dsr_type exists in the Network DSR
 
         Args:
             network (Network): Network object to which this object belongs
@@ -94,6 +100,7 @@ class Bus(NetworkElement):
         exception_list: list[NetworkValidatorException] = []
         self._validate_name_type(exception_list)
         self._validate_energy_type(network, exception_list)
+        self._validate_dsr_mapping(network, exception_list)
         if exception_list:
             raise NetworkValidatorExceptionGroup(
                 f"While adding Bus {self.name} following errors occurred: ",
@@ -160,3 +167,20 @@ class Bus(NetworkElement):
             return None
         self.lines_in.add(line_name)
         _logger.debug(f"Line name: {line_name} added to {self.name} line_in")
+
+    def _validate_dsr_mapping(
+        self, network: Network, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        if self.dsr_type is not None:
+            if not isinstance(self.dsr_type, str):
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"DSR type of bus {self.name} must be type of str, not type {type(self.dsr_type).__name__}"
+                    )
+                )
+            elif self.dsr_type not in network.dsr:
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"DSR type {self.dsr_type} of bus {self.name} not exists in Network DSR"
+                    )
+                )

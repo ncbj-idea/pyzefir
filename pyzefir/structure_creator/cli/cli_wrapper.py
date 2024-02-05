@@ -48,7 +48,6 @@ def create_structure(
         scenario_name=scenario_name,
         n_hours=input_data.structure_data.n_hours,
         n_years=input_data.structure_data.n_years,
-        emission_types=list(input_data.structure_data.emission_fees.keys()),
     )
 
 

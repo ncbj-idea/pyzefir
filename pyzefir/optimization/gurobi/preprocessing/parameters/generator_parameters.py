@@ -38,10 +38,6 @@ class GeneratorParameters(ModelParameters):
             generators, indices.GEN, "unit_base_cap"
         )
         """ generator base capacity """
-        self.power_utilization = self.fetch_energy_source_type_prop(
-            generators, generator_types, indices.GEN, "power_utilization"
-        )
-        """ power utilization factor """
         self.buses = self.get_set_prop_from_element(
             generators, "buses", indices.GEN, indices.BUS
         )
@@ -97,10 +93,6 @@ class GeneratorParameters(ModelParameters):
             generators, indices.GEN, "max_device_nom_power"
         )
         """ generator maximum device nominal power """
-        self.power_utilization = self.fetch_energy_source_type_prop(
-            generators, generator_types, indices.GEN, "power_utilization"
-        )
-        """ generator power utilization """
         self.tgen = {
             i: indices.TGEN.inverse[generators[gen].energy_source_type]
             for i, gen in indices.GEN.mapping.items()

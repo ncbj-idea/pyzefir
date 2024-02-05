@@ -178,6 +178,7 @@ class Indices:
         """ aggregated consumer generator and generator type index """
         self._AGGR_STORS, self._AGGR_TSTORS = self._init_aggr_stor_indices(network)
         """ aggregated consumer storage and storage type index """
+        self.DSR = IndexingSet.create_from_network_elements_dict(network.dsr, "DSR")
 
     def _init_aggr_gen_indices(self, network: Network) -> tuple[dict, dict]:
         aggr_gens = {

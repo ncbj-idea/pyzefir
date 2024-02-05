@@ -29,6 +29,10 @@ class BusParser(AbstractElementParser):
 
     def create(self) -> tuple[Bus, ...]:
         return tuple(
-            Bus(name=row["name"], energy_type=row["energy_type"])
+            Bus(
+                name=row["name"],
+                energy_type=row["energy_type"],
+                dsr_type=row["dsr_type"] if not pd.isnull(row["dsr_type"]) else None,
+            )
             for row in self.bus_df.to_dict(orient="records")
         )

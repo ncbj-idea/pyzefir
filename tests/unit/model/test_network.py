@@ -480,7 +480,6 @@ def test_add_duplicated_aggregated_consumer(network: Network) -> None:
         (
             Fuel("test", None, None, None, None),  # noqa
             (
-                "Availability must be a pandas Series, but NoneType given",
                 "Cost must be a pandas Series, but NoneType given",
                 "Energy per unit must be of float type",
                 "Emission mapping must be of dict type",
@@ -495,10 +494,6 @@ def test_add_duplicated_aggregated_consumer(network: Network) -> None:
                 0.1,
             ),
             "Emission mapping must be of dict type",
-        ),
-        (
-            Fuel("test", dict(CO2_EMISSION=0.1), None, pd.Series(), 0.1),  # noqa
-            "Availability must be a pandas Series, but NoneType given",
         ),
         (
             Fuel(

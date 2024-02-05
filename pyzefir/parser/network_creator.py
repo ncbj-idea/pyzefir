@@ -16,6 +16,7 @@
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from pyzefir.model.exceptions import (
@@ -38,6 +39,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.dsr import DSR
 from pyzefir.model.network_elements.emission_fee import EmissionFee
 from pyzefir.model.utils import NetworkConstants
 from pyzefir.parser.elements_parsers.aggregated_consumer_parser import (
@@ -47,6 +49,7 @@ from pyzefir.parser.elements_parsers.bus_parser import BusParser
 from pyzefir.parser.elements_parsers.capacity_factor_parser import CapacityFactorParser
 from pyzefir.parser.elements_parsers.demand_chunk_parser import DemandChunkParser
 from pyzefir.parser.elements_parsers.demand_profile_parser import DemandProfileParser
+from pyzefir.parser.elements_parsers.dsr_parser import DSRParser
 from pyzefir.parser.elements_parsers.emission_fee_parser import EmissionFeeParser
 from pyzefir.parser.elements_parsers.energy_source_type_parser import (
     EnergySourceTypeParser,
@@ -92,6 +95,7 @@ class NetworkCreator:
         transmission_fees = NetworkCreator._create_transmission_fees(df_dict)
         emission_fees = NetworkCreator._create_emission_fees(df_dict)
         demand_chunks = NetworkCreator._create_demand_chunks(df_dict)
+        dsr = NetworkCreator._create_dsr(df_dict)
 
         return NetworkCreator._create_network(
             network_constants,
@@ -111,6 +115,7 @@ class NetworkCreator:
             transmission_fees,
             emission_fees,
             demand_chunks,
+            dsr,
         )
 
     @staticmethod
@@ -132,6 +137,7 @@ class NetworkCreator:
         transmission_fees: tuple[TransmissionFee, ...],
         emission_fees: tuple[EmissionFee, ...],
         demand_chunks: tuple[DemandChunk, ...],
+        dsr: tuple[DSR, ...],
     ) -> Network:
         network = Network(
             network_constants=network_constants,
@@ -141,6 +147,7 @@ class NetworkCreator:
         exception_list: list[NetworkValidatorException] = []
         objects_and_methods_list = [
             (emission_fees, network.add_emission_fee),
+            (dsr, network.add_dsr),
             (buses, network.add_bus),
             (fuels, network.add_fuel),
             (capacity_factors, network.add_capacity_factor),
@@ -195,8 +202,44 @@ class NetworkCreator:
             .pivot_table(columns="name", dropna=False)
             .to_dict("index")["base_total_emission"]
         )
+        generation_fractions_df = df_dict[DataCategories.SCENARIO][
+            DataSubCategories.GENERATION_FRACTION
+        ]
+        min_generation_fr, max_generation_fr = dict(), dict()
+        for energy_type in generation_fractions_df["energy_type"].values:
+            per_en_type_df = generation_fractions_df[
+                generation_fractions_df["energy_type"] == energy_type
+            ]
+            tags = (per_en_type_df["tag"].iloc[0], per_en_type_df["subtag"].iloc[0])
+            min_generation_fr.update(
+                {energy_type: {tags: per_en_type_df["min_generation_fraction"].iloc[0]}}
+            )
+            max_generation_fr.update(
+                {energy_type: {tags: per_en_type_df["max_generation_fraction"].iloc[0]}}
+            )
+        power_reserves = (
+            df_dict[DataCategories.STRUCTURE][DataSubCategories.POWER_RESERVE]
+            .pivot_table(
+                index="energy_type",
+                columns="tag_name",
+                values="power_reserve_value",
+                aggfunc="first",
+            )
+            .replace({np.nan: None})
+            .to_dict(orient="index")
+        )
+        constants_dict["power_reserves"] = {
+            key: {
+                sub_key: float(sub_value)
+                for sub_key, sub_value in value.items()
+                if sub_value is not None
+            }
+            for key, value in power_reserves.items()
+        }
         constants_dict = {k.lower(): v for k, v in constants_dict.items()}
         config_dict = config_dict if config_dict else dict()
+        constants_dict["min_generation_fraction"] = min_generation_fr
+        constants_dict["max_generation_fraction"] = max_generation_fr
         return NetworkConstants(**constants_dict | config_dict)
 
     @staticmethod
@@ -383,7 +426,14 @@ class NetworkCreator:
             generators_type=df_dict[DataCategories.GENERATOR][
                 DataSubCategories.GENERATOR_TYPES
             ],
+            generators_power_utilization=df_dict[DataCategories.GENERATOR][
+                DataSubCategories.POWER_UTILIZATION
+            ],
             n_years=network_constants.n_years,
+            n_hours=network_constants.n_hours,
+            curtailment_cost=df_dict[DataCategories.SCENARIO][
+                DataSubCategories.CURTAILMENT_COST
+            ],
         ).create()
         return generator_types, storage_types
 
@@ -396,3 +446,13 @@ class NetworkCreator:
         ).create()
 
         return demand_chunks
+
+    @classmethod
+    def _create_dsr(
+        cls, df_dict: dict[str, dict[str, pd.DataFrame]]
+    ) -> tuple[DSR, ...]:
+        dsr = DSRParser(
+            df_dict[DataCategories.STRUCTURE][DataSubCategories.DSR]
+        ).create()
+
+        return dsr

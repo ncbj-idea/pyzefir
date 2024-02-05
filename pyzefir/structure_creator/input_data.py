@@ -41,6 +41,7 @@ class ScenarioData:
     technology_type_cap_limits: dict[str, pd.DataFrame]
     yearly_demand: dict[str, pd.DataFrame]
     fractions: dict[str, dict[str, pd.DataFrame]]
+    generation_fraction: pd.DataFrame
 
     @staticmethod
     def _load_fractions(input_path: Path) -> dict[str, dict[str, pd.DataFrame]]:
@@ -75,6 +76,9 @@ class ScenarioData:
                 input_path / XlsxFileName.yearly_demand, sheet_name=None
             ),
             fractions=ScenarioData._load_fractions(input_path),
+            generation_fraction=pd.read_excel(
+                input_path / XlsxFileName.generation_fraction
+            ),
         )
 
 
@@ -93,6 +97,7 @@ class StructureData:
     cap_min: dict[str, pd.DataFrame]
     cap_max: dict[str, pd.DataFrame]
     cap_base: dict[str, pd.DataFrame]
+    power_reserve: pd.DataFrame
 
     @staticmethod
     def _load_json_files_config(dir_path: Path) -> dict[str, dict]:
@@ -133,6 +138,7 @@ class StructureData:
                 input_path / SubDirectory.cap_range / XlsxFileName.cap_base,
                 sheet_name=None,
             ),
+            power_reserve=pd.read_excel(input_path / XlsxFileName.power_reserve),
         )
 
 

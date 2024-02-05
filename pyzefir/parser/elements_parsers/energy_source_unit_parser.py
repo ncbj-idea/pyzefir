@@ -176,7 +176,7 @@ class EnergySourceUnitParser(AbstractElementParser):
                 == energy_sources["max_device_nom_power"]
             )
         ]
-        missing_base_cap["unit_base_capacity"] = (
+        missing_base_cap.loc[:, "unit_base_capacity"] = (
             missing_base_cap["base_fraction"]
             * missing_base_cap["n_consumers_base"]
             * missing_base_cap["max_device_nom_power"]

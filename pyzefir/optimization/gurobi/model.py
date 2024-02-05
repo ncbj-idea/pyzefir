@@ -46,6 +46,12 @@ from pyzefir.optimization.gurobi.constraints_builder.storage_constraints_builder
 from pyzefir.optimization.gurobi.objective_builder.capex_objective_builder import (
     CapexObjectiveBuilder,
 )
+from pyzefir.optimization.gurobi.objective_builder.curtailed_energy_cost import (
+    CurtailedEnergyCostObjectiveBuilder,
+)
+from pyzefir.optimization.gurobi.objective_builder.dsr_penalty_objective_builder import (
+    DsrPenaltyObjectiveBuilder,
+)
 from pyzefir.optimization.gurobi.objective_builder.emission_fee_objective_builder import (
     EmissionFeeObjectiveBuilder,
 )
@@ -96,6 +102,8 @@ class GurobiOptimizationModel(OptimizationModel):
         EnsPenaltyCostObjectiveBuilder,
         TransmissionFeeObjectiveBuilder,
         EmissionFeeObjectiveBuilder,
+        CurtailedEnergyCostObjectiveBuilder,
+        DsrPenaltyObjectiveBuilder,
     ]
 
     def __init__(self) -> None:
@@ -183,11 +191,11 @@ class GurobiOptimizationModel(OptimizationModel):
         self._model = Model("zefir")
         self._set_paths()
         self._indices = Indices(self.input_data.network, self.input_data.config)
-        self._variables = OptimizationVariables(
-            self.model, self.indices, self.input_data.config
-        )
         self._parameters = OptimizationParameters(
             self.input_data.network, self.indices, self.input_data.config
+        )
+        self._variables = OptimizationVariables(
+            self.model, self.indices, self.input_data.config, self.parameters
         )
         self.model.update()
         self._set_constraints()

@@ -41,7 +41,7 @@ def xlsx_path_manager() -> XlsxPathManager:
     return XlsxPathManager(Path("tmp/input_data"), Path("tmp/output_data"))
 
 
-def test_DataCategories_get_main_categories() -> None:
+def test_datacategories_get_main_categories() -> None:
     expected = [
         "initial_state",
         "structure",
@@ -57,7 +57,7 @@ def test_DataCategories_get_main_categories() -> None:
     assert set(DataCategories.get_main_categories()) == set(expected)
 
 
-def test_DataCategories_get_dynamic_categories() -> None:
+def test_datacategories_get_dynamic_categories() -> None:
     expected = [
         "demand_types",
         "conversion_rate",
@@ -99,6 +99,8 @@ def test_DataCategories_get_dynamic_categories() -> None:
                 DataSubCategories.TRANSMISSION_FEES,
                 DataSubCategories.EMISSION_FEES_EMISSION_TYPES,
                 DataSubCategories.GENERATOR_EMISSION_FEES,
+                DataSubCategories.DSR,
+                DataSubCategories.POWER_RESERVE,
             ],
         ),
         (
@@ -109,6 +111,7 @@ def test_DataCategories_get_dynamic_categories() -> None:
                 DataSubCategories.EMISSION_REDUCTION,
                 DataSubCategories.GENERATOR_TYPE_ENERGY_CARRIER,
                 DataSubCategories.GENERATOR_TYPE_ENERGY_TYPE,
+                DataSubCategories.POWER_UTILIZATION,
             ],
         ),
         (

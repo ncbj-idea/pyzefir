@@ -48,7 +48,6 @@ def test_energy_source_type() -> EnergySourceTypeTest:
         capex=pd.Series([0] * default_network_constants.n_years),
         opex=pd.Series([0] * default_network_constants.n_years),
         build_time=123,
-        power_utilization=0.9,
         min_capacity=pd.Series([np.nan] * default_network_constants.n_years),
         max_capacity=pd.Series([np.nan] * default_network_constants.n_years),
         min_capacity_increase=pd.Series([np.nan] * default_network_constants.n_years),
@@ -74,54 +73,6 @@ def test_energy_source_type() -> EnergySourceTypeTest:
                 )
             ],
             id="invalid build_time",
-        ),
-        pytest.param(
-            {
-                "power_utilization": None,
-            },
-            [
-                NetworkValidatorException(
-                    "EnergySourceTypeTest attribute 'power_utilization' for test must be an instance of "
-                    "float or int, but it is an instance of NoneType instead"
-                )
-            ],
-            id="invalid power_utilization_type_2",
-        ),
-        pytest.param(
-            {
-                "power_utilization": 0.0,
-            },
-            [
-                NetworkValidatorException(
-                    "Power utilization value for test must be "
-                    "strictly greater than 0 and less than or equal to 1, but it is 0.0"
-                )
-            ],
-            id="invalid power_utilization_value_1",
-        ),
-        pytest.param(
-            {
-                "power_utilization": 1.1,
-            },
-            [
-                NetworkValidatorException(
-                    "Power utilization value for test must be "
-                    "strictly greater than 0 and less than or equal to 1, but it is 1.1"
-                )
-            ],
-            id="invalid power_utilization_value_2",
-        ),
-        pytest.param(
-            {
-                "power_utilization": -1.1,
-            },
-            [
-                NetworkValidatorException(
-                    "Power utilization value for test must be "
-                    "strictly greater than 0 and less than or equal to 1, but it is -1.1"
-                )
-            ],
-            id="invalid power_utilization_value_3",
         ),
         pytest.param(
             {

@@ -140,6 +140,8 @@ def create_structure_dict(
     unit_emission_fee_map: dict,
     tags_techs_mapping: dict,
     transmission_fee_cost_df: pd.DataFrame,
+    dsr_df: pd.DataFrame,
+    power_reserve_df: pd.DataFrame,
 ) -> dict[StructureSheetName, pd.DataFrame]:
     (
         aggregate_types_df,
@@ -168,12 +170,14 @@ def create_structure_dict(
                     [
                         StructureSheetsColumnName.bus,
                         StructureSheetsColumnName.energy_type,
+                        StructureSheetsColumnName.dsr_type,
                     ]
                 ],
                 local_buses_df[
                     [
                         StructureSheetsColumnName.bus,
                         StructureSheetsColumnName.energy_type,
+                        StructureSheetsColumnName.dsr_type,
                     ]
                 ],
             ]
@@ -267,5 +271,7 @@ def create_structure_dict(
         StructureSheetName.EMISSION_FEES_EMISSION_TYPES: emission_fees_emission_types_df,
         StructureSheetName.GENERATOR_EMISSION_FEES: unit_emission_fee_df,
         StructureSheetName.TRANSMISSION_FEES: transmission_fee_cost_df,
+        StructureSheetName.DSR: dsr_df,
+        StructureSheetName.POWER_RESERVE: power_reserve_df,
     }
     return structure_data

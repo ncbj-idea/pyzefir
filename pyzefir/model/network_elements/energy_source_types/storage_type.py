@@ -26,6 +26,7 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_elements import EnergySourceType
+from pyzefir.model.utils import check_interval
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -52,14 +53,22 @@ class StorageType(EnergySourceType):
     """
     cycle_length: int
     """
-    Number of hours after which state of charge must be 0; if cycle_len = 10, then soc = 0 for hours: 0, 10, 20, ...
+    Number of hours after which state of charge must be 0;
+    if cycle_len = 10, then soc = 0 for hours: 0, 10, 20, ...
     """
     power_to_capacity: float
     """
     Ratio of storage power to storage capacity
     """
     energy_loss: float = 0.0
-    """energy losses associated with soc"""
+    """
+    energy losses associated with soc
+    """
+    power_utilization: float
+    """
+    Determines the percentage of the installed generator's rated power that
+    can be used
+    """
 
     def validate(self, network: Network) -> None:
         """
@@ -86,9 +95,13 @@ class StorageType(EnergySourceType):
             ("power_to_capacity", float | int),
             ("energy_type", str),
             ("energy_loss", float | int),
+            ("power_utilization", float | int),
         ]:
             self._validate_attribute_type(
-                attr=attr, attr_type=attr_type, exception_list=exception_list
+                attr=attr,
+                attr_type=attr_type,
+                exception_list=exception_list,
+                raise_error=True,
             )
         if self.energy_type not in network.energy_types:
             exception_list.append(
@@ -98,14 +111,24 @@ class StorageType(EnergySourceType):
                     f" energy types: {sorted(network.energy_types)}"
                 )
             )
+        for attr in (
+            "generation_efficiency",
+            "load_efficiency",
+            "energy_loss",
+            "power_utilization",
+        ):
+            if not np.isnan(attr_value := getattr(self, attr)) and not check_interval(
+                lower_bound=0, upper_bound=1, value=getattr(self, attr)
+            ):
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"The value of the {attr} is inconsistent with th expected bounds of "
+                        f"the interval: 0 <= {attr_value} <= 1"
+                    )
+                )
+
         if exception_list:
             raise NetworkValidatorExceptionGroup(
                 f"While adding StorageType {self.name} following errors occurred: ",
-                exception_list,
-            )
-        if not np.isnan(self.energy_loss) and not 0 <= self.energy_loss < 1:
-            raise NetworkValidatorExceptionGroup(
-                f"Energy_loss value for {self.name} must be "
-                f"strictly greater than or equal 0 and less than or equal to 1, but it is {self.energy_loss}",
                 exception_list,
             )

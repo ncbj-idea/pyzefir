@@ -34,6 +34,8 @@ class StructureSheetName(StrEnum):
     EMISSION_FEES_EMISSION_TYPES = "Emission Fees - Emission Types"
     GENERATOR_EMISSION_FEES = "Generator - Emission Fees"
     TRANSMISSION_FEES = "Transmission Fees"
+    DSR = "DSR"
+    POWER_RESERVE = "Power Reserve"
 
 
 class StructureSheetsColumnName(StrEnum):
@@ -63,6 +65,7 @@ class StructureSheetsColumnName(StrEnum):
     demand_type = auto()
     n_consumers_base = auto()
     average_area = auto()
+    dsr_type = auto()
 
 
 class StructureTemporaryColumnName(StrEnum):
@@ -92,6 +95,9 @@ class InputFileFieldName(StrEnum):
     energy_tech_mapping = auto()
     device_capacity_range = auto()
     TECH_CLASS = "TECH_CLASS"
+    dsr = auto()
+    dsr_type = auto()
+    dsr_types = auto()
 
 
 class InputXlsxColumnName(StrEnum):

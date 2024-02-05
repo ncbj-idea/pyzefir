@@ -36,6 +36,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.dsr import DSR
 from pyzefir.model.network_elements.emission_fee import EmissionFee
 from pyzefir.model.utils import NetworkConstants
 from pyzefir.parser.csv_parser import CsvParser
@@ -116,6 +117,7 @@ def test_network_creator_create_network() -> None:
             CO2_EMISSION: np.nan,
             PM10_EMISSION: np.nan,
         },
+        {},
     )
 
     bus_a = Bus(
@@ -232,7 +234,14 @@ def test_network_creator_create_network() -> None:
         price=pd.Series([0.2] * network_constants.n_years),
         emission_type=PM10_EMISSION,
     )
-
+    dsr = DSR(
+        name="DSR_1",
+        compensation_factor=0.1,
+        balancing_period_len=20,
+        penalization=0.1,
+        relative_shift_limit=0.1,
+        abs_shift_limit=None,
+    )
     network = NetworkCreator._create_network(
         energy_types=[ELECTRICITY, HEATING],
         buses=(bus_a, bus_b, bus_c),
@@ -243,7 +252,7 @@ def test_network_creator_create_network() -> None:
         aggregated_consumers=(aggregate,),
         fuels=(coal, gas),
         capacity_factors=(),
-        emission_types={CO2_EMISSION, PM10_EMISSION},
+        emission_types=[CO2_EMISSION, PM10_EMISSION],
         generator_types=(gen_type,),
         storage_types=(storage_type,),
         demand_profiles=(demand_profile,),
@@ -251,6 +260,7 @@ def test_network_creator_create_network() -> None:
         transmission_fees=(transmission_fee_A, transmission_fee_B),
         emission_fees=(emission_fee_A, emission_fee_B),
         demand_chunks=(),
+        dsr=(dsr,),
     )
 
     assert isinstance(network, Network)
@@ -286,6 +296,7 @@ def test_network_creator_create_assertion_occurred() -> None:
             CO2_EMISSION: 0.1,
             PM10_EMISSION: 0.15,
         },
+        {},
     )
     bus_a = Bus(
         name="bus_A",
@@ -377,6 +388,14 @@ def test_network_creator_create_assertion_occurred() -> None:
     )
     sun = CapacityFactor(name="sun", profile=pd.Series(data=np.arange(24)))
     demand_profile = DemandProfile("default", default_energy_profile())
+    dsr = DSR(
+        name="DSR_1",
+        compensation_factor=0.1,
+        balancing_period_len=20,
+        penalization=0.1,
+        relative_shift_limit=0.1,
+        abs_shift_limit=None,
+    )
 
     with pytest.raises(NetworkValidatorException) as error_info:
         NetworkCreator._create_network(
@@ -389,7 +408,7 @@ def test_network_creator_create_assertion_occurred() -> None:
             aggregated_consumers=(aggregate,),
             fuels=(coal,),
             capacity_factors=(sun,),
-            emission_types={CO2_EMISSION, PM10_EMISSION},
+            emission_types=[CO2_EMISSION, PM10_EMISSION],
             generator_types=(gen_type,),
             storage_types=(storage_type,),
             demand_profiles=(demand_profile,),
@@ -397,6 +416,7 @@ def test_network_creator_create_assertion_occurred() -> None:
             transmission_fees=(),
             emission_fees=(),
             demand_chunks=(),
+            dsr=(dsr,),
         )
     assert (
         str(error_info.value.args[0])
@@ -423,6 +443,14 @@ def test_network_creator_create_assertion_occurred() -> None:
         price=pd.Series([0.2] * network_constants.n_years),
         emission_type="SO2",
     )
+    dsr = DSR(
+        name="DSR_1",
+        compensation_factor=0.1,
+        balancing_period_len=20,
+        penalization=0.1,
+        relative_shift_limit=0.1,
+        abs_shift_limit=None,
+    )
     with pytest.raises(NetworkValidatorException) as error_info:
         NetworkCreator._create_network(
             energy_types=[ELECTRICITY, HEATING],
@@ -434,7 +462,7 @@ def test_network_creator_create_assertion_occurred() -> None:
             aggregated_consumers=(aggregate,),
             fuels=(coal,),
             capacity_factors=(sun,),
-            emission_types={CO2_EMISSION, PM10_EMISSION},
+            emission_types=[CO2_EMISSION, PM10_EMISSION],
             generator_types=(gen_type,),
             storage_types=(storage_type,),
             demand_profiles=(demand_profile,),
@@ -442,6 +470,7 @@ def test_network_creator_create_assertion_occurred() -> None:
             transmission_fees=(),
             emission_fees=(em_so2,),
             demand_chunks=(),
+            dsr=(dsr,),
         )
 
     assert (

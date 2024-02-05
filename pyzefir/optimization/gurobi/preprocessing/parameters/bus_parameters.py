@@ -64,6 +64,13 @@ class BusParameters(ModelParameters):
             local_balancing_stacks, indices.BUS, indices.LBS
         )
         """ mapping bus_idx -> lbs_idx """
+        self.dsr_type = self.get_index_from_prop_if_not_none(
+            elements=buses,
+            element_idx=indices.BUS,
+            idx_to_get=indices.DSR,
+            prop="dsr_type",
+        )
+        """ mapping bus_idx -> dsr_idx """
 
     @staticmethod
     def get_lbs_mapping(

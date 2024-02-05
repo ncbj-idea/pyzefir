@@ -106,6 +106,21 @@ def grid_connection(
 
 
 @pytest.fixture
+def grid_connection_no_fee(local_ee_bus: Bus, grid_bus: Bus) -> Line:
+    """
+    Line connecting the local_ee_bus with grid (grid_bus)
+    """
+    return Line(
+        name=f"{grid_bus.name}->{local_ee_bus.name}",
+        energy_type=EE,
+        fr=grid_bus.name,
+        to=local_ee_bus.name,
+        transmission_loss=0,
+        max_capacity=np.infty,
+    )
+
+
+@pytest.fixture
 def grid_connection2(
     local_ee_bus2: Bus, grid_bus: Bus, transmission_fee: TransmissionFee
 ) -> Line:

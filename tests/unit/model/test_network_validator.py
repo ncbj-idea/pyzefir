@@ -31,7 +31,9 @@ from pyzefir.model.network_validator import (
     BaseCapacityValidator,
     BaseTotalEmissionValidation,
     NetworkElementsValidation,
+    NetworkGenerationFraction,
     NetworkValidator,
+    PowerReserveValidation,
     RelativeEmissionLimitsValidation,
 )
 from pyzefir.model.utils import NetworkConstants
@@ -123,7 +125,7 @@ def test_relative_emission_limits_validation(
     base_total_emission = {CO2_EMISSION: np.nan, PM10_EMISSION: np.nan}
     network = Network(
         network_constants=NetworkConstants(
-            4, 24, relative_emission_limits, base_total_emission
+            4, 24, relative_emission_limits, base_total_emission, {}
         ),
         energy_types=[ELECTRICITY, HEATING],
         emission_types=[CO2_EMISSION, PM10_EMISSION],
@@ -170,7 +172,7 @@ def test_base_total_emission_validation(
 
     network = Network(
         network_constants=NetworkConstants(
-            4, 24, relative_emission_limits, base_total_emission
+            4, 24, relative_emission_limits, base_total_emission, {}
         ),
         energy_types=[ELECTRICITY, HEATING],
         emission_types=[CO2_EMISSION, PM10_EMISSION],
@@ -232,11 +234,14 @@ def test_network_validator(network: Network) -> None:
         RelativeEmissionLimitsValidation, "validate"
     ) as mock_emission_validate, mock.patch.object(
         NetworkElementsValidation, "validate"
-    ) as mock_element_validate:
+    ) as mock_element_validate, mock.patch.object(
+        PowerReserveValidation, "validate"
+    ) as mock_power_reserves_validate:
         NetworkValidator(network).validate()
 
         mock_emission_validate.assert_called_once_with(network, [])
         mock_element_validate.assert_called_once_with(network, [])
+        mock_power_reserves_validate.assert_called_once_with(network, [])
 
 
 def test_network_relative_emission_limit_happy_path(network: Network) -> None:
@@ -350,4 +355,304 @@ def test_base_capacity_values(
     setattr(network.generators[unit_name], prop, value)
     BaseCapacityValidator.validate(network, exception_list=actual_exception_list)
 
+    assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@pytest.mark.parametrize(
+    "min_gen_frac, max_gen_frac, exception_msg",
+    (
+        pytest.param(
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.1},
+            },
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 1.2},
+            },
+            "Max generation fraction <1.2> for energy type <ELECTRICITY>, tags "
+            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
+            id="Max generation fraction for tags",
+        ),
+        pytest.param(
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.1},
+            },
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): np.nan},
+            },
+            "Max generation fraction <nan> for energy type <ELECTRICITY>, tags "
+            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
+            id="Max generation fraction nan",
+        ),
+        pytest.param(
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 1.1},
+            },
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.9},
+            },
+            "Min generation fraction <1.1> for energy type <ELECTRICITY>, tags "
+            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
+            id="Min generation fraction for tags",
+        ),
+        pytest.param(
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): np.nan},
+            },
+            {
+                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.9},
+            },
+            "Min generation fraction <nan> for energy type <ELECTRICITY>, tags "
+            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
+            id="Min generation fraction nan",
+        ),
+        pytest.param(
+            {
+                "gravity": {("ee_tag", "ee_tag2"): 0.1},
+            },
+            {
+                "gravity": {("ee_tag", "ee_tag2"): 0.9},
+            },
+            "Incorrect energy type <gravity> for tags <('ee_tag', 'ee_tag2')>",
+            id="Incorrect energy type",
+        ),
+    ),
+)
+def test_network_generation_fraction_validation(
+    min_gen_frac: dict[str, dict[tuple[str, str], float]],
+    max_gen_frac: dict[str, dict[tuple[str, str], float]],
+    exception_msg: str,
+) -> None:
+    base_total_emission = {CO2_EMISSION: np.nan, PM10_EMISSION: np.nan}
+    relative_emission_limits = {
+        CO2_EMISSION: pd.Series([np.nan] * 4),
+        PM10_EMISSION: pd.Series([np.nan] * 4),
+    }
+    network = Network(
+        network_constants=NetworkConstants(
+            n_years=4,
+            n_hours=24,
+            relative_emission_limits=relative_emission_limits,
+            base_total_emission=base_total_emission,
+            power_reserves={"ELECTRICITY": {"example_tag": 0.5, "example_tag2": 0.9}},
+            min_generation_fraction=min_gen_frac,
+            max_generation_fraction=max_gen_frac,
+        ),
+        energy_types=[ELECTRICITY, HEATING],
+        emission_types=[CO2_EMISSION, PM10_EMISSION],
+    )
+    exception_list: list[NetworkValidatorException] = []
+    NetworkGenerationFraction.validate(network, exception_list=exception_list)
+    assert len(exception_list)
+    assert str(exception_list[0]) == exception_msg
+
+
+@pytest.mark.parametrize(
+    "generator_tags, exception_msg",
+    (
+        pytest.param(
+            {
+                "HEAT_PUMP_LKT2": {"tags": ["example_tag2"]},
+            },
+            "Subtag <example_tag2> is not a proper subset of the tag set <example_tag>",
+            id="number of tags = number of subtags",
+        ),
+        pytest.param(
+            {
+                "HEAT_PUMP_LKT2": {"tags": ["example_tag", "example_tag2"]},
+                "CHP_COAL_HS1_KSE": {"tags": ["example_tag2"]},
+            },
+            "Subtag <example_tag2> is not a proper subset of the tag set <example_tag>",
+            id="number of tags = number of subtags",
+        ),
+    ),
+)
+def test_validate_proper_subtags(
+    network: Network, generator_tags: dict[str, list[str]], exception_msg: str
+) -> None:
+    set_network_elements_parameters(getattr(network, "generators"), generator_tags)
+
+    exception_list: list[NetworkValidatorException] = []
+    NetworkGenerationFraction.validate(network, exception_list=exception_list)
+    assert len(exception_list)
+    assert str(exception_list[0]) == exception_msg
+
+
+@pytest.mark.parametrize(
+    "generators, storages, exception_msg",
+    (
+        pytest.param(
+            {
+                "HEAT_PLANT_GAS_HS2": {"buses": {"KSE"}, "tags": ["example_tag"]},
+            },
+            {},
+            "Energy type for generators of the tag: example_tag for <HEAT_PLANT_GAS_HS2> "
+            "do not match energy type in Generation Fraction",
+            id="invalid storage energy type",
+        ),
+        pytest.param(
+            {},
+            {
+                "BATTERY_EE_LKT3": {"tags": ["example_tag"]},
+            },
+            "Energy type for storages of the tag: example_tag for <BATTERY_EE_LKT3> "
+            "do not match energy type in Generation Fraction",
+            id="invalid storage energy type",
+        ),
+    ),
+)
+def test_validate_tag_energy_types(
+    network: Network,
+    generators: dict[str, dict[str, set[str] | list[str]]],
+    storages: dict[str, dict[str, list[str] | list[str]]],
+    exception_msg: str,
+) -> None:
+    set_network_elements_parameters(getattr(network, "generators"), generators)
+    set_network_elements_parameters(getattr(network, "storages"), storages)
+
+    exception_list: list[NetworkValidatorException] = []
+    NetworkGenerationFraction.validate(network, exception_list=exception_list)
+    assert len(exception_list)
+    assert str(exception_list[0]) == exception_msg
+
+
+@pytest.mark.parametrize(
+    "power_reserves, exception_list",
+    (
+        pytest.param(
+            {
+                "HEAT": {"example_tag": 0.7, "example_tag3": 0.1},
+            },
+            [
+                NetworkValidatorException(
+                    "All tags assigned to a given power reserve must be defined and contain only generators, "
+                    "but tags ['example_tag2', 'example_tag3'] do not assign to generators, were missed or extra added."
+                )
+            ],
+            id="Extra tag",
+        ),
+        pytest.param(
+            {
+                "HEAT": {"example_tag": 0.7},
+            },
+            [
+                NetworkValidatorException(
+                    "All tags assigned to a given power reserve must be defined and contain only generators, "
+                    "but tags ['example_tag2'] do not assign to generators, were missed or extra added."
+                )
+            ],
+            id="Missing tag",
+        ),
+        pytest.param(
+            {"HEAT": {"example_tag2": 0.7}, "ELECTRICITY": {"example_tag": 0.5}},
+            [
+                NetworkValidatorException(
+                    "Generator: HEAT_PUMP_LKT3 included in the tag: example_tag assigned to a given power reserve "
+                    "does not obtain the type of energy: ELECTRICITY that is assigned to the given power reserve."
+                )
+            ],
+            id="Incorrect energy type matching",
+        ),
+        pytest.param(
+            {
+                "HEAT": {"example_tag": 0.5},
+                "ELECTRICITY": {"example_tag2": 0.7, "example_tag3": 0.7},
+            },
+            [
+                NetworkValidatorException(
+                    "All tags assigned to a given power reserve must be defined and contain only generators, "
+                    "but tags ['example_tag3'] do not assign to generators, were missed or extra added."
+                )
+            ],
+            id="Incorrect energy type",
+        ),
+        pytest.param(
+            {
+                "HEAT": {"example_tag2": 0.5},
+            },
+            [
+                NetworkValidatorException(
+                    "All tags assigned to a given power reserve must be defined and contain only generators, "
+                    "but tags ['example_tag'] do not assign to generators, were missed or extra added."
+                )
+            ],
+            id="Missing energy type in the reserve definition",
+        ),
+    ),
+)
+def test_power_reserves(
+    power_reserves: dict[str, dict[str, float]],
+    network: Network,
+    exception_list: list[NetworkValidatorException],
+) -> None:
+    actual_exception_list: list[NetworkValidatorException] = []
+    const = NetworkConstants(
+        n_years=4,
+        n_hours=24,
+        base_total_emission={
+            CO2_EMISSION: [0.95, 0.85, 0.75],
+            PM10_EMISSION: [0.95, 0.85, 0.75],
+        },
+        relative_emission_limits={
+            CO2_EMISSION: pd.Series([np.nan] * 4),
+            PM10_EMISSION: pd.Series([np.nan] * 4),
+        },
+        power_reserves=power_reserves,
+    )
+    network.constants = const
+    PowerReserveValidation.validate(network, actual_exception_list)
+    assert_same_exception_list(actual_exception_list[:1], exception_list[:1])
+
+
+@pytest.mark.parametrize(
+    "power_reserves, exception_list",
+    (
+        pytest.param(
+            {
+                15: {"example_tag": 0.5, "example_tag2": 0.9},
+                ("HEAT",): {"example_tag": 0.7, "example_tag3": 0.1},
+            },
+            [
+                NetworkValidatorException(
+                    "Power reserve must be type of dict[str, dict[str, float]]."
+                )
+            ],
+            id="Incorrect power reserve type",
+        ),
+        pytest.param(
+            {
+                "ELECTRICITY": [("example_tag", 0.5), ("example_tag2", 0.9)],
+                "HEAT": [("example_tag", 0.7), ("example_tag3", 0.1)],
+            },
+            [
+                NetworkValidatorException(
+                    "Power reserve must be type of dict[str, dict[str, float]]."
+                )
+            ],
+            id="Incorrect power reserve type",
+        ),
+    ),
+)
+def test_power_reserves_type(
+    power_reserves: Any,
+    exception_list: list[NetworkValidatorException],
+    network: Network,
+) -> None:
+    actual_exception_list: list[NetworkValidatorException] = []
+    const = NetworkConstants(
+        n_years=4,
+        n_hours=24,
+        base_total_emission={
+            CO2_EMISSION: [0.95, 0.85, 0.75],
+            PM10_EMISSION: [0.95, 0.85, 0.75],
+        },
+        relative_emission_limits={
+            CO2_EMISSION: pd.Series([np.nan] * 4),
+            PM10_EMISSION: pd.Series([np.nan] * 4),
+        },
+        power_reserves=power_reserves,
+    )
+    network.constants = const
+    PowerReserveValidation._validate_power_reserves_type(
+        network.constants.power_reserves, actual_exception_list
+    )
     assert_same_exception_list(actual_exception_list, exception_list)

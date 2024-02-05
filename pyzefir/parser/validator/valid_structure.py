@@ -96,6 +96,11 @@ def get_dataset_config_from_categories(
                 dataset_name=DataSubCategories.GENERATOR_TYPE_ENERGY_TYPE,
                 columns={"generator_type": str, "energy_type": str},
             ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.POWER_UTILIZATION,
+                columns={"hour_idx": int},
+                default_type={float},
+            ),
         ],
         DataCategories.STORAGE: [
             DatasetConfig(
@@ -160,7 +165,7 @@ def get_dataset_config_from_categories(
             ),
             DatasetConfig(
                 dataset_name=DataSubCategories.BUSES,
-                columns={"name": str, "energy_type": str},
+                columns={"name": str, "energy_type": str, "dsr_type": str},
             ),
             DatasetConfig(
                 dataset_name=DataSubCategories.GENERATORS,
@@ -212,6 +217,25 @@ def get_dataset_config_from_categories(
                 dataset_name=DataSubCategories.GENERATOR_EMISSION_FEES,
                 columns={"generator": str, "emission_fee": str},
             ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.DSR,
+                columns={
+                    "name": str,
+                    "compensation_factor": float,
+                    "balancing_period_len": int,
+                    "penalization": float,
+                    "relative_shift_limit": float,
+                    "abs_shift_limit": float,
+                },
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.POWER_RESERVE,
+                columns={
+                    "tag_name": str,
+                    "energy_type": str,
+                    "power_reserve_value": float,
+                },
+            ),
         ],
         DataCategories.SCENARIO: [
             DatasetConfig(
@@ -237,12 +261,22 @@ def get_dataset_config_from_categories(
                 },
             ),
             DatasetConfig(
+                dataset_name=DataSubCategories.GENERATION_FRACTION,
+                columns={
+                    "tag": str,
+                    "subtag": str,
+                    "energy_type": str,
+                    "min_generation_fraction": float,
+                    "max_generation_fraction": float,
+                },
+            ),
+            DatasetConfig(
                 dataset_name=DataSubCategories.COST_PARAMETERS,
                 columns={
                     "year_idx": int,
                     "technology_type": str,
-                    "CAPEX": int,
-                    "OPEX": int,
+                    "CAPEX": float,
+                    "OPEX": float,
                 },
             ),
             DatasetConfig(
@@ -289,6 +323,11 @@ def get_dataset_config_from_categories(
                 dataset_name=DataSubCategories.N_CONSUMERS,
                 columns={"year_idx": int},
                 default_type={int},
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.CURTAILMENT_COST,
+                columns={"year_idx": int},
+                default_type={float},
             ),
             DatasetConfig(
                 dataset_name=DataSubCategories.EMISSION_FEES,

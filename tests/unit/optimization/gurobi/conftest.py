@@ -134,6 +134,7 @@ def network_constants() -> NetworkConstants:
         n_hours=N_HOURS,
         relative_emission_limits=REL_EM_LIM,
         base_total_emission=BASE_TOTAL_EMISSION,
+        power_reserves={},
     )
 
 
@@ -191,6 +192,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 EE,
             },
             efficiency={EE: 0.9},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "pp_gas": create_generator_type(
             name="pp_gas",
@@ -199,6 +201,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 EE,
             },
             efficiency={EE: 0.8},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_plant_coal": create_generator_type(
             name="heat_plant_coal",
@@ -207,6 +210,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency={HEAT: 0.9},
             life_time=30,
             build_time=1,
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "local_coal_heat_plant": create_generator_type(
             name="local_coal_heat_plant",
@@ -215,6 +219,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency={HEAT: 0.88},
             life_time=25,
             build_time=1,
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "local_coal_heat_plant2": create_generator_type(
             name="local_coal_heat_plant2",
@@ -223,6 +228,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency={HEAT: 0.88},
             life_time=25,
             build_time=1,
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_plant_biomass": create_generator_type(
             name="heat_plant_biomass",
@@ -231,6 +237,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency={HEAT: 0.5},
             life_time=25,
             build_time=1,
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "chp_coal": create_generator_type(
             name="chp_coal",
@@ -239,6 +246,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency={EE: 0.3, HEAT: 0.5},
             life_time=30,
             build_time=1,
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_pump": create_generator_type(
             name="heat_pump",
@@ -247,6 +255,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency={HEAT: 0.9},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "boiler_coal": create_generator_type(
             name="boiler_coal",
@@ -255,6 +264,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency={HEAT: 0.8},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "boiler_biomass": create_generator_type(
             name="boiler_biomass",
@@ -263,6 +273,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency={HEAT: 0.84},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "pv": create_generator_type(
             name="pv",
@@ -271,6 +282,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="sun",
             efficiency={EE: 0.9},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "solar": create_generator_type(
             name="solar",
@@ -279,6 +291,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="sun",
             efficiency={HEAT: 0.8},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "wind_farm": create_generator_type(
             name="wind_farm",
@@ -287,6 +300,7 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="wind",
             efficiency={EE: 0.85},
+            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
     }
 

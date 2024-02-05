@@ -20,10 +20,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyzefir.model.exceptions import (
-    NetworkValidatorException,
-    NetworkValidatorExceptionGroup,
-)
+from pyzefir.model.exceptions import NetworkValidatorException
 from pyzefir.model.network import Network
 from pyzefir.model.network_elements.energy_source_types.storage_type import StorageType
 from pyzefir.model.network_elements.energy_sources.storage import Storage
@@ -32,100 +29,69 @@ from tests.unit.model.test_network_elements.helpers import assert_same_exception
 
 
 @pytest.mark.parametrize(
-    "storage_type, exception_list",
+    "storage_type, exception_value",
     [
-        (
+        pytest.param(
             get_default_storage_type(
                 series_length=default_network_constants.n_years,
-                name="default_storage_type",
                 generation_efficiency="string",
             ),
-            [
-                NetworkValidatorException(
-                    "StorageType attribute 'generation_efficiency' for default_storage_type must be an instance "
-                    "of float | int, but it is an instance of <class 'str'> instead"
-                )
-            ],
+            "StorageType attribute 'generation_efficiency' for default must be an instance "
+            "of float | int, but it is an instance of <class 'str'> instead",
+            id="generation_efficiency_wrong_type",
         ),
-        (
+        pytest.param(
             get_default_storage_type(
                 series_length=default_network_constants.n_years,
-                name="default_storage_type",
                 load_efficiency="string",
             ),
-            [
-                NetworkValidatorException(
-                    "StorageType attribute 'load_efficiency' for default_storage_type must be an instance "
-                    "of float | int, but it is an instance of <class 'str'> instead"
-                )
-            ],
+            "StorageType attribute 'load_efficiency' for default must be an instance "
+            "of float | int, but it is an instance of <class 'str'> instead",
+            id="load_efficiency_wrong_type",
         ),
-        (
+        pytest.param(
             get_default_storage_type(
                 series_length=default_network_constants.n_years,
-                name="default_storage_type",
                 cycle_length="string",
             ),
-            [
-                NetworkValidatorException(
-                    "StorageType attribute 'cycle_length' for default_storage_type must be an instance "
-                    "of <class 'int'>, but it is an instance of <class 'str'> instead"
-                )
-            ],
+            "StorageType attribute 'cycle_length' for default must be an instance "
+            "of <class 'int'>, but it is an instance of <class 'str'> instead",
+            id="cycle_length_wrong_type",
         ),
-        (
+        pytest.param(
             get_default_storage_type(
                 series_length=default_network_constants.n_years,
-                name="default_storage_type",
                 power_to_capacity="string",
             ),
-            [
-                NetworkValidatorException(
-                    "StorageType attribute 'power_to_capacity' for default_storage_type must be an instance "
-                    "of float | int, but it is an instance of <class 'str'> instead"
-                )
-            ],
+            "StorageType attribute 'power_to_capacity' for default must be an instance "
+            "of float | int, but it is an instance of <class 'str'> instead",
+            id="power_to_capacity_wrong_type",
         ),
-        (
+        pytest.param(
             get_default_storage_type(
                 series_length=default_network_constants.n_years,
-                name="default_storage_type",
                 energy_type=1,
             ),
-            [
-                NetworkValidatorException(
-                    "StorageType attribute 'energy_type' for default_storage_type must be an instance "
-                    "of <class 'str'>, but it is an instance of <class 'int'> instead"
-                ),
-                NetworkValidatorException(
-                    "StorageType default_storage_type has energy type 1 "
-                    "which is not compliant with the network energy types: ['ELECTRICITY', 'HEATING']"
-                ),
-            ],
+            "StorageType attribute 'energy_type' for default must be an instance "
+            "of <class 'str'>, but it is an instance of <class 'int'> instead",
+            id="energy_type_wrong_type",
         ),
     ],
-    ids=[
-        "generation_efficiency_wrong_type",
-        "load_efficiency_wrong_type",
-        "cycle_length_wrong_type",
-        "power_to_capacity_wrong_type",
-        "energy_type_wrong_type",
-    ],
 )
-def test_attribute_validators(
+def test_attribute_types_validators(
     storage_type: StorageType,
-    exception_list: list[NetworkValidatorException],
+    exception_value: str,
     network_fixture: Network,
 ) -> None:
-    with pytest.raises(NetworkValidatorExceptionGroup) as e_info:
+    with pytest.raises(NetworkValidatorException) as e_info:
         storage_type.validate(network_fixture)
-    assert_same_exception_list(list(e_info.value.exceptions), exception_list)
+    assert str(e_info.value) == exception_value
 
 
 @pytest.mark.parametrize(
     "storage_type, storage, expected_exception_list",
     [
-        (
+        pytest.param(
             None,
             Storage(
                 name="storage_a",
@@ -133,16 +99,16 @@ def test_attribute_validators(
                 energy_source_type="test_storage_type",
                 unit_base_cap=15,
                 unit_min_capacity=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_max_capacity=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_min_capacity_increase=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_max_capacity_increase=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
             ),
             [
@@ -150,8 +116,9 @@ def test_attribute_validators(
                     "Storage type test_storage_type not found in the network"
                 ),
             ],
+            id="test_storage_type not in the network",
         ),
-        (
+        pytest.param(
             "string",
             Storage(
                 name="storage_a",
@@ -159,16 +126,16 @@ def test_attribute_validators(
                 energy_source_type="test_storage_type",
                 unit_base_cap=15,
                 unit_min_capacity=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_max_capacity=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_min_capacity_increase=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
                 unit_max_capacity_increase=pd.Series(
-                    np.empty(default_network_constants.n_years).fill(np.nan)
+                    index=range(default_network_constants.n_years), data=np.nan
                 ),
             ),
             [
@@ -176,11 +143,11 @@ def test_attribute_validators(
                     "Storage type must be of type StorageType, but it is <class 'str'> instead."
                 )
             ],
+            id="storage_type not instance of StorageType",
         ),
     ],
-    ids=["storage_type_is_none", "storage_type_is_not_StorageType"],
 )
-def test_validator_storage_type(
+def test_storage_type_instance(
     storage_type: Any,
     storage: Storage,
     expected_exception_list: list[NetworkValidatorException],
@@ -188,3 +155,103 @@ def test_validator_storage_type(
     actual_exception_list: list[NetworkValidatorException] = []
     storage._validate_storage_type(storage_type, actual_exception_list)
     assert_same_exception_list(actual_exception_list, expected_exception_list)
+
+
+@pytest.mark.parametrize(
+    "storage_type, exception_value",
+    [
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                energy_type="COLD",
+            ),
+            "StorageType default has energy type COLD which is not compliant with the network "
+            "energy types: ['ELECTRICITY', 'HEATING']",
+            id="energy_type_not_in_network_COLD",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                energy_type="HEAT_USAGE",
+            ),
+            "StorageType default has energy type HEAT_USAGE which is not compliant with the network "
+            "energy types: ['ELECTRICITY', 'HEATING']",
+            id="energy_type_not_in_network_HEAT_USAGE",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                energy_type="ELECT",
+            ),
+            "StorageType default has energy type ELECT which is not compliant with the network "
+            "energy types: ['ELECTRICITY', 'HEATING']",
+            id="energy_type_not_in_network_ELECT",
+        ),
+    ],
+)
+def test_storage_type_energy_type(
+    storage_type: StorageType,
+    exception_value: str,
+    network_fixture: Network,
+) -> None:
+    with pytest.raises(NetworkValidatorException) as e_info:
+        storage_type.validate(network_fixture)
+    assert str(e_info.value.args[1][0]) == exception_value
+
+
+@pytest.mark.parametrize(
+    "storage_type, exception_value",
+    [
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                generation_efficiency=1.01,
+            ),
+            "The value of the generation_efficiency is inconsistent with th expected bounds of the "
+            "interval: 0 <= 1.01 <= 1",
+            id="generation_efficiency_above_upper_bound",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                load_efficiency=-0.23,
+            ),
+            "The value of the load_efficiency is inconsistent with th expected bounds of the "
+            "interval: 0 <= -0.23 <= 1",
+            id="load_efficiency_below_lower_bound",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                power_utilization=1.45,
+            ),
+            "The value of the power_utilization is inconsistent with th expected bounds of the "
+            "interval: 0 <= 1.45 <= 1",
+            id="power_utilization_above_upper_bound",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                energy_loss=-0.01,
+            ),
+            "The value of the energy_loss is inconsistent with th expected bounds of the "
+            "interval: 0 <= -0.01 <= 1",
+            id="energy_loss_below_lower_bound",
+        ),
+    ],
+)
+def test_storage_type_attributes_values_check_interval(
+    storage_type: StorageType,
+    exception_value: str,
+    network_fixture: Network,
+) -> None:
+    with pytest.raises(NetworkValidatorException) as e_info:
+        storage_type.validate(network_fixture)
+    assert str(e_info.value.args[1][0]) == exception_value
+
+
+def test_storage_type_happy_path(network_fixture: Network) -> None:
+    storage_type: StorageType = get_default_storage_type(
+        series_length=default_network_constants.n_years
+    )
+    storage_type.validate(network_fixture)

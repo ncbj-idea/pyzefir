@@ -48,11 +48,6 @@ class EnergySourceType(NetworkElement, ABC):
     """
     Number of years needed to build new capacity
     """
-    power_utilization: float
-    """
-    Determines the percentage of the installed generator's rated power that
-    can be used (number from [0,1] interval)
-    """
     capex: pd.Series
     """
     Investment cost [$/1 unit of added capacity]
@@ -136,21 +131,6 @@ class EnergySourceType(NetworkElement, ABC):
                         f"Energy source type {self.name} {attr} must have a NaN value for the base year"
                     )
                 )
-
-        if not isinstance(self.power_utilization, float | int):
-            exception_list.append(
-                NetworkValidatorException(
-                    f"{self.__class__.__name__} attribute 'power_utilization' for {self.name} must be an instance of "
-                    f"float or int, but it is an instance of {type(self.power_utilization).__name__} instead"
-                )
-            )
-        elif not 0 < self.power_utilization <= 1:
-            exception_list.append(
-                NetworkValidatorException(
-                    f"Power utilization value for {self.name} must be "
-                    f"strictly greater than 0 and less than or equal to 1, but it is {self.power_utilization}"
-                )
-            )
 
     def _validate_tags(self, exception_list: list[NetworkValidatorException]) -> None:
         if not isinstance(self.tags, list) or any(

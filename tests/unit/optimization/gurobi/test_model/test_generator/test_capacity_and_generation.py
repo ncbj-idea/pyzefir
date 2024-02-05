@@ -34,23 +34,61 @@ from tests.unit.optimization.gurobi.utils import TOL
 
 
 @pytest.mark.parametrize(
-    ("hour_sample", "year_sample", "power_utilization"),
+    ("hour_sample", "year_sample", "power_utilization", "ee_max_cap", "ens_expected"),
     [
-        (np.arange(50), np.arange(N_YEARS), {"pp_coal": 1, "heat_plant_biomass": 1}),
         (
-            np.arange(100, 150),
-            np.array([0, 1]),
-            {"pp_coal": 1, "heat_plant_biomass": 1},
+            np.arange(50),
+            np.arange(N_YEARS),
+            {
+                "pp_coal": pd.Series([0.001] * 8760),
+                "heat_plant_biomass": pd.Series([1] * 8760),
+            },
+            pd.Series([40] * 5),
+            True,
         ),
         (
             np.arange(50),
             np.arange(N_YEARS),
-            {"pp_coal": 0.6, "heat_plant_biomass": 0.7},
+            {
+                "pp_coal": pd.Series([1] * 8760),
+                "heat_plant_biomass": pd.Series([1] * 8760),
+            },
+            pd.Series([40] * 5),
+            False,
+        ),
+        (
+            np.arange(100, 150),
+            np.array([0, 1]),
+            {
+                "pp_coal": pd.Series([1] * 8760),
+                "heat_plant_biomass": pd.Series([1] * 8760),
+            },
+            pd.Series([40] * 2),
+            False,
+        ),
+        (
+            np.arange(50),
+            np.arange(N_YEARS),
+            {
+                "pp_coal": pd.Series([0.6] * 8760),
+                "heat_plant_biomass": pd.Series([0.7] * 8760),
+            },
+            pd.Series([40] * 5),
+            False,
         ),
         (
             np.arange(100, 150),
             np.array([0, 1, 2, 3]),
-            {"pp_coal": 0.8, "heat_plant_biomass": 0.5},
+            {
+                "pp_coal": pd.Series(
+                    [0.8] * 2190 + [0.85] * 2190 + [0.9] * 2190 + [0.7] * 2190
+                ),
+                "heat_plant_biomass": pd.Series(
+                    [0.9] * 2190 + [0.7] * 2190 + [0.92] * 2190 + [0.65] * 2190
+                ),
+            },
+            pd.Series([40] * 5),
+            False,
         ),
     ],
 )
@@ -58,6 +96,8 @@ def test_generation_upper_bound(
     hour_sample: np.ndarray,
     year_sample: np.ndarray,
     power_utilization: dict,
+    ee_max_cap: pd.Series,
+    ens_expected: bool,
     network: Network,
     coal_power_plant: Generator,
     biomass_heat_plant: Generator,
@@ -79,28 +119,25 @@ def test_generation_upper_bound(
         engine.results.generators_results.gen,
         engine.results.generators_results.cap,
     )
-    assert np.allclose(
-        np.maximum(
-            gen[coal_power_plant.name].values
-            - cap[coal_power_plant.name].values.reshape(-1)
-            * network.generator_types[
-                coal_power_plant.energy_source_type
-            ].power_utilization,
-            0,
-        ),
-        0,
-    )
-    assert np.allclose(
-        np.maximum(
-            gen[biomass_heat_plant.name].values
-            - cap[biomass_heat_plant.name].values.reshape(-1)
-            * network.generator_types[
-                biomass_heat_plant.energy_source_type
-            ].power_utilization,
-            0,
-        ),
-        0,
-    )
+    for y in year_sample:
+        lhs = np.asarray(gen[coal_power_plant.name][y])
+        rhs = (
+            cap[coal_power_plant.name][0][y]
+            * engine.parameters.tgen.power_utilization[
+                engine.indices.TGEN.inverse["pp_coal"]
+            ]
+        )
+        assert np.all(lhs <= rhs + TOL)
+
+    for y in year_sample:
+        lhs = np.asarray(gen[biomass_heat_plant.name][y])
+        rhs = (
+            cap[biomass_heat_plant.name][0][y]
+            * engine.parameters.tgen.power_utilization[
+                engine.indices.TGEN.inverse["heat_plant_biomass"]
+            ]
+        )
+        assert np.all(lhs <= rhs + TOL)
 
 
 @pytest.mark.parametrize(

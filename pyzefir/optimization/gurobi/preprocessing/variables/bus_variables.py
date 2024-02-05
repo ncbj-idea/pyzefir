@@ -17,6 +17,9 @@
 from gurobipy import Model
 
 from pyzefir.optimization.gurobi.preprocessing.indices import Indices
+from pyzefir.optimization.gurobi.preprocessing.opt_parameters import (
+    OptimizationParameters,
+)
 from pyzefir.optimization.gurobi.preprocessing.variables import VariableGroup
 from pyzefir.optimization.opt_config import OptConfig
 
@@ -24,10 +27,25 @@ from pyzefir.optimization.opt_config import OptConfig
 class BusVariables(VariableGroup):
     """Bus variables"""
 
-    def __init__(self, model: Model, indices: Indices, opt_config: OptConfig) -> None:
+    def __init__(
+        self,
+        model: Model,
+        indices: Indices,
+        opt_config: OptConfig,
+        parameters: OptimizationParameters | None,
+    ) -> None:
         self.bus_ens = model.addMVar(
             shape=(len(indices.BUS), len(indices.H), len(indices.Y)),
             name="BUS_ENS",
             ub=0 if not opt_config.ens else None,
         )
         """ bus variables"""
+        n_dsr = len(parameters.bus.dsr_type) if parameters is not None else 0
+        self.shift_minus = model.addMVar(
+            shape=(n_dsr, len(indices.H), len(indices.Y)), name="SHIFT_MINUS"
+        )
+        """ down shift for dsr """
+        self.shift_plus = model.addMVar(
+            shape=(n_dsr, len(indices.H), len(indices.Y)), name="SHIFT_PLUS"
+        )
+        """ up shift for dsr """

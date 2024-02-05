@@ -17,6 +17,9 @@
 from gurobipy import Model
 
 from pyzefir.optimization.gurobi.preprocessing.indices import Indices
+from pyzefir.optimization.gurobi.preprocessing.opt_parameters import (
+    OptimizationParameters,
+)
 from pyzefir.optimization.gurobi.preprocessing.variables.bus_variables import (
     BusVariables,
 )
@@ -47,7 +50,11 @@ class OptimizationVariables:
     """
 
     def __init__(
-        self, grb_model: Model, indices: Indices, opt_config: OptConfig
+        self,
+        grb_model: Model,
+        indices: Indices,
+        opt_config: OptConfig,
+        parameters: OptimizationParameters | None = None,
     ) -> None:
         self.gen = GeneratorVariables(grb_model, indices)
         """ generators variables """
@@ -57,7 +64,7 @@ class OptimizationVariables:
         """ line variables """
         self.frac = FractionVariables(grb_model, indices)
         """ fraction variables """
-        self.bus = BusVariables(grb_model, indices, opt_config)
+        self.bus = BusVariables(grb_model, indices, opt_config, parameters)
         """ bus variables """
         self.tgen = GeneratorTypeVariables(grb_model, indices)
         """ generator type variables """

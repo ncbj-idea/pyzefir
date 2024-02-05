@@ -209,6 +209,7 @@ def test_get_lbs_tech_config_error() -> None:
                     "technology_type": ["KSE", "DISTRICT_HEAT_COAL_BIG"],
                     "unit_class": ["GENERATOR", "GENERATOR"],
                     "transmission_loss": [0.04, 0.13],
+                    "dsr_type": [None, None],
                 }
             ),
             {
@@ -350,6 +351,7 @@ def test_local_buses_process_technology() -> None:
         "results": [],
         "unit_emission_fees_map": {},
         "unit_tech_tags": {},
+        "dsr_types": {},
     }
 
     local_buses_process_technology(**sample_input_data)
@@ -367,6 +369,7 @@ def test_local_buses_process_technology() -> None:
             "SINGLE_FAMILY_AB",
             "HEAT_USABLE",
             1.20374262,
+            None,
         ]
     ]
     assert sample_input_data["unit_emission_fees_map"] == {}
@@ -404,13 +407,13 @@ def test_create_line_connections() -> None:
 
     expected_output = pd.DataFrame(
         {
-            "name": ["Sub1 -> Bus2"],
-            "energy_type": ["Electricity"],
-            "bus_from": ["Sub1"],
-            "bus_to": ["Bus2"],
-            "transmission_loss": [0.1],
-            "max_capacity": [np.nan],
-            "transmission_fee": [0.5],
+            "name": ["Sub1 -> Bus1", "Sub1 -> Bus2"],
+            "energy_type": ["Electricity", "Electricity"],
+            "bus_from": ["Sub1", "Sub1"],
+            "bus_to": ["Bus1", "Bus2"],
+            "transmission_loss": [0.1, 0.1],
+            "max_capacity": [np.nan, np.nan],
+            "transmission_fee": [0.5, 0.5],
         }
     )
     result_df = create_line_connections(

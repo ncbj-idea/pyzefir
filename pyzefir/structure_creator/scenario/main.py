@@ -217,7 +217,9 @@ def create_emission_fees_df(
 
 
 def create_scenario_data_dict(
-    scenario_data: ScenarioData, n_years: int, n_hours: int, emission_types: list[str]
+    scenario_data: ScenarioData,
+    n_years: int,
+    n_hours: int,
 ) -> dict[ScenarioSheetName, pd.DataFrame]:
     return {
         ScenarioSheetName.COST_PARAMETERS: create_cost_parameters_df(
@@ -270,6 +272,12 @@ def create_scenario_data_dict(
             ],
             n_years=n_years,
         ),
+        ScenarioSheetName.GENERATION_FRACTION: scenario_data.generation_fraction,
+        ScenarioSheetName.CURTAILMENT_COST: create_interpolated_attribute_dataframe(
+            df=scenario_data.cost_parameters[ScenarioSheetsColumnName.CURTAILMENT],
+            index_name=ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
+            n_years=n_years,
+        ),
     }
 
 
@@ -279,13 +287,11 @@ def create_scenario(
     scenario_name: str,
     n_years: int,
     n_hours: int,
-    emission_types: list[str],
 ) -> None:
     scenario_data_dict = create_scenario_data_dict(
         scenario_data=scenario_data,
         n_years=n_years,
         n_hours=n_hours,
-        emission_types=emission_types,
     )
     write_to_excel(
         data=scenario_data_dict,

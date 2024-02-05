@@ -59,7 +59,11 @@ class FuelParser(AbstractElementParser):
             emission={
                 emission_type: value for emission_type, value in df_row[1:].items()
             },
-            availability=fuel_availability[df_row.name],
+            availability=(
+                fuel_availability[df_row.name]
+                if df_row.name in fuel_availability.columns
+                else None
+            ),
             cost=fuel_prices[df_row.name],
             energy_per_unit=df_row["energy_per_unit"],
         )

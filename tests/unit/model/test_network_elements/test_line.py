@@ -165,7 +165,8 @@ def test_validate_line_connections(
             -1,
             [
                 NetworkValidatorException(
-                    "Transmission loss must have value between 0 and 1. Given value: -1"
+                    "The value of the transmission_loss is inconsistent with th expected bounds of the "
+                    "interval: 0 <= -1 <= 1",
                 )
             ],
         ),
@@ -173,7 +174,8 @@ def test_validate_line_connections(
             2,
             [
                 NetworkValidatorException(
-                    "Transmission loss must have value between 0 and 1. Given value: 2"
+                    "The value of the transmission_loss is inconsistent with th expected bounds of the "
+                    "interval: 0 <= 2 <= 1",
                 )
             ],
         ),

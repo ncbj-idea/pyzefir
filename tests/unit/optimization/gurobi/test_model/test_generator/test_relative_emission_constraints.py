@@ -147,6 +147,7 @@ def test_generator_emission_limit_constraint(
         n_hours=N_HOURS,
         relative_emission_limits=relative_emission_limit,
         base_total_emission=base_total_emission,
+        power_reserves={},
     )
     network.constants = new_network_constants
     opt_config = create_default_opf_config(

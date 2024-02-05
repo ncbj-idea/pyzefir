@@ -42,15 +42,14 @@ default_network_constants: Final[NetworkConstants] = NetworkConstants(
         CO2_EMISSION: np.nan,
         PM10_EMISSION: np.nan,
     },
+    min_generation_fraction={"HEAT": {("example_tag", "example_tag2"): 0.0}},
+    max_generation_fraction={"HEAT": {("example_tag", "example_tag2"): 100.0}},
+    power_reserves={},
 )
 
 
 def get_random_series(length: int | None = None) -> pd.Series:
-    return pd.Series(np.random.rand(8760 if length is None else length))
-
-
-def get_random_df() -> pd.DataFrame:
-    return pd.DataFrame(np.random.rand(8760, 2))
+    return pd.Series(data=[0] * length if length is not None else 8760)
 
 
 default_yearly_demand = {
@@ -206,7 +205,9 @@ default_generator_type_params = {
     "emission_reduction": {CO2_EMISSION: 0.34, PM10_EMISSION: 0.1},
     "life_time": 50,
     "build_time": 5,
-    "power_utilization": 0.9,
+    "power_utilization": pd.Series(
+        data=[1.0] * DEFAULT_HOURS, index=np.arange(DEFAULT_HOURS)
+    ),
     "capex": pd.Series([_DEFAULT_GENERATOR_CAPEX] * DEFAULT_SERIES_LENGTH),
     "opex": pd.Series([_DEFAULT_GENERATOR_OPEX] * DEFAULT_SERIES_LENGTH),
     "ramp": np.nan,

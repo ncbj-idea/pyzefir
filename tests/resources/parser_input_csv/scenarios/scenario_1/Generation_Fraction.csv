@@ -1,0 +1,2 @@
+tag,subtag,energy_type,min_generation_fraction,max_generation_fraction
+example_tag,example_tag2,HEAT,0,0.9

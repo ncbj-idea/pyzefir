@@ -32,7 +32,9 @@ class StorageConstraintsBuilder(PartialConstraintsBuilder):
         for st_idx, st_name in self.indices.STOR.mapping.items():
             state_of_charge = self.variables.stor.soc[st_idx, :, :]
             capacity = self.variables.stor.cap[st_idx, :]
-            power_utilization = self.parameters.stor.power_utilization[st_idx]
+            power_utilization = self.parameters.tstor.power_utilization[
+                self.parameters.stor.tstor[st_idx]
+            ]
             self.model.addConstr(
                 state_of_charge <= capacity * power_utilization,
                 name=f"{st_name}_STATE_OF_CHARGE_UPPER_BOUND_CONSTRAINT",

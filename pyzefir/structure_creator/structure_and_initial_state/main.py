@@ -105,6 +105,7 @@ def create_global_data(
                     tech_conf[InputFileFieldName.type],
                     tech_conf["class"],
                     bus_config[InputFileFieldName.transmission_loss],
+                    bus_config.get(InputFileFieldName.dsr_type, None),
                 ]
             )
 
@@ -114,9 +115,8 @@ def create_global_data(
                         global_tech_tags_mapping[tag] = {tech}
                     else:
                         global_tech_tags_mapping[tag].add(tech)
-            if (
-                InputFileFieldName.emission_fees in global_tech_df.index
-                and not pd.isna(global_tech_df[tech][InputFileFieldName.emission_fees])
+            if InputFileFieldName.emission_fees in global_tech_df.index and isinstance(
+                global_tech_df[tech][InputFileFieldName.emission_fees], list
             ):
                 unit_emission_fee_map[tech] = global_tech_df[tech][
                     InputFileFieldName.emission_fees
@@ -132,6 +132,7 @@ def create_global_data(
             StructureSheetsColumnName.technology_type,
             StructureTemporaryColumnName.unit_class,
             StructureSheetsColumnName.transmission_loss,
+            StructureSheetsColumnName.dsr_type,
         ],
     )
 
@@ -157,9 +158,10 @@ def local_buses_process_technology(
     tech_energy_mapping: dict,
     energy_to_bus: dict[str, str],
     structure_data: StructureData,
-    results: list[list[str | float]],
+    results: list[list[str | float | None]],
     unit_emission_fees_map: dict,
     unit_tech_tags: dict,
+    dsr_types: dict | None,
 ) -> None:
     tech_class = tech_config[InputFileFieldName.TECH_CLASS]
     tech_aggr_config = get_lbs_tech_config(
@@ -174,11 +176,11 @@ def local_buses_process_technology(
         [structure_data.cap_base, structure_data.cap_max, structure_data.cap_min],
     )
 
-    tech_energy_type = tech_energy_mapping.get(tech)
-    if tech_energy_type is None:
+    tech_energy_types = tech_energy_mapping.get(tech)
+    if tech_energy_types is None:
         raise ValueError(
             f"there is a problem with technology {tech} in lbs {lbs_type} "
-            f"- energy_type is {tech_energy_type}"
+            f"- energy_type is {tech_energy_types}"
         )
 
     tech_name = get_element_name(aggregate=aggregate, lbs=lbs_type, unit_type=tech)
@@ -195,7 +197,6 @@ def local_buses_process_technology(
         for tag in tech_aggr_config[InputFileFieldName.tags]:
             unit_tech_tags.setdefault(tag, set()).add(tech_name)
 
-    tech_energy_types = tech_energy_mapping[tech]
     results.extend(
         [
             [
@@ -210,8 +211,10 @@ def local_buses_process_technology(
                 aggregate,
                 et,
                 base_capacity,
+                dsr_types.get(et) if dsr_types is not None else None,
             ]
             for et in tech_energy_types
+            if et in energy_to_bus
         ]
     )
 
@@ -225,7 +228,7 @@ def local_buses_process_lbs_type(
     lbs_type: str,
     lbs_config: dict,
     structure_data: StructureData,
-    results: list[list[str | float]],
+    results: list[list[str | float | None]],
     buses_out: list[list[str]],
     buses_in: list[list[str]],
     unit_emission_fees_map: dict,
@@ -250,7 +253,7 @@ def local_buses_process_lbs_type(
     )
 
     tech_energy_mapping = invert_dict(lbs_conf[InputFileFieldName.energy_tech_mapping])
-
+    dsr_types = lbs_conf.get(InputFileFieldName.dsr_types)
     for tech, tech_config in lbs_conf[InputFileFieldName.device_capacity_range].items():
         local_buses_process_technology(
             aggregate,
@@ -264,6 +267,7 @@ def local_buses_process_lbs_type(
             results,
             unit_emission_fees_map,
             unit_tech_tags,
+            dsr_types,
         )
 
 
@@ -271,8 +275,10 @@ def local_buses_process_aggregate_apply(
     row: pd.Series,
     lbs_config: dict,
     structure_data: StructureData,
-) -> tuple[list[list[str | float]], list[list[str]], list[list[str]], dict, dict]:
-    results: list[list[str | float]] = []
+) -> tuple[
+    list[list[str | float | None]], list[list[str]], list[list[str]], dict, dict
+]:
+    results: list[list[str | float | None]] = []
     buses_out: list[list[str]] = []
     buses_in: list[list[str]] = []
     unit_emission_fees_map: dict = {}
@@ -344,6 +350,7 @@ def create_local_buses_data(
         StructureSheetsColumnName.aggregate,
         StructureSheetsColumnName.energy_type,
         StructureSheetsColumnName.base_capacity,
+        StructureSheetsColumnName.dsr_type,
     ]
 
     local_buses_df = pd.DataFrame(results, columns=columns)
@@ -392,7 +399,7 @@ def create_line_connections(
             StructureSheetsColumnName.transmission_loss,
         ].iloc[0]
 
-        for lbs_type in [x for x in row.index[1:] if row[x] == 1]:
+        for lbs_type in [x for x in row.index if row[x] == 1]:
             filtered_df = local_buses_in_df[
                 (local_buses_in_df[StructureSheetsColumnName.lbs_type] == lbs_type)
                 & (
@@ -465,6 +472,8 @@ def create_structure_and_initial(
     ]
     aggregate_types_dict = structure_data.aggregate_types
     emission_fees_dict = structure_data.emission_fees
+    dsr_df = structure_data.configuration[InputFileFieldName.dsr]
+    power_reserve_df = structure_data.power_reserve
     (
         global_buses_df,
         global_unit_emission_fee_map,
@@ -506,6 +515,8 @@ def create_structure_and_initial(
             local_techs_tags_mapping, global_tech_tags_mapping
         ),
         transmission_fee_cost_df=transmission_fee_cost_df,
+        dsr_df=dsr_df,
+        power_reserve_df=power_reserve_df,
     )
     initial_state_data = create_initial_state_dict(
         global_buses_df=global_buses_df,

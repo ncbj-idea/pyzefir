@@ -20,8 +20,13 @@ import numpy as np
 import pandas as pd
 
 from pyzefir.model.network_elements import GeneratorType, StorageType
+from pyzefir.parser.csv_parser import CsvParserException
 from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 from pyzefir.parser.elements_parsers.utils import create_tags_list
+
+
+class EnergySourceTypeParserException(CsvParserException):
+    pass
 
 
 class EnergySourceTypeParser(AbstractElementParser):
@@ -36,7 +41,10 @@ class EnergySourceTypeParser(AbstractElementParser):
         generators_energy_type: pd.DataFrame,
         generators_fuel_type: pd.DataFrame,
         generators_type: pd.DataFrame,
+        generators_power_utilization: pd.DataFrame,
         n_years: int,
+        n_hours: int,
+        curtailment_cost: pd.DataFrame,
     ) -> None:
         self.generators_energy_type = generators_energy_type.copy(deep=True).set_index(
             "generator_type"
@@ -55,10 +63,18 @@ class EnergySourceTypeParser(AbstractElementParser):
         self.cost_parameters_df = cost_parameters_df.copy(deep=True)
         self.generators_fuel_type = generators_fuel_type.copy(deep=True)
         self.generators_type = generators_type.copy(deep=True)
+        self.generators_power_utilization = generators_power_utilization.copy(
+            deep=True
+        ).set_index("hour_idx")
         self.n_years = n_years
+        self.n_hours = n_hours
+        self.curtailment_cost = curtailment_cost.copy(deep=True)
 
     def _prepare_energy_source_parameters(self) -> dict[str, pd.DataFrame]:
-        """Prepare common parameters for GeneratorType and StorageType classes (EnergySourceType parameters)."""
+        """
+        Prepare common parameters for GeneratorType and StorageType
+        classes (EnergySourceType parameters).
+        """
         energy_source_types = self.cost_parameters_df["technology_type"].unique()
         result_dict = dict()
         for en_source_type in energy_source_types:
@@ -107,10 +123,7 @@ class EnergySourceTypeParser(AbstractElementParser):
         )
         ramp = df_row["ramp"] if "ramp" in df_row else np.nan
         energy_types = self.generators_energy_type.loc[name]
-        if not np.isnan(df_row["power_utilization"]):
-            power_utilization = float(df_row["power_utilization"])
-        else:
-            power_utilization = 1.0
+        power_utilization = self._get_power_utilization(name, df_row)
         if isinstance(energy_types, pd.DataFrame):
             energy_types = energy_types.squeeze()
 
@@ -142,6 +155,9 @@ class EnergySourceTypeParser(AbstractElementParser):
         )
         if conv_rate := conv_dict.get(name):
             gen_type.conversion_rate = conv_rate
+        curt_cost = self.curtailment_cost.get(name)
+        if curt_cost is not None and len(curt_cost):
+            gen_type.energy_curtailment_cost = curt_cost
         return gen_type
 
     def _create_storage_type(
@@ -173,8 +189,10 @@ class EnergySourceTypeParser(AbstractElementParser):
             max_capacity_increase=energy_source_df["max_capacity_increase"].reindex(
                 range(self.n_years)
             ),
-            generation_efficiency=self.storage_type_df.loc[name]["gen_efficiency"],
-            load_efficiency=self.storage_type_df.loc[name]["load_efficiency"],
+            generation_efficiency=float(
+                self.storage_type_df.loc[name]["gen_efficiency"]
+            ),
+            load_efficiency=float(self.storage_type_df.loc[name]["load_efficiency"]),
             energy_type=self.storage_type_df.loc[name]["energy_type"],
             cycle_length=int(self.storage_type_df.loc[name]["cycle_length"]),
             power_to_capacity=float(
@@ -209,3 +227,28 @@ class EnergySourceTypeParser(AbstractElementParser):
         )
 
         return generator_types, storage_types
+
+    def _get_power_utilization(self, name: str, df_row: pd.Series) -> pd.Series | float:
+        power_utilization = df_row["power_utilization"]
+        if (
+            not np.isnan(power_utilization)
+            and name in self.generators_power_utilization.columns
+        ):
+            raise EnergySourceTypeParserException(
+                f"Power utilization for {name} must be specified by passing value "
+                f"in generator_types.xlsx: Generator Types sheet or Power Utilization sheet, "
+                f"but two methods were used at once"
+            )
+        if not np.isnan(power_utilization):
+            power_utilization = pd.Series(
+                data=[float(power_utilization)] * self.n_hours,
+                index=np.arange(self.n_hours),
+            )
+        elif name in self.generators_power_utilization.columns:
+            power_utilization = self.generators_power_utilization[name]
+        else:
+            power_utilization = pd.Series(
+                data=[1.0] * self.n_hours,
+                index=np.arange(self.n_hours),
+            )
+        return power_utilization

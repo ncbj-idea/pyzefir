@@ -837,24 +837,53 @@ class BusResults(ResultsGroup):
     """Bus results"""
 
     variable_group: InitVar[BusVariables]
-    """Initial value hint for the GeneratorVariables object"""
+    """Initial value hint for the BusVariables object"""
     indices: InitVar[Indices]
     """Initial value hint for the Indices object"""
 
     bus_ens: dict[str, pd.DataFrame] = field(init=False)
     """ ens generator per bus """
 
-    def __post_init__(self, variable_group: BusVariables, indices: Indices) -> None:
+    parameters: InitVar[BusParameters | None]
+    """Initial value hint for the BusVariables object"""
+
+    def __post_init__(
+        self,
+        variable_group: BusVariables,
+        indices: Indices,
+        parameters: BusParameters = None,
+    ) -> None:
         self.bus_ens = self.fetch_2d_variable(
             indices.BUS,
             variable_group.bus_ens,
             row_index=indices.H,
             column_index=indices.Y,
         )
+        filter_map = {
+            v: {k}
+            for k, v in indices.BUS.mapping.items()
+            if k not in parameters.dsr_type
+        }
+        self.shift_minus = self.fetch_2d_variable(
+            indices.BUS,
+            variable_group.shift_minus,
+            row_index=indices.H,
+            column_index=indices.Y,
+            filter_map=filter_map,
+        )
+        self.shift_plus = self.fetch_2d_variable(
+            indices.BUS,
+            variable_group.shift_plus,
+            row_index=indices.H,
+            column_index=indices.Y,
+            filter_map=filter_map,
+        )
 
     def to_exportable(self) -> ExportableBusResults:
         return ExportableBusResults(
-            generation_ens=self.dict_of_2d_array_to_pandas(self.bus_ens)
+            generation_ens=self.dict_of_2d_array_to_pandas(self.bus_ens),
+            shift_minus=self.dict_of_2d_array_to_pandas(self.shift_minus),
+            shift_plus=self.dict_of_2d_array_to_pandas(self.shift_plus),
         )
 
 
@@ -924,4 +953,6 @@ class Results:
         self.fractions_results = FractionsResults(
             variable_group=variables.frac, indices=indices
         )
-        self.bus_results = BusResults(variable_group=variables.bus, indices=indices)
+        self.bus_results = BusResults(
+            variable_group=variables.bus, indices=indices, parameters=parameters.bus
+        )

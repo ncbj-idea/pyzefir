@@ -24,6 +24,7 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_element import NetworkElement
+from pyzefir.model.utils import check_interval
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -147,10 +148,13 @@ class Line(NetworkElement):
             )
             return None
 
-        if not 0 <= self.transmission_loss <= 1:
+        if not check_interval(
+            lower_bound=0, upper_bound=1, value=self.transmission_loss
+        ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Transmission loss must have value between 0 and 1. Given value: {self.transmission_loss}"
+                    f"The value of the transmission_loss is inconsistent with th expected bounds of "
+                    f"the interval: 0 <= {self.transmission_loss} <= 1"
                 )
             )
 

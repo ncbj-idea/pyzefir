@@ -28,6 +28,9 @@ from pyzefir.optimization.gurobi.preprocessing.parameters.capacity_factor_parame
 from pyzefir.optimization.gurobi.preprocessing.parameters.demand_chunks_parameters import (
     DemandChunkParameters,
 )
+from pyzefir.optimization.gurobi.preprocessing.parameters.dsr_parameters import (
+    DsrParameters,
+)
 from pyzefir.optimization.gurobi.preprocessing.parameters.emission_fee_parameters import (
     EmissionFeeParameters,
 )
@@ -59,6 +62,7 @@ from pyzefir.optimization.gurobi.preprocessing.parameters.transmission_fee_param
     TransmissionFeeParameters,
 )
 from pyzefir.optimization.opt_config import OptConfig
+from pyzefir.utils.functions import tag_str_to_idx
 
 
 class OptimizationParameters:
@@ -88,7 +92,10 @@ class OptimizationParameters:
         )
         """ storages parameters """
         self.tgen: GeneratorTypeParameters = GeneratorTypeParameters(
-            network.generator_types, indices, scale=opt_config.money_scale
+            network.generator_types,
+            network.generators,
+            indices,
+            scale=opt_config.money_scale,
         )
         """ generator types parameters """
         self.tstor: StorageTypeParameters = StorageTypeParameters(
@@ -121,6 +128,13 @@ class OptimizationParameters:
                 for key, series in network.constants.relative_emission_limits.items()
             },
             base_total_emission=network.constants.base_total_emission,
+            min_generation_fraction=tag_str_to_idx(
+                network.constants.min_generation_fraction, indices.TAGS.inverse
+            ),
+            max_generation_fraction=tag_str_to_idx(
+                network.constants.max_generation_fraction, indices.TAGS.inverse
+            ),
+            power_reserves=network.constants.power_reserves,
         )
         self.emf: EmissionFeeParameters = EmissionFeeParameters(
             network.emission_fees, indices, scale=opt_config.money_scale
@@ -130,3 +144,5 @@ class OptimizationParameters:
             network.demand_chunks, indices
         )
         """ demand chunks parameters """
+        self.dsr: DsrParameters = DsrParameters(network.dsr, indices)
+        """DSR parameters"""

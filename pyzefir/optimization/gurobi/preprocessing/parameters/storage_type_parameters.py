@@ -80,3 +80,7 @@ class StorageTypeParameters(ModelParameters):
             storage_types, "tags", indices.TSTOR, indices.T_TAGS
         )
         """ storage type tags """
+        self.power_utilization = self.fetch_element_prop(
+            storage_types, indices.TSTOR, "power_utilization"
+        )
+        """ storage power utilization """

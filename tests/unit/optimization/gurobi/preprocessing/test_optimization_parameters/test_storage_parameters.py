@@ -82,10 +82,6 @@ def test_create(
         assert all(
             t_storage_params.opex[type_dict[storage_id]] == storage_type.opex[sample]
         )
-        assert (
-            storage_params.power_utilization[storage_id]
-            == storage_type.power_utilization
-        )
 
         if storage.min_device_nom_power is not None:
             assert (

@@ -110,7 +110,7 @@ class OptConfig:
                 OptConfigError("money scale must be greater or equal 1")
             )
 
-        if not all(diff(self.year_sample) == 1) or self.year_sample[0] != 0:
+        if not (diff(self.year_sample) == 1).all() or self.year_sample[0] != 0:
             exception_list.append(
                 OptConfigError("year sample must be consecutive starting from 0")
             )

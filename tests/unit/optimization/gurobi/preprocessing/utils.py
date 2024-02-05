@@ -48,7 +48,7 @@ def create_generator_type(  # noqa: C901
     cap_max: Series | None = None,
     delta_cap_min: Series | None = None,
     delta_cap_max: Series | None = None,
-    power_utilization: float = 1.0,
+    power_utilization: pd.Series | float = 1.0,
 ) -> GeneratorType:
     cap_min = pd.Series([np.nan] * N_YEARS) if cap_min is None else cap_min
     cap_max = pd.Series([np.nan] * N_YEARS) if cap_max is None else cap_max

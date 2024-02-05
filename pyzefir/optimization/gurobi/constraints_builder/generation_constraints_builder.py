@@ -33,19 +33,25 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
             generation_brutto = self.variables.gen.gen[gen_idx, :, :]
             capacity = self.variables.gen.cap[gen_idx, :]
             capacity_factor_id = self.parameters.gen.capacity_factors[gen_idx]
+            gen_to_tgen = self.parameters.gen.tgen
             if capacity_factor_id is not None:
                 capacity_factor = self.parameters.cf.profile[capacity_factor_id]
                 self.model.addConstr(
                     generation_brutto
                     == capacity_factor.reshape(-1, 1)
                     * capacity.reshape(1, -1)
-                    * self.parameters.gen.power_utilization[gen_idx],
+                    * self.parameters.tgen.power_utilization[
+                        gen_to_tgen[gen_idx]
+                    ].reshape(-1, 1),
                     name=f"{gen_name}_NON_DISPATCHABLE_GEN_CAP_CONSTRAINT",
                 )
             else:
                 self.model.addConstr(
                     generation_brutto
-                    <= capacity * self.parameters.gen.power_utilization[gen_idx],
+                    <= capacity.reshape(1, -1)
+                    * self.parameters.tgen.power_utilization[
+                        gen_to_tgen[gen_idx]
+                    ].reshape(-1, 1),
                     name=f"{gen_name}_DISPATCHABLE_GEN_CAP_CONSTRAINT",
                 )
 

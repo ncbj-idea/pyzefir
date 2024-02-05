@@ -21,6 +21,7 @@ import pytest
 from pyzefir.model.exceptions import NetworkValidatorException
 from pyzefir.model.network import Network
 from pyzefir.model.network_elements import Bus
+from pyzefir.model.network_elements.dsr import DSR
 from tests.unit.defaults import (
     ELECTRICITY,
     HEATING,
@@ -39,7 +40,16 @@ def network() -> Network:
     network.add_bus(Bus(name="bus_A", energy_type=ELECTRICITY))
     network.add_bus(Bus(name="bus_B", energy_type=ELECTRICITY))
     network.add_bus(Bus(name="bus_C", energy_type=HEATING))
-
+    network.add_dsr(
+        DSR(
+            name="dsr_1",
+            compensation_factor=0.1,
+            balancing_period_len=10,
+            penalization=0.1,
+            relative_shift_limit=None,
+            abs_shift_limit=None,
+        )
+    )
     return network
 
 
@@ -97,3 +107,41 @@ def test_validate_energy_type(
         assert len(exception_list) == 0
     else:
         assert_same_exception_list(exception_list, expected_exception_list)
+
+
+@pytest.mark.parametrize(
+    "dsr_type, expected_exception_list",
+    [
+        pytest.param("dsr_1", [], id="correct_dsr_type"),
+        (
+            pytest.param(
+                1,
+                [
+                    NetworkValidatorException(
+                        "DSR type of bus bus_1 must be type of str, not type int"
+                    )
+                ],
+                id="incorrect_dsr_type",
+            )
+        ),
+        pytest.param(
+            "not_existing_dsr",
+            [
+                NetworkValidatorException(
+                    "DSR type not_existing_dsr of bus bus_1 not exists in Network DSR"
+                )
+            ],
+            id="dsr_type_not_exist_in_network_dsr",
+        ),
+    ],
+)
+def test_validate_dsr_mapping(
+    expected_exception_list: list[NetworkValidatorException] | None,
+    bus: Bus,
+    network: Network,
+    dsr_type: Any,
+) -> None:
+    exception_list: list[NetworkValidatorException] = []
+    bus.dsr_type = dsr_type
+    bus._validate_dsr_mapping(network, exception_list)
+    assert_same_exception_list(exception_list, expected_exception_list)

@@ -28,7 +28,7 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_element import NetworkElement
-from pyzefir.model.utils import validate_dict_type, validate_series
+from pyzefir.model.utils import check_interval, validate_dict_type, validate_series
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -229,15 +229,14 @@ class AggregatedConsumer(NetworkElement):
             )
 
         for stack, fraction in self.stack_base_fraction.items():
-            if not 0 <= fraction <= 1:
+            if not check_interval(lower_bound=0, upper_bound=1, value=fraction):
                 exception_list.append(
                     NetworkValidatorException(
-                        "Fraction of local balancing stack "
-                        f"{stack} in aggregated consumer {self.name} "
-                        f"must be a number from [0,1] interval, but {fraction} "
-                        "given instead"
+                        f"The value of the {stack} is inconsistent with th expected bounds of "
+                        f"the interval: 0 <= {fraction} <= 1"
                     )
                 )
+
             if stack not in network.local_balancing_stacks:
                 exception_list.append(
                     NetworkValidatorException(

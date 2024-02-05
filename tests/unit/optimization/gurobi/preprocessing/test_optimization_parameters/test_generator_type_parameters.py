@@ -83,6 +83,14 @@ from tests.unit.optimization.gurobi.preprocessing.test_optimization_parameters.u
             },
             id="ramp",
         ),
+        pytest.param(
+            array([2]),
+            ["pp_coal", "pp_gas"],
+            {
+                "energy_curtailment_cost": pd.Series([10.0, 20.0, 30.0, 40.0, 50.0]),
+            },
+            id="energy_curtailment_cost",
+        ),
     ],
 )
 def test_create(
@@ -116,10 +124,12 @@ def test_create(
             "min_capacity_increase",
             "max_capacity_increase",
             "ramp",
+            "energy_curtailment_cost",
         ]:
             if param in params_to_change:
-                assert vectors_eq_check(
-                    getattr(generator_type_params, param)[generator_type_id],
-                    getattr(generator_type, param),
-                    sample,
-                )
+                if bool(generator_type.energy_curtailment_cost.__len__()):
+                    assert vectors_eq_check(
+                        getattr(generator_type_params, param)[generator_type_id],
+                        getattr(generator_type, param),
+                        sample,
+                    )

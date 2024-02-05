@@ -17,6 +17,8 @@
 from collections import defaultdict
 from typing import TypeVar
 
+import numpy as np
+
 
 def get_dict_vals(used_dict: dict[int, set] | None) -> set:
     """get all values of dictionary"""
@@ -48,3 +50,46 @@ def invert_dict_of_sets(dict_: dict[T, set[Y]]) -> dict[Y, set[T]]:
         for value in value_set:
             result_dict[value].add(key)
     return dict(result_dict)
+
+
+def tag_str_to_idx(
+    min_max_gen_frac: dict[str, dict[tuple[int, int], float]] | None,
+    tag_str_to_idx_arg: dict[int, int],
+) -> dict[str, dict[tuple[int, int], float]] | None:
+    """for opt_parameters: reading min/max generation fractions replace tags str by idxs
+    using tag_str_to_idx map"""
+    if min_max_gen_frac is None:
+        return None
+    return {
+        k: {
+            (tag_str_to_idx_arg[t[0]], tag_str_to_idx_arg[t[1]]): p
+            for t, p in v.items()
+        }
+        for k, v in min_max_gen_frac.items()
+    }
+
+
+def is_flow_int(num: float | int | str | None) -> bool:
+    """check if general float number allowing int type"""
+    if (
+        num is not None
+        and isinstance(num, float | int | np.integer)
+        and not np.isnan(num)
+    ):
+        return True
+    return False
+
+
+def is_none_general(arg: dict | None) -> bool:
+    """returns True if None or empty dict"""
+    res = False
+    if isinstance(arg, dict):
+        if len(arg) == 0:
+            res = True
+    elif arg is None:
+        res = True
+    return res
+
+
+def flatten_list(list_of_lists: list[tuple[int]] | list[list[int]]) -> list[int]:
+    return [elem for list_elem in list_of_lists for elem in list_elem]

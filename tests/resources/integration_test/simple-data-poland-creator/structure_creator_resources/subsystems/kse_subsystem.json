@@ -9,5 +9,6 @@
     "WIND_FARM_BIG",
     "PV_FARM_BIG"
   ],
-  "transmission_loss": 0.04
+  "transmission_loss": 0.04,
+  "dsr_type": "dsr_subsystem"
 }

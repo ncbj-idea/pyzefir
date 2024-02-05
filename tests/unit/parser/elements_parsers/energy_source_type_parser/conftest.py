@@ -54,7 +54,7 @@ def generator_types_mock() -> pd.DataFrame:
     return pd.DataFrame(
         columns=["name", "build_time", "life_time", "power_utilization"],
         data=[
-            ["GEN_TYPE_1", 0, 20, 0.9],
+            ["GEN_TYPE_1", 0, 20, np.nan],
             ["GEN_TYPE_2", 1, 30, 0.9],
             ["GEN_TYPE_3", 0, 15, 0.9],
         ],
@@ -99,6 +99,19 @@ def generator_type_energy_type_mock() -> pd.DataFrame:
             ["GEN_TYPE_2", ELECTRICITY],
             ["GEN_TYPE_3", HEATING],
         ],
+    )
+
+
+@pytest.fixture
+def energy_curtailment_cost_mock() -> pd.DataFrame:
+    """energy curtailemnt cost mock"""
+    return pd.DataFrame(
+        {
+            "year_idx": [0, 1, 2, 3, 4],
+            "GEN_TYPE_1": [50] * 5,
+            "GEN_TYPE_2": [55] * 5,
+            "GEN_TYPE_3": [45] * 5,
+        }
     )
 
 
@@ -180,6 +193,14 @@ def conversion_rate_mock() -> dict[str, pd.DataFrame]:
 
 
 @pytest.fixture
+def generators_power_utilization() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=["hour_idx", "GEN_TYPE_1"],
+        data=[[hour_idx, 0.9] for hour_idx in range(8760)],
+    )
+
+
+@pytest.fixture
 def energy_source_type_parser(
     storage_types_mock: pd.DataFrame,
     generator_types_mock: pd.DataFrame,
@@ -190,6 +211,8 @@ def energy_source_type_parser(
     conversion_rate_mock: dict[str, pd.DataFrame],
     cost_parameters_mock: pd.DataFrame,
     energy_source_evolution_limits_mock: pd.DataFrame,
+    energy_curtailment_cost_mock: pd.DataFrame,
+    generators_power_utilization: pd.DataFrame,
 ) -> EnergySourceTypeParser:
     return EnergySourceTypeParser(
         cost_parameters_df=cost_parameters_mock,
@@ -201,5 +224,8 @@ def energy_source_type_parser(
         generators_emission_reduction=emission_reduction_mock,
         generators_energy_type=generator_type_energy_type_mock,
         generators_fuel_type=generator_fuel_type_mock,
+        generators_power_utilization=generators_power_utilization,
         n_years=default_network_constants.n_years,
+        n_hours=default_network_constants.n_hours,
+        curtailment_cost=energy_curtailment_cost_mock,
     )

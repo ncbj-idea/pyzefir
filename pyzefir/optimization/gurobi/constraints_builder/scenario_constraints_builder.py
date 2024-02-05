@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from gurobipy import quicksum
+from gurobipy import LinExpr, MLinExpr, quicksum
 
 from pyzefir.optimization.gurobi.constraints_builder.builder import (
     PartialConstraintsBuilder,
@@ -39,6 +39,7 @@ from pyzefir.optimization.gurobi.preprocessing.variables.generator_variables imp
 from pyzefir.optimization.gurobi.preprocessing.variables.storage_variables import (
     StorageVariables,
 )
+from pyzefir.utils.functions import invert_dict_of_sets
 
 
 class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
@@ -51,9 +52,16 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         self.energy_source_type_capacity_constraints()
         self.energy_source_capacity_constraints()
         self.emission_constraints()
+        self._min_generation_fraction_constraint()
+        self._max_generation_fraction_constraint()
+        self.power_reserve_constraint()
 
     def max_fuel_consumption_constraints(self) -> None:
         for fuel_idx in self.indices.FUEL.mapping.keys():
+            if fuel_idx not in self.parameters.fuel.availability or all(
+                np.isnan(self.parameters.fuel.availability[fuel_idx])
+            ):
+                continue
             max_fuel_availability = self.parameters.fuel.availability[fuel_idx]
             for year_idx in self.indices.Y.mapping.keys():
                 if np.isnan(max_fuel_availability[year_idx]):
@@ -311,3 +319,94 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                             ],
                             name=f"{et}_{y_idx}_EMISSIONS_CONSTRAINT",
                         )
+
+    def _min_generation_fraction_constraint(self) -> None:
+        min_gen_frac_params = (
+            self.parameters.scenario_parameters.min_generation_fraction
+        )
+        if min_gen_frac_params is not None:
+            for et, min_gen_frac_per_et in min_gen_frac_params.items():
+                for tags, min_gen_frac in min_gen_frac_per_et.items():
+                    tag, subtag = tags
+                    (
+                        tag_gen_idxs,
+                        subtag_gen_idxs,
+                        tag_stor_idxs,
+                        subtag_stor_idxs,
+                    ) = self._get_tags(tag, subtag)
+                    self.model.addConstr(
+                        self._expr_gen(et, subtag_gen_idxs, subtag_stor_idxs)
+                        >= self._expr_gen(et, tag_gen_idxs, tag_stor_idxs)
+                        * min_gen_frac,
+                        name="MIN_GENERATION_FFRACTION_CONSTRAINT",
+                    )
+
+    def _max_generation_fraction_constraint(self) -> None:
+        max_gen_frac_params = (
+            self.parameters.scenario_parameters.max_generation_fraction
+        )
+        if max_gen_frac_params is not None:
+            for et, max_gen_frac_per_et in max_gen_frac_params.items():
+                for tags, max_gen_frac in max_gen_frac_per_et.items():
+                    tag, subtag = tags
+                    (
+                        tag_gen_idxs,
+                        subtag_gen_idxs,
+                        tag_stor_idxs,
+                        subtag_stor_idxs,
+                    ) = self._get_tags(tag, subtag)
+                    self.model.addConstr(
+                        self._expr_gen(et, subtag_gen_idxs, subtag_stor_idxs)
+                        <= self._expr_gen(et, tag_gen_idxs, tag_stor_idxs)
+                        * max_gen_frac,
+                        name="MAX_GENERATION_FFRACTION_CONSTRAINT",
+                    )
+
+    def _get_tags(
+        self, tag: int, subtag: int
+    ) -> tuple[set[int], set[int], set[int], set[int]]:
+        tag_gen_idxs = ScenarioConstraintsBuilder._unit_of_given_tag(
+            self.parameters.gen.tags, tag
+        )
+        subtag_gen_idxs = ScenarioConstraintsBuilder._unit_of_given_tag(
+            self.parameters.gen.tags, subtag
+        )
+        tag_stor_idxs = ScenarioConstraintsBuilder._unit_of_given_tag(
+            self.parameters.stor.tags, tag
+        )
+        subtag_stor_idxs = ScenarioConstraintsBuilder._unit_of_given_tag(
+            self.parameters.stor.tags, subtag
+        )
+        return tag_gen_idxs, subtag_gen_idxs, tag_stor_idxs, subtag_stor_idxs
+
+    def _expr_gen(
+        self, et: str, gen_idxs: set[int], stor_idxs: set[int]
+    ) -> MLinExpr | LinExpr | float:
+        gen_et_var = self.variables.gen.gen_et
+        stor_et_var = self.variables.stor.gen
+        return quicksum(
+            gen_et_var[gen_idx, self.indices.ET.inverse[et], :, :]
+            for gen_idx in gen_idxs
+        ) + quicksum(stor_et_var[stor_idx, :, :] for stor_idx in stor_idxs)
+
+    @staticmethod
+    def _unit_of_given_tag(unit_tags: dict[int, set[int]], tag_idx: int) -> set[int]:
+        """returns set of units of a given tag"""
+        return {gen_idx for gen_idx, tag_set in unit_tags.items() if tag_idx in tag_set}
+
+    def power_reserve_constraint(self) -> None:
+        power_reserves = self.parameters.scenario_parameters.power_reserves
+        cap = self.variables.gen.cap
+        gen_et = self.variables.gen.gen_et
+        gens_of_tag = invert_dict_of_sets(self.parameters.gen.tags)
+        for energy_type, tag_to_reserve in power_reserves.items():
+            et = self.indices.ET.inverse[energy_type]
+            for tag, reserve in tag_to_reserve.items():
+                self.model.addConstr(
+                    quicksum(
+                        cap[gen_idx, :] - gen_et[gen_idx, et, :, :]
+                        for gen_idx in gens_of_tag[tag]
+                    )
+                    >= reserve,
+                    name=f"ENERGY_TYPE_{et}_TAG_{tag}_POWER_RESERVE_CONSTRAINT",
+                )

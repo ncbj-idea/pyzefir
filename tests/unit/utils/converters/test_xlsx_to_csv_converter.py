@@ -119,6 +119,8 @@ def test_handle_sheet_name_replaces_characters(
                 "Fractions",
                 "N_Consumers",
                 "Emission_Fees",
+                "Generation_Fraction",
+                "Curtailment_Cost",
             ],
             "scenarios",
             None,
@@ -402,14 +404,14 @@ def test_xlsx_to_csv_convert_xlsx_to_csv(
 def test_xlsx_to_csv_convert(scenario_path_str: str | None) -> None:
     amount_of_csv_files = {
         "initial_state": 2,
-        "structure": 14,
+        "structure": 16,
         "fuels": 2,
         "capacity_factors": 1,
         "demand_chunks": 2,
-        "generator_types": 5,
+        "generator_types": 6,
         "storage_types": 1,
         "demand_types": 2,
-        "scenarios": 11,
+        "scenarios": 13,
         "conversion_rate": 1,
     }
     input_files_path = get_resources("convert_input_structure")

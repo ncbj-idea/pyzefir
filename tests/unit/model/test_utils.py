@@ -19,7 +19,7 @@ import pandas as pd
 import pytest
 
 from pyzefir.model.exceptions import NetworkValidatorException
-from pyzefir.model.utils import validate_series
+from pyzefir.model.utils import check_interval, validate_series
 from tests.unit.model.test_network_elements.helpers import assert_same_exception_list
 
 
@@ -115,3 +115,52 @@ def test_validate_series(
     validate_series(**kwargs, exception_list=actual_exception_list)
 
     assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@pytest.mark.parametrize(
+    "value, is_lower_closed, is_upper_closed",
+    [
+        pytest.param(
+            -2,
+            True,
+            True,
+            id="value_below_lower_bound_interval_closed",
+        ),
+        pytest.param(
+            0,
+            False,
+            True,
+            id="value_below_lower_bound_interval_open",
+        ),
+        pytest.param(
+            150,
+            True,
+            True,
+            id="value_below_lower_bound_interval_closed",
+        ),
+        pytest.param(
+            3,
+            True,
+            False,
+            id="value_below_lower_bound_interval_closed",
+        ),
+    ],
+)
+def test_check_interval(
+    value: int | float,
+    is_lower_closed: bool,
+    is_upper_closed: bool,
+) -> None:
+    lower_bound = 0
+    upper_bound = 3
+
+    assert (
+        check_interval(
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            value=value,
+            is_lower_bound_closed=is_lower_closed,
+            is_upper_bound_closed=is_upper_closed,
+        )
+        is False
+    )

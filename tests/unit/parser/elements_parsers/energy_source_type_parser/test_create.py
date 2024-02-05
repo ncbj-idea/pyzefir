@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy as np
+
 from pyzefir.model.network_elements import GeneratorType, StorageType
 from pyzefir.parser.elements_parsers.energy_source_type_parser import (
     EnergySourceTypeParser,
@@ -40,3 +42,13 @@ def test_create_energy_source_type(
 
     assert len(storage_types) == len(stor_types_df)
     assert set(stor_types_df.index) == set(s.name for s in storage_types)
+    idx = 0
+    for name in list(energy_source_type_parser.curtailment_cost)[1:]:
+        assert np.all(
+            generator_types[idx].energy_curtailment_cost
+            == energy_source_type_parser.curtailment_cost[name]
+        )
+        assert len(generator_types[idx].energy_curtailment_cost) == len(
+            energy_source_type_parser.curtailment_cost.year_idx
+        )
+        idx += 1

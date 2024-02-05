@@ -29,6 +29,8 @@ class ScenarioSheetName(StrEnum):
     CONSTANTS = "Constants"
     RELATIVE_EMISSION_LIMITS = "Relative Emission Limits"
     EMISSION_FEES = "Emission Fees"
+    GENERATION_FRACTION = "Generation Fraction"
+    CURTAILMENT_COST = "Curtailment Cost"
 
 
 class ScenarioSheetsColumnName(StrEnum):
@@ -58,3 +60,4 @@ class ScenarioSheetsColumnName(StrEnum):
     EMISSION_FEES = auto()
     EMISSION_FEE = auto()
     EMISSION_TYPE = auto()
+    CURTAILMENT = auto()

@@ -224,14 +224,10 @@ def test_aggregate_validation_should_rise_exception(
                     "aggregate_1 do not sum to 1, but to 0 instead"
                 ),
                 NetworkValidatorException(
-                    "Fraction of local balancing stack stack_1 in aggregated "
-                    "consumer aggregate_1 must be a number from [0,1] interval,"
-                    " but 2 given instead"
+                    "The value of the stack_1 is inconsistent with th expected bounds of the interval: 0 <= 2 <= 1"
                 ),
                 NetworkValidatorException(
-                    "Fraction of local balancing stack stack_2 in aggregated "
-                    "consumer aggregate_1 must be a number from [0,1] interval,"
-                    " but -2 given instead"
+                    "The value of the stack_2 is inconsistent with th expected bounds of the interval: 0 <= -2 <= 1"
                 ),
             ],
         ),
@@ -786,6 +782,7 @@ def test_binary_fraction(
             CO2_EMISSION: np.nan,
             PM10_EMISSION: np.nan,
         },
+        power_reserves={},
     )
     aggregate_consumer.stack_base_fraction = stack_base_fraction
     setattr(aggregate_consumer, fraction_name, fraction)

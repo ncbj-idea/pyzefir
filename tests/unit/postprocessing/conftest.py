@@ -159,7 +159,23 @@ def bus_results() -> ExportableBusResults:
             "data2": pd.DataFrame(
                 {"sample_1": [0.9, 0.18, 0.054, 0.0072], "sample_2": [18, 36, 54, 72]}
             ),
-        }
+        },
+        shift_minus={
+            "data1": pd.DataFrame(
+                {"sample_1": [15, 30, 45, 60], "sample_2": [0.75, 0.15, 0.045, 0.006]}
+            ),
+            "data2": pd.DataFrame(
+                {"sample_1": [0.9, 0.18, 0.054, 0.0072], "sample_2": [18, 36, 54, 72]}
+            ),
+        },
+        shift_plus={
+            "data1": pd.DataFrame(
+                {"sample_1": [15, 30, 45, 60], "sample_2": [0.75, 0.15, 0.045, 0.006]}
+            ),
+            "data2": pd.DataFrame(
+                {"sample_1": [0.9, 0.18, 0.054, 0.0072], "sample_2": [18, 36, 54, 72]}
+            ),
+        },
     )
 
 

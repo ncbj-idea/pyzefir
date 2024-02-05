@@ -97,7 +97,8 @@ class NetworkElement(ABC):
                 )
             exception_list.append(
                 NetworkValidatorException(
-                    f"{self.__class__.__name__} attribute '{attr}' for {self.name} must be an instance of "
+                    f"{self.__class__.__name__} attribute '{attr}' for {self.name} "
+                    "must be an instance of "
                     f"{attr_type}, but it is an instance of {type(getattr(self, attr))} instead"
                 )
             )

@@ -18,6 +18,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import Type
 
+import numpy as np
 import pandas as pd
 
 from pyzefir.model.exceptions import (
@@ -25,8 +26,7 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network import Network, NetworkElementsDict
-from pyzefir.model.network_elements import AggregatedConsumer, Bus, Storage
-from pyzefir.model.network_elements.energy_sources.generator import Generator
+from pyzefir.model.network_elements import AggregatedConsumer, Bus, Generator, Storage
 
 
 class BasicValidator(ABC):
@@ -48,6 +48,8 @@ class NetworkValidator:
             BaseTotalEmissionValidation,
             BaseCapacityValidator,
             NetworkElementsValidation,
+            NetworkGenerationFraction,
+            PowerReserveValidation,
         )
 
     def _validate(self, *validators: Type[BasicValidator]) -> None:
@@ -57,6 +59,108 @@ class NetworkValidator:
         if exception_list:
             raise NetworkValidatorExceptionGroup(
                 "Following errors found during network validation: ", exception_list
+            )
+
+
+class PowerReserveValidation(BasicValidator):
+    @staticmethod
+    def validate(
+        network: Network, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        if PowerReserveValidation._validate_power_reserves_type(
+            network.constants.power_reserves, exception_list
+        ) and set(
+            [
+                key
+                for value_dict in network.constants.power_reserves.values()
+                for key in value_dict.keys()
+            ]
+        ):
+            generators_with_tags = [
+                network.generators[gen_name]
+                for gen_name in network.generators
+                if network.generators[gen_name].tags
+            ]
+            PowerReserveValidation._validate_power_reserves_tags(
+                network, exception_list
+            )
+            PowerReserveValidation._validate_energy_type_matching(
+                network, generators_with_tags, exception_list
+            )
+
+    @staticmethod
+    def _validate_power_reserves_type(
+        power_reserves: dict[str, dict[str, float]],
+        exception_list: list[NetworkValidatorException],
+    ) -> bool:
+        if not (
+            isinstance(power_reserves, dict)
+            and all(
+                isinstance(k, str)
+                and isinstance(internal_dict, dict)
+                and all(
+                    isinstance(kk, str) and isinstance(vv, (int, float))
+                    for kk, vv in internal_dict.items()
+                )
+                for k, internal_dict in power_reserves.items()
+            )
+        ):
+            exception_list.append(
+                NetworkValidatorException(
+                    "Power reserve must be type of dict[str, dict[str, float]]."
+                )
+            )
+            return False
+        return True
+
+    @staticmethod
+    def _validate_energy_type_matching(
+        network: Network,
+        generators_with_tags: list[Generator],
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        for ee_type, tags in network.constants.power_reserves.items():
+            for tag in tags:
+                gen_with_tag = [gen for gen in generators_with_tags if tag in gen.tags]
+                for gen in gen_with_tag:
+                    if (
+                        ee_type
+                        not in network.generator_types[
+                            gen.energy_source_type
+                        ].energy_types
+                    ):
+                        exception_list.append(
+                            NetworkValidatorException(
+                                f"Generator: {gen.name} included in the tag: {tag} "
+                                f"assigned to a given power reserve does not obtain "
+                                f"the type of energy: {ee_type} that is assigned to the given power reserve."
+                            )
+                        )
+
+    @staticmethod
+    def _validate_power_reserves_tags(
+        network: Network, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        power_reserve_tags = set(
+            [
+                key
+                for value_dict in network.constants.power_reserves.values()
+                for key in value_dict.keys()
+            ]
+        )
+        gen_tags = set(
+            [
+                tag
+                for gen_name in network.generators.keys()
+                for tag in network.generators[str(gen_name)].tags
+            ]
+        )
+        if diff := sorted(power_reserve_tags.symmetric_difference(gen_tags)):
+            exception_list.append(
+                NetworkValidatorException(
+                    f"All tags assigned to a given power reserve must be defined and contain only generators, "
+                    f"but tags {diff} do not assign to generators, were missed or extra added."
+                )
             )
 
 
@@ -374,3 +478,170 @@ class BaseCapacityValidator(BasicValidator):
             stack_aggr_map=stack_aggr_map,
             exception_list=exception_list,
         )
+
+
+class NetworkGenerationFraction(BasicValidator):
+    @staticmethod
+    def _validate_min_max_gen_frac(
+        min_max: dict[str, dict[tuple[str, str], float]],
+        message: str,
+        energy_types: list[str],
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        """Check if all min/max generation fraction are in [0,1] and if energy type is correct"""
+
+        for energy_type, tags_gen_frac in min_max.items():
+            for tags_pair, generation_fraction in tags_gen_frac.items():
+                if energy_type not in energy_types:
+                    exception_list.append(
+                        NetworkValidatorException(
+                            f"Incorrect energy type <{energy_type}> for tags <{tags_pair}>"
+                        )
+                    )
+                if (
+                    generation_fraction < 0
+                    or generation_fraction > 1
+                    or np.isnan(generation_fraction)
+                ):
+                    exception_list.append(
+                        NetworkValidatorException(
+                            f"{message} generation fraction <{generation_fraction}> for energy type <{energy_type}>, "
+                            f"tags <{tags_pair}> "
+                            f"must be a number greater than zero and "
+                            f"smaller than one "
+                        )
+                    )
+
+    @staticmethod
+    def _get_n_tag_elemets(
+        tag: str, subtag: str, network: Network
+    ) -> tuple[int, int, int, int]:
+        gen, stor = network.generators, network.storages
+        n_gen_tag = len([v.tags for k, v in gen.items() if tag in v.tags])
+        n_stor_tag = len([v.tags for k, v in stor.items() if tag in v.tags])
+        n_gen_subtag = len([v.tags for k, v in gen.items() if subtag in v.tags])
+        n_stor_subtag = len([v.tags for k, v in stor.items() if subtag in v.tags])
+        return n_gen_tag, n_stor_tag, n_gen_subtag, n_stor_subtag
+
+    @staticmethod
+    def _validate_proper_subtags(
+        min_max: dict[str, dict[tuple[str, str], float]],
+        network: Network,
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        """Check subtag is a proper set"""
+        for energy_type, tags_gen_frac in min_max.items():
+            for tags in tags_gen_frac.keys():
+                tag, subtag = tags
+                (
+                    n_gen_tag,
+                    n_stor_tag,
+                    n_gen_subtag,
+                    n_stor_subtag,
+                ) = NetworkGenerationFraction._get_n_tag_elemets(tag, subtag, network)
+                if n_gen_tag + n_stor_tag <= n_gen_subtag + n_stor_subtag:
+                    exception_list.append(
+                        NetworkValidatorException(
+                            f"Subtag <{subtag}> is not a proper subset of the tag set <{tag}>"
+                        )
+                    )
+
+    @staticmethod
+    def _gen_et_validation(
+        energy_types_dict: dict[str, str],
+        network: Network,
+        tag: str,
+        energy_type: str,
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        gen = network.generators
+        gens_et = [
+            {
+                "name": v.name,
+                "energy_type": {
+                    energy_types_dict[bus]
+                    for bus in v.buses.union({v.bus})
+                    if bus is not None
+                },
+            }
+            for k, v in gen.items()
+            if tag in v.tags
+        ]
+        for gen_et in gens_et:
+            if energy_type not in gen_et["energy_type"]:
+                unit_name = gen_et["name"]
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"Energy type for generators of the tag: {tag} "
+                        f"for <{unit_name}> do not match energy type in Generation Fraction"
+                    )
+                )
+
+    @staticmethod
+    def _stor_et_validation(
+        energy_types_dict: dict[str, str],
+        network: Network,
+        tag: str,
+        energy_type: str,
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        stor = network.storages
+        stors_et = [
+            {
+                "name": v.name,
+                "energy_type": {
+                    energy_types_dict[bus] for bus in {v.bus} if bus is not None
+                },
+            }
+            for k, v in stor.items()
+            if tag in v.tags
+        ]
+        for stor_et in stors_et:
+            if energy_type not in stor_et["energy_type"]:
+                unit_name = stor_et["name"]
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"Energy type for storages of the tag: {tag} "
+                        f"for <{unit_name}> do not match energy type in Generation Fraction"
+                    )
+                )
+
+    @staticmethod
+    def _validate_tag_energy_types(
+        min_max: dict[str, dict[tuple[str, str], float]],
+        network: Network,
+        exception_list: list[NetworkValidatorException],
+    ) -> None:
+        """Check tags energy types"""
+        for energy_type, tags_gen_frac in min_max.items():
+            et = {v.name: v.energy_type for k, v in network.buses.items()}
+            for tags in tags_gen_frac.keys():
+                for tag in tags:
+                    NetworkGenerationFraction._gen_et_validation(
+                        et, network, tag, energy_type, exception_list
+                    )
+                    NetworkGenerationFraction._stor_et_validation(
+                        et, network, tag, energy_type, exception_list
+                    )
+
+    @staticmethod
+    def validate(
+        network: Network, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        energy_types = network.energy_types
+        min_gen_fr = network.constants.min_generation_fraction
+        max_gen_fr = network.constants.max_generation_fraction
+        NetworkGenerationFraction._validate_min_max_gen_frac(
+            min_gen_fr, "Min", energy_types, exception_list
+        )
+        NetworkGenerationFraction._validate_min_max_gen_frac(
+            max_gen_fr, "Max", energy_types, exception_list
+        )
+
+        for min_max_gen_fr in (min_gen_fr, max_gen_fr):
+            NetworkGenerationFraction._validate_proper_subtags(
+                min_max_gen_fr, network, exception_list
+            )
+            NetworkGenerationFraction._validate_tag_energy_types(
+                min_max_gen_fr, network, exception_list
+            )

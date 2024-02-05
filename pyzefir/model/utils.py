@@ -29,6 +29,9 @@ class NetworkConstants:
     n_hours: int
     relative_emission_limits: dict[str, pd.Series]
     base_total_emission: dict[str, float | int]
+    power_reserves: dict[str, dict[str, float | int]]
+    min_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
+    max_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
     binary_fraction: bool = False
 
 
@@ -158,3 +161,33 @@ def validate_dict_type(
         is_validation_ok = False
 
     return is_validation_ok
+
+
+def check_interval(
+    lower_bound: int | float,
+    upper_bound: int | float,
+    value: int | float,
+    is_lower_bound_closed: bool = True,
+    is_upper_bound_closed: bool = True,
+) -> bool:
+    """
+    Checks if the given value falls within the specified interval defined by the lower and upper bounds.
+
+    Args:
+        lower_bound (int or float): The lower bound of the interval.
+        upper_bound (int or float): The upper bound of the interval.
+        value (int or float): The value to be checked against the interval.
+        is_lower_bound_closed (bool, optional): Whether the lower bound is closed (inclusive). Default is True.
+        is_upper_bound_closed (bool, optional): Whether the upper bound is closed (inclusive). Default is True.
+
+    Returns:
+        bool
+    """
+
+    return (
+        (is_lower_bound_closed and lower_bound <= value)
+        or (not is_lower_bound_closed and lower_bound < value)
+    ) and (
+        (is_upper_bound_closed and value <= upper_bound)
+        or (not is_upper_bound_closed and value < upper_bound)
+    )

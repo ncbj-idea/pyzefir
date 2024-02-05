@@ -28,6 +28,7 @@ class GeneratorTypeParameters(ModelParameters):
     def __init__(
         self,
         generator_types: NetworkElementsDict,
+        generators: NetworkElementsDict,
         indices: Indices,
         scale: float = 1.0,
     ) -> None:
@@ -81,3 +82,13 @@ class GeneratorTypeParameters(ModelParameters):
             generator_types, "tags", indices.TGEN, indices.T_TAGS
         )
         """ generator type tags """
+        self.energy_curtailment_cost = self.fetch_element_prop(
+            generator_types,
+            indices.TGEN,
+            "energy_curtailment_cost",
+            sample=indices.Y.ii,
+        )
+        self.power_utilization = self.fetch_element_prop(
+            generator_types, indices.TGEN, "power_utilization", sample=indices.H.ii
+        )
+        """ power utilization factor """

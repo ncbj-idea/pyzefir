@@ -42,7 +42,7 @@ class Fuel(NetworkElement):
     """
     Emission per one unit of used fuel
     """
-    availability: pd.Series
+    availability: pd.Series | None
     """
     Maximal amount of fuel availability in each year
     """
@@ -60,12 +60,13 @@ class Fuel(NetworkElement):
         network: Network,
         exception_list: list[NetworkValidatorException],
     ) -> None:
-        validate_series(
-            name="Availability",
-            series=self.availability,
-            length=network.constants.n_years,
-            exception_list=exception_list,
-        )
+        if self.availability is not None:
+            validate_series(
+                name="Availability",
+                series=self.availability,
+                length=network.constants.n_years,
+                exception_list=exception_list,
+            )
         validate_series(
             name="Cost",
             series=self.cost,

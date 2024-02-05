@@ -25,6 +25,7 @@ from pyzefir.model.network_elements.bus import Bus
 from pyzefir.model.network_elements.energy_sources.generator import Generator
 from pyzefir.model.network_elements.fuel import Fuel
 from tests.unit.defaults import (
+    DEFAULT_HOURS,
     ELECTRICITY,
     HEATING,
     default_generator_type,
@@ -305,4 +306,71 @@ def test_conversion_rate_validators(
 ) -> None:
     actual_exception_list: list[NetworkValidatorException] = []
     gen_type._validate_conversion_rate(actual_exception_list, network)
+    assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@pytest.mark.parametrize(
+    "params, exception_list",
+    [
+        pytest.param(
+            {
+                "power_utilization": pd.Series(
+                    data=[1.0] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                )
+            },
+            [],
+            id="correct_power_utilization",
+        ),
+        pytest.param(
+            {
+                "power_utilization": 1.0,
+            },
+            [
+                NetworkValidatorException(
+                    "power_utilization must be a pandas Series, but float given"
+                )
+            ],
+            id="incorrect_power_utilization_type",
+        ),
+        pytest.param(
+            {
+                "power_utilization": pd.Series(
+                    data=[-1.0] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+            },
+            [
+                NetworkValidatorException(
+                    "Power utilization values for default_generator_type must be greater "
+                    f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS))} it is not"
+                )
+            ],
+            id="incorrect_power_utilization_values",
+        ),
+        pytest.param(
+            {
+                "power_utilization": pd.Series(
+                    data=[-1.0] * (DEFAULT_HOURS - 2) + [2.0, 2.5],
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+            },
+            [
+                NetworkValidatorException(
+                    "Power utilization values for default_generator_type must be greater "
+                    f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS-2))} it is not"
+                )
+            ],
+            id="incorrect_mixed_power_utilization_values",
+        ),
+    ],
+)
+def test_power_utilization(
+    params: dict,
+    exception_list: list[NetworkValidatorException],
+    network: Network,
+) -> None:
+    gen_type = GeneratorType(**default_generator_type | params)
+    actual_exception_list: list[NetworkValidatorException] = []
+    gen_type._validate_power_utilization(network, actual_exception_list)
     assert_same_exception_list(actual_exception_list, exception_list)

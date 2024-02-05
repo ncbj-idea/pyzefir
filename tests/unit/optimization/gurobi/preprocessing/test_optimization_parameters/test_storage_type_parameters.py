@@ -43,6 +43,7 @@ from tests.unit.optimization.gurobi.preprocessing.test_optimization_parameters.u
                 "min_capacity_increase": pd.Series([np.nan, 4.0, 4.2, 4.1, 4.6]),
                 "max_capacity_increase": pd.Series([np.nan, 0.5, 20.0, 0.1, 30.0]),
                 "energy_loss": 0.1,
+                "power_utilization": 0.9,
             },
             id="full_year_range+every_storage_type+every_param",
         ),
@@ -90,6 +91,11 @@ def test_create(
         complete_network, indices, opt_config
     ).tstor
 
+    # assert (
+    #     storage_params.power_utilization[storage_id]
+    #     == storage_type.power_utilization
+    # )
+
     for storage_type_id, storage_type_name in indices.TSTOR.mapping.items():
         storage_type = complete_network.storage_types[storage_type_name]
 
@@ -99,6 +105,7 @@ def test_create(
             "min_capacity_increase",
             "max_capacity_increase",
             "energy_loss",
+            "power_utilization",
         ]:
             if param in params_to_change:
                 assert vectors_eq_check(

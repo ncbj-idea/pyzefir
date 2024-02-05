@@ -76,6 +76,8 @@ class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
                 max([fee_array.max() for fee_array in self.parameters.tf.fee.values()])
             )
             * self.parameters.scenario_parameters.hourly_scale
+            if len(self.parameters.tf.fee.values()) != 0
+            else 0.0
         )
         return max(
             max(
