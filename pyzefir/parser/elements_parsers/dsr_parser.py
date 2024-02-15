@@ -34,12 +34,16 @@ class DSRParser(AbstractElementParser):
                 compensation_factor=row["compensation_factor"],
                 balancing_period_len=row["balancing_period_len"],
                 penalization=row["penalization"],
-                relative_shift_limit=row["relative_shift_limit"]
-                if not pd.isnull(row["relative_shift_limit"])
-                else None,
-                abs_shift_limit=row["abs_shift_limit"]
-                if not pd.isnull(row["abs_shift_limit"])
-                else None,
+                relative_shift_limit=(
+                    row["relative_shift_limit"]
+                    if not pd.isnull(row["relative_shift_limit"])
+                    else None
+                ),
+                abs_shift_limit=(
+                    row["abs_shift_limit"]
+                    if not pd.isnull(row["abs_shift_limit"])
+                    else None
+                ),
             )
             for row in self.dsr_df.to_dict(orient="records")
         )

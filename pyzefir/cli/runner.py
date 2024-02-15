@@ -24,8 +24,8 @@ from pyzefir.model.exceptions import NetworkValidatorExceptionGroup
 from pyzefir.model.network import Network
 from pyzefir.model.network_validator import NetworkValidator
 from pyzefir.optimization.exportable_results import ExportableResults
-from pyzefir.optimization.gurobi.model import GurobiOptimizationModel
 from pyzefir.optimization.input_data import OptimizationInputData
+from pyzefir.optimization.linopy.model import LinopyOptimizationModel
 from pyzefir.optimization.opt_config import OptConfig
 from pyzefir.optimization.results import Results
 from pyzefir.parser.csv_parser import CsvParser
@@ -62,7 +62,7 @@ class CliRunner:
         ):
             self.logger.info("Triggered structure creator to run ... ")
             create_structure(
-                input_path=self.config_params.input_path,
+                input_path=self.config_params.structure_creator_input_path,
                 output_path=self.config_params.input_path,
                 scenario_name=self.config_params.scenario,
                 n_hours=self.config_params.n_hours,
@@ -121,10 +121,11 @@ class CliRunner:
             money_scale=self.config_params.money_scale,
             ens=self.config_params.ens,
             use_hourly_scale=self.config_params.use_hourly_scale,
+            solver_name=self.config_params.solver,
         )
 
     def _run_optimization(self, network: Network, opt_config: OptConfig) -> Results:
-        engine = GurobiOptimizationModel()
+        engine = LinopyOptimizationModel()
         self.logger.info("Building optimization model...")
         engine.build(OptimizationInputData(network, opt_config))
         self.logger.info("Done.")

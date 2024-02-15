@@ -1,0 +1,4 @@
+---
+include:
+  - project: cae/zefirlib/pyzefir-cicd
+    file: pyzefir-gitlab-cicd.yml

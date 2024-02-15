@@ -17,6 +17,7 @@
 import re
 from pathlib import Path
 
+import linopy
 import numpy as np
 import pytest
 
@@ -30,6 +31,7 @@ from pyzefir.utils.config_parser import (
     validate_file_path,
     validate_input_format,
     validate_sol_dump_path,
+    validate_solver_name,
 )
 from tests.unit.utils.config.utils import dump_vector_data_from_csv
 
@@ -213,3 +215,22 @@ def test_load_vector_from_csv(data: np.ndarray, tmp_path: Path) -> None:
     dump_vector_data_from_csv(data, tmp_path / "test_file.csv")
     arr = load_vector_from_csv(tmp_path / "test_file.csv", param_name="no_name")
     assert np.all(arr == arr)
+
+
+@pytest.mark.parametrize("solver_name", linopy.available_solvers)
+def test_validate_solver_name(solver_name: str) -> None:
+    """Test if validate_solver_name will not raise ConfigException for valid input."""
+    try:
+        validate_solver_name(solver_name)
+    except ConfigException:
+        pytest.fail()
+
+
+@pytest.mark.parametrize("solver_name", ["duplex", "other"])
+def test_validate_solver_name_invalid(solver_name: str) -> None:
+    """Test if validate_solver_name will raise ConfigException for invalid input."""
+    msg = re.escape(
+        f"provided solver_name {solver_name} is different than valid solvers: {linopy.available_solvers}"
+    )
+    with pytest.raises(ConfigException, match=msg):
+        validate_solver_name(solver_name)

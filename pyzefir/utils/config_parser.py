@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, overload
 
+import linopy
 import numpy as np
 import pandas as pd
 
@@ -42,9 +43,9 @@ class ConfigParams:
     csv_dump_path: Path | None
     """path to the folder, where converted (xlsx -> csv) files will be stored [default = output_path/model-csv-input]"""
     sol_dump_path: Path
-    """path where gurobi *.sol file will be dumped [default = output_path/results.sol]"""
+    """path where linopy *.sol file will be dumped [default = output_path/results.sol]"""
     opt_logs_path: Path
-    """path where gurobi log file will be dumped [default = output_path/gurobi.log]"""
+    """path where linopy log file will be dumped [default = output_path/linopy.log]"""
     year_sample: np.ndarray | None
     """indices of years forming year sample [if not provided, full year index will be used]"""
     hour_sample: np.ndarray | None
@@ -63,6 +64,9 @@ class ConfigParams:
     """ number of years in which the simulation will be calculated (used for structure creator) """
     n_hours: int | None
     """ number of hours in which the simulation will be calculated (used for structure creator) """
+    solver: str | None = None
+    structure_creator_input_path: Path | None = None
+    """ path to the creator input files """
 
     def __post_init__(self) -> None:
         """Validate parameters."""
@@ -75,11 +79,16 @@ class ConfigParams:
         validate_csv_dump_path(self.csv_dump_path, self.input_format)
         validate_sol_dump_path(self.sol_dump_path)
         validate_dir_path(self.opt_logs_path.parent, "opt_logs_path parent")
-        validate_structure_create(self.n_hours, self.n_years, self.input_path)
+        validate_solver_name(self.solver)
+        validate_structure_create(
+            self.n_hours, self.n_years, self.structure_creator_input_path
+        )
 
 
 def validate_structure_create(
-    n_hours: int | None, n_years: int | None, input_path: Path
+    n_hours: int | None,
+    n_years: int | None,
+    input_path: Path | None,
 ) -> None:
     """Validate if are the same type and if both are int check if input_path exists"""
     if (n_hours is None) != (n_years is None):
@@ -87,10 +96,8 @@ def validate_structure_create(
             "Both parameters must have the same int or None value,"
             f"and they do n_hours: {type(n_hours)} and n_years: {type(n_years)}"
         )
-    if n_hours is not None and n_years is not None:
-        validate_dir_path(
-            input_path / "structure_creator_resources", "structure creator"
-        )
+    if n_hours is not None and n_years is not None and input_path is not None:
+        validate_dir_path(input_path, "structure creator")
 
 
 def validate_file_path(file_path: Path, param_name: str) -> None:
@@ -167,6 +174,14 @@ def validate_csv_dump_path(csv_dump_path: Path | None, input_format: str) -> Non
         validate_dir_path(csv_dump_path, param_name="csv_dump_path", create=True)
 
 
+def validate_solver_name(solver_name: str | None) -> None:
+    """Validate if solver_name is correct."""
+    if solver_name is not None and solver_name not in linopy.available_solvers:
+        raise ConfigException(
+            f"provided solver_name {solver_name} is different than valid solvers: {linopy.available_solvers}"
+        )
+
+
 def load_vector_from_csv(path: Path, param_name: str) -> np.ndarray:
     """Load 1 dimensional dataset (as 1D NumPy array) from given path."""
     validate_file_path(path, param_name)
@@ -192,13 +207,14 @@ class ConfigLoader:
             "money_scale": _opt,
             "ens": _opt,
             "use_hourly_scale": _opt,
+            "solver": _opt,
         },
-        "create": {"n_years": _opt, "n_hours": _opt},
+        "create": {"n_years": _opt, "n_hours": _opt, "input_path": _opt},
     }
     _sections = _mandatory_sections | _optional_sections
 
     _default_csv_dump_path_name = "model-csv-input"
-    _default_opt_log = "gurobi.log"
+    _default_opt_log = "opt.log"
     _default_sol = "results.sol"
 
     def __init__(self, config_ini_path: Path) -> None:
@@ -273,14 +289,29 @@ class ConfigLoader:
             use_hourly_scale=self.config.getboolean(
                 "optimization", "use_hourly_scale", fallback=True
             ),
-            n_years=int(n_years_raw)
-            if (n_years_raw := self.config.get("create", "n_years", fallback=None))
-            is not None
-            else None,
-            n_hours=int(n_hours_raw)
-            if (n_hours_raw := self.config.get("create", "n_hours", fallback=None))
-            is not None
-            else None,
+            n_years=(
+                int(n_years_raw)
+                if (n_years_raw := self.config.get("create", "n_years", fallback=None))
+                is not None
+                else None
+            ),
+            n_hours=(
+                int(n_hours_raw)
+                if (n_hours_raw := self.config.get("create", "n_hours", fallback=None))
+                is not None
+                else None
+            ),
+            solver=self.config.get("optimization", "solver", fallback=None),
+            structure_creator_input_path=(
+                Path(creator_input)
+                if (
+                    creator_input := self.config.get(
+                        "create", "input_path", fallback=None
+                    )
+                )
+                is not None
+                else None
+            ),
         )
 
     def _load_network_config(self) -> dict[str, Any]:
@@ -306,11 +337,11 @@ class ConfigLoader:
 
     @overload
     def _get_path(self, section: str, key: str, default: Path) -> Path:
-        ...
+        pass
 
     @overload
     def _get_path(self, section: str, key: str, default: None = None) -> Path | None:
-        ...
+        pass
 
     def _get_path(
         self, section: str, key: str, default: Path | None = None

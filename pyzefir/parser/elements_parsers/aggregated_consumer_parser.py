@@ -170,7 +170,9 @@ class AggregatedConsumerParser(AbstractElementParser):
             max_fraction_increase=fraction["max_fraction_increase"].get(
                 df_row["name"], pd.Series([np.nan] * n_years)
             ),
-            average_area=float(df_row["average_area"])
-            if not pd.isna(df_row["average_area"])
-            else None,
+            average_area=(
+                float(df_row["average_area"])
+                if not pd.isna(df_row["average_area"])
+                else None
+            ),
         )

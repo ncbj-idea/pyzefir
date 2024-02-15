@@ -1,0 +1,13 @@
+# CHANGELOG
+
+## [0.3.0] - 2024-02-16
+
+### Added
+
+- Support for open source solvers via linopy
+
+### Fixed
+- Fix structure creator
+
+### Changed
+- Use of pyproject.toml for project setup

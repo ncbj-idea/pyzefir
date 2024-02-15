@@ -35,7 +35,7 @@ class BasicValidator(ABC):
     def validate(
         network: Network, exception_list: list[NetworkValidatorException]
     ) -> None:
-        ...
+        pass
 
 
 class NetworkValidator:

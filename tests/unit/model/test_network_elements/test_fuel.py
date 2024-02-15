@@ -24,7 +24,7 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_elements import Bus, Fuel
 from tests.unit.defaults import ELECTRICITY, HEATING, default_network_constants
 from tests.unit.model.test_network_elements.helpers import assert_same_exception_list
-from tests.unit.optimization.gurobi.names import CO2, PM10
+from tests.unit.optimization.linopy.names import CO2, PM10
 
 
 @pytest.fixture()

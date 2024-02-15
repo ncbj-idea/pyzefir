@@ -54,9 +54,10 @@ def test_csv_exporter_export_group_results(
 ) -> None:
     root_path = temporary_directory / category
     expected_paths_and_sheet_names = {
-        root_path / f"{outer_key}.xlsx": list(inner_dict.keys())
-        if isinstance(inner_dict, dict)
-        else [outer_key]
+        root_path
+        / f"{outer_key}.xlsx": (
+            list(inner_dict.keys()) if isinstance(inner_dict, dict) else [outer_key]
+        )
         for outer_key, inner_dict in asdict(result).items()
     }
 

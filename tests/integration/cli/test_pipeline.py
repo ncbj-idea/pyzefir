@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import configparser
-import os
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -40,7 +39,6 @@ def test_simple_run(
         cli_run, ["--config", str(config_ini_path)], catch_exceptions=False
     )
 
-    sol_file_path, log_file_path = output_path / "file.sol", output_path / "file.log"
     csv_dump_dir_expected_content = {
         "capacity_factors",
         "demand_chunks",
@@ -63,16 +61,6 @@ def test_simple_run(
     csv_dump_dir_content = set(x.name for x in csv_dump_path.iterdir())
 
     assert result.exit_code == 0
-    assert (
-        sol_file_path.exists()
-        and sol_file_path.is_file()
-        and os.stat(sol_file_path).st_size > 0
-    )
-    assert (
-        log_file_path.exists()
-        and log_file_path.is_file()
-        and os.stat(log_file_path).st_size > 0
-    )
     assert (
         csv_dump_path.exists()
         and csv_dump_path.is_dir()

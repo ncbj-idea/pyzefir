@@ -27,16 +27,18 @@ def get_dict_vals(used_dict: dict[int, set] | None) -> set:
     return {element for value_set in used_dict.values() for element in value_set}
 
 
-def _demch_unit(
-    dmch_idx: int, dem_ch_tag: dict[int, int], unit_tags: dict[int, set[int]]
+def demand_chunk_unit_indices(
+    demand_chunk_idx: int,
+    demand_chunk_tags: dict[int, int],
+    unit_tags: dict[int, set[int]],
 ) -> set[int]:
-    """unit idx of the corresponsing demand chunk id"""
+    """unit idx of the corresponding demand chunk id"""
     """dem_ch_tag: demand chunks idx to tag idx """
     """unit _tags: unit idx to tag idx"""
     return {
-        gen_idx
-        for gen_idx, tag_set in unit_tags.items()
-        if dem_ch_tag[dmch_idx] in tag_set
+        unit_idx
+        for unit_idx, tag_set in unit_tags.items()
+        if demand_chunk_tags[demand_chunk_idx] in tag_set
     }
 
 

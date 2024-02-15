@@ -48,7 +48,7 @@ def test_valid_minimal_config_file(
     assert loaded_params.scenario == "scenario"
     assert loaded_params.input_format == "csv"
     assert loaded_params.sol_dump_path == mock_output_directory / "results.sol"
-    assert loaded_params.opt_logs_path == mock_output_directory / "gurobi.log"
+    assert loaded_params.opt_logs_path == mock_output_directory / "opt.log"
     assert loaded_params.csv_dump_path is None
     assert loaded_params.hour_sample is None
     assert loaded_params.year_sample is None

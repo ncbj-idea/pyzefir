@@ -19,8 +19,10 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import pytest
+from linopy import solvers
 
 root_input_path = Path(__file__).parent.parent.parent / "resources" / "integration_test"
 input_path = root_input_path / "simple-data-poland"
@@ -42,8 +44,15 @@ def tmp_dir_with_files() -> Path:
     yield tmp_dir
 
 
+@pytest.fixture(params=solvers.available_solvers)
+def solver(request: Any) -> str:
+    return request.param
+
+
 @pytest.fixture
-def config_parser(output_path: Path, csv_dump_path: Path) -> configparser.ConfigParser:
+def config_parser(
+    output_path: Path, csv_dump_path: Path, solver: str
+) -> configparser.ConfigParser:
     """Simple configuration file for pipeline test run."""
     config = configparser.ConfigParser()
     config.read_dict(
@@ -69,6 +78,7 @@ def config_parser(output_path: Path, csv_dump_path: Path) -> configparser.Config
                 "money_scale": 100.0,
                 "ens": False,
                 "use_hourly_scale": True,
+                "solver": solver,
             },
         }
     )
@@ -109,7 +119,11 @@ def config_parser_with_creator(
                 "ens": True,
                 "use_hourly_scale": True,
             },
-            "create": {"n_hours": 8760, "n_years": 20},
+            "create": {
+                "n_hours": 8760,
+                "n_years": 20,
+                "input_path": str(tmp_dir_with_files / "structure_creator_resources"),
+            },
         }
     )
     return config

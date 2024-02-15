@@ -45,6 +45,7 @@ class OptConfig:
         money_scale: float = 1.0,
         ens: bool = True,
         use_hourly_scale: bool = True,
+        solver_name: str | None = None,
     ):
         self.hours: ndarray = hours if isinstance(hours, ndarray) else arange(hours)
         """ sequence of all hours in a year """
@@ -53,7 +54,7 @@ class OptConfig:
         self.sol_dump_path: Path | None = sol_dump_path
         """ path where *.sol file will be dumped """
         self.opt_logs_dump_path: Path | None = opt_logs_dump_path
-        """ path where gurobi log file will be dumped """
+        """ path where linopy log file will be dumped """
         self.discount_rate: ndarray = (
             discount_rate if isinstance(discount_rate, ndarray) else zeros(years)
         )
@@ -74,6 +75,8 @@ class OptConfig:
             len(self.hours) / len(self.hour_sample) if use_hourly_scale else 1.0
         )
         """ ratio of the total number of hours to the total number of hours in given sample"""
+        self.solver_name: str | None = solver_name
+        """ name of the solver to be used """
         self.validate()
 
     def validate(self) -> None:

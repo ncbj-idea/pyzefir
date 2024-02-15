@@ -101,9 +101,9 @@ class ExcelToCsvConverter(AbstractConverter):
             valid_structure = get_dataset_config_from_categories(
                 data_category=category, dataset_name=sheet_name
             )
-            dataframe_structure: dict[
-                str, str
-            ] = ExcelToCsvConverter._get_dataframe_structure(df, valid_structure)
+            dataframe_structure: dict[str, str] = (
+                ExcelToCsvConverter._get_dataframe_structure(df, valid_structure)
+            )
             dataset_reference = get_dataset_reference(
                 category, valid_structure.dataset_name
             )

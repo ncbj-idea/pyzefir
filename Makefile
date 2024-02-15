@@ -4,17 +4,16 @@ else
     VENV_ACTIVATE := .venv/bin/activate
 endif
 
-$(VENV_ACTIVATE): requirements.txt requirements-dev.txt .pre-commit-config.yaml
+$(VENV_ACTIVATE): pyproject.toml .pre-commit-config.yaml
 	python3.11 -m venv .venv
 	. $(VENV_ACTIVATE) && pip install --upgrade pip \
-		&& pip install -U -r requirements.txt \
-		&& pip install -U -r requirements-dev.txt
+		&& pip install -U .[dev]
 	. $(VENV_ACTIVATE) && pre-commit install
 
 install: $(VENV_ACTIVATE)
 
 lint: $(VENV_ACTIVATE)
-	. $(VENV_ACTIVATE) && black . && pylama --skip=.*/* -l mccabe,pycodestyle,pyflakes,radon,mypy
+	. $(VENV_ACTIVATE) && black . && pylama pyzefir tests -l mccabe,pycodestyle,pyflakes,radon,mypy --async
 
 unit: $(VENV_ACTIVATE) lint
 	. $(VENV_ACTIVATE) && pytest -vvv tests/unit && tox -e fast_integration --skip-pkg-install

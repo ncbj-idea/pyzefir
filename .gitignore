@@ -4,3 +4,5 @@ pyzefir.egg-info
 .vscode/*
 .idea/*
 .DS_Store
+.tox
+build

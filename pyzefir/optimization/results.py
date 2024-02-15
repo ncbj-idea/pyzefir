@@ -1,5 +1,5 @@
 # PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
+# Copyright (C) 2024 Narodowe Centrum Badań Jądrowych
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -20,7 +20,8 @@ from typing import Final
 
 import numpy as np
 import pandas as pd
-from gurobipy import LinExpr, MVar, Var, tupledict
+import xarray as xr
+from linopy import Variable
 
 from pyzefir.optimization.exportable_results import (
     ExportableBusResults,
@@ -31,54 +32,54 @@ from pyzefir.optimization.exportable_results import (
     ExportableResultsGroup,
     ExportableStorageResults,
 )
-from pyzefir.optimization.gurobi.expression_handler import ExpressionHandler
-from pyzefir.optimization.gurobi.objective_builder.capex_objective_builder import (
+from pyzefir.optimization.linopy.expression_handler import ExpressionHandler
+from pyzefir.optimization.linopy.objective_builder.capex_objective_builder import (
     CapexObjectiveBuilder,
 )
-from pyzefir.optimization.gurobi.preprocessing.indices import IndexingSet, Indices
-from pyzefir.optimization.gurobi.preprocessing.opt_parameters import (
+from pyzefir.optimization.linopy.preprocessing.indices import IndexingSet, Indices
+from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
     OptimizationParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.opt_variables import (
+from pyzefir.optimization.linopy.preprocessing.opt_variables import (
     OptimizationVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.bus_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.bus_parameters import (
     BusParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.generator_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.generator_parameters import (
     GeneratorParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.generator_type_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.generator_type_parameters import (
     GeneratorTypeParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.scenario_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.scenario_parameters import (
     ScenarioParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.storage_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.storage_parameters import (
     StorageParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.parameters.storage_type_parameters import (
+from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameters import (
     StorageTypeParameters,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.bus_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.bus_variables import (
     BusVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.fraction_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.fraction_variables import (
     FractionVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.generator_type_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.generator_type_variables import (
     GeneratorTypeVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.generator_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.generator_variables import (
     GeneratorVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.line_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.line_variables import (
     LineVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.storage_type_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.storage_type_variables import (
     StorageTypeVariables,
 )
-from pyzefir.optimization.gurobi.preprocessing.variables.storage_variables import (
+from pyzefir.optimization.linopy.preprocessing.variables.storage_variables import (
     StorageVariables,
 )
 from pyzefir.utils.functions import get_dict_vals, invert_dict_of_sets
@@ -114,224 +115,6 @@ class ResultsGroup(abc.ABC):
             df = df.rename(column_index.mapping, axis=1)
 
         return df
-
-    @staticmethod
-    def fetch_4d_variable(
-        index1: IndexingSet,
-        index2: IndexingSet,
-        index3: IndexingSet,
-        variable: MVar,
-        row_index: IndexingSet | None = None,
-        column_index: IndexingSet | None = None,
-    ) -> dict[str, dict[str, dict[str, pd.DataFrame]]]:
-        """Fetches a 4D variable and returns a dictionary mapping names dict str -> 2D Pandas DataFrame.
-
-        Args:
-            index1 (IndexingSet): First index to fetch
-            index2 (IndexingSet): Second index to catch
-            index3 (IndexingSet): Second index to catch
-            variable (MVar): The 2D variable to fetch.
-            row_index (IndexingSet | None): The indexing set for the variable's rows.
-            column_index (IndexingSet | None): The indexing set for the variable's columns.
-
-        Returns:
-            dict[str, dict[str, dict[str, pd.DataFrame]]]: A dictionary mapping names to 2D Pandas DataFrames.
-        """
-        result_dict = dict()
-        for idx1, name1 in index1.mapping.items():
-            sub_dict = dict()
-            for idx2, name2 in index2.mapping.items():
-                sub_sub_dict = dict()
-                for idx3, name3 in index3.mapping.items():
-                    df = pd.DataFrame(variable[idx1, idx2, idx3, :, :].x)
-                    ResultsGroup._rename_axes(df, row_index, column_index)
-                    sub_sub_dict[name3] = df
-                sub_dict[name2] = sub_sub_dict
-            result_dict[name1] = sub_dict
-        return result_dict
-
-    @staticmethod
-    def fetch_3d_variable(
-        index1: IndexingSet,
-        index2: IndexingSet,
-        variable: MVar,
-        row_index: IndexingSet | None = None,
-        column_index: IndexingSet | None = None,
-    ) -> dict[str, dict[str, pd.DataFrame]]:
-        """Fetches a 3D variable and returns a dictionary mapping names dict str -> 2D Pandas DataFrame.
-
-        Args:
-            index1 (IndexingSet): First index to fetch
-            index2 (IndexingSet): Second index to catch
-            variable (MVar): The 2D variable to fetch.
-            row_index (IndexingSet | None): The indexing set for the variable's rows.
-            column_index (IndexingSet | None): The indexing set for the variable's columns.
-
-        Returns:
-            dict[str, dict[str, pd.DataFrame]]: A dictionary mapping names to 2D Pandas DataFrames.
-        """
-        result_dict = dict()
-        for idx1, name1 in index1.mapping.items():
-            sub_dict = dict()
-            for idx2, name2 in index2.mapping.items():
-                df = pd.DataFrame(variable[idx1, idx2, :, :].x)
-                ResultsGroup._rename_axes(df, row_index, column_index)
-                sub_dict[name2] = df
-            result_dict[name1] = sub_dict
-        return result_dict
-
-    @staticmethod
-    def fetch_2d_variable(
-        index: IndexingSet,
-        variable: MVar | tupledict,
-        row_index: IndexingSet,
-        column_index: IndexingSet,
-        filter_map: dict[int, set] | set | None = None,
-    ) -> dict[str, pd.DataFrame]:
-        """Fetches a 2D variable and returns a dictionary mapping names to 2D Pandas DataFrames.
-
-        Args:
-            index (IndexingSet): The indexing set for the variable.
-            variable (MVar): The 2D variable to fetch.
-            row_index (IndexingSet): The indexing set for the variable's rows.
-            column_index (IndexingSet | None): The indexing set for the variable's columns.
-            filter_map (dict | set | None): dict of sets or set indices to filter from index mapping.
-
-        Returns:
-            dict[str, pd.DataFrame]: A dictionary mapping names to 2D Pandas DataFrames.
-        """
-        match filter_map:
-            case dict():
-                filter_idxs = get_dict_vals(filter_map)
-            case set():
-                filter_idxs = filter_map
-            case _:
-                filter_idxs = set()
-        result_dict = dict()
-        for idx, name in index.mapping.items():
-            if idx in filter_idxs:
-                continue
-            vals = np.array(
-                [
-                    [variable[(idx, row, col)].x for col in column_index.ord]
-                    for row in row_index.ord
-                ]
-            )
-            df = pd.DataFrame(vals)
-            ResultsGroup._rename_axes(df, row_index, column_index)
-            result_dict[name] = df
-        return result_dict
-
-    @staticmethod
-    def fetch_1d_variable(
-        index: IndexingSet,
-        variable: MVar | tupledict,
-        row_index: IndexingSet,
-        column_index: IndexingSet | None = None,
-        filter_map: dict[int, set] | set | None = None,
-    ) -> dict[str, pd.DataFrame]:
-        """Fetches a 1D variable and returns a dictionary mapping names to 1D Pandas DataFrames.
-
-        Args:
-            index (IndexingSet): The indexing set for the variable.
-            variable (MVar | Var): The 1D variable to fetch.
-            row_index (IndexingSet): The indexing set for the variable's rows.
-            column_index (IndexingSet | None): The indexing set for the variable's columns.
-            filter_map (dict | set | None): dict of sets or set indices to filter from index mapping.
-
-        Returns:
-            dict[str, pd.DataFrame]: A dictionary mapping names to 1D Pandas DataFrames.
-        """
-        match filter_map:
-            case dict():
-                filter_idxs = get_dict_vals(filter_map)
-            case set():
-                filter_idxs = filter_map
-            case _:
-                filter_idxs = set()
-        result_dict = dict()
-        for idx, name in index.mapping.items():
-            if idx in filter_idxs:
-                continue
-            vals = [variable[(idx, row)].x for row in row_index.ord]
-            df = pd.DataFrame(vals)
-
-            ResultsGroup._rename_axes(df, row_index, column_index)
-            result_dict[name] = df
-        return result_dict
-
-    @staticmethod
-    def fetch_1d_tvariable(
-        aggr_index: IndexingSet,
-        t_index: IndexingSet,
-        variable: Var,
-        row_index: IndexingSet,
-        index_map: dict[int, set],
-    ) -> dict[str, dict[str, pd.DataFrame]]:
-        """Fetches a 2D t_variable and returns a dictionary mapping names to 1D Pandas DataFrames.
-
-        Args:
-
-        aggr_index (IndexingSet): aggregate index
-        t_index (IndexingSet): technology type index
-        variable (Var): technology type variable
-        row_index (IndexingSet): The indexing set for the variable's rows.
-        column_index (IndexingSet): The indexing set for the variable's columns.
-        index_map (dict): technology types for a given aggregate.
-
-        Returns:
-            dict[str, dict[str, pd.DataFrame]]: A dictionary mapping aggr names, t_names into 1D Pandas DataFrames.
-        """
-        result_dict: dict[str, dict[str, pd.DataFrame]] = dict()
-        for aggr_idx, aggr_name in aggr_index.mapping.items():
-            result_dict[aggr_name] = dict()
-            for t_idx in index_map[aggr_idx]:
-                t_name = t_index.mapping[t_idx]
-                df = pd.DataFrame(
-                    [variable[(aggr_idx, t_idx, row)].x for row in row_index.ord]
-                )
-                result_dict[aggr_name][t_name] = df
-        return result_dict
-
-    @staticmethod
-    def fetch_2d_tvariable(
-        aggr_index: IndexingSet,
-        t_index: IndexingSet,
-        variable: Var,
-        row_index: IndexingSet,
-        column_index: IndexingSet,
-        index_map: dict[int, set],
-    ) -> dict[str, dict[str, pd.DataFrame]]:
-        """Fetches a 3D t_variable and returns a dictionary mapping names to 2D Pandas DataFrames.
-
-        Args:
-
-        aggr_index (IndexingSet): aggregate index
-        t_index (IndexingSet): technology type index
-        variable (Var): technology type variable
-        row_index (IndexingSet): The indexing set for the variable's rows.
-        column_index (IndexingSet): The indexing set for the variable's columns
-        index_map (dict): technology types for a given aggregate.
-
-        Returns:
-            dict[str, dict[str, pd.DataFrame]]: A dictionary mapping aggr names, t_names into 2D Pandas DataFrames.
-        """
-        result_dict: dict[str, dict[str, pd.DataFrame]] = dict()
-        for aggr_idx, aggr_name in aggr_index.mapping.items():
-            result_dict[aggr_name] = dict()
-            for t_idx in index_map[aggr_idx]:
-                t_name = t_index.mapping[t_idx]
-                df = pd.DataFrame(
-                    [
-                        [
-                            variable[(aggr_idx, t_idx, row, col)].x
-                            for col in column_index.ord
-                        ]
-                        for row in row_index.ord
-                    ]
-                )
-                result_dict[aggr_name][t_name] = df
-        return result_dict
 
     @staticmethod
     def dict_of_1d_array_to_pandas(
@@ -393,6 +176,62 @@ class ResultsGroup(abc.ABC):
         raise NotImplementedError
 
     @staticmethod
+    def global_capex_per_unit_per_year(
+        capex: np.ndarray,
+        cap_plus: xr.DataArray,
+        disc_rate: np.ndarray,
+        bt: int,
+        lt: int,
+        y_idx: int,
+        u_idx: int,
+        y_idxs: IndexingSet,
+    ) -> float:
+        am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
+            lt=lt, bt=bt, yy=y_idxs
+        )
+        res = 0.0
+        for s in y_idxs.ord:
+            res += (
+                cap_plus.sel(index=(u_idx, s)).to_numpy()
+                * am_indicator[s, y_idx]
+                * capex[s]
+                * disc_rate[y_idx]
+                / lt
+            )
+
+        return res
+
+    @staticmethod
+    def local_capex_per_unit_per_year(
+        capex: np.ndarray,
+        tcap_plus: xr.DataArray,
+        disc_rate: np.ndarray,
+        bt: int,
+        lt: int,
+        y_idx: int,
+        ut_idx: int,
+        aggr_idxs: set[int],
+        y_idxs: IndexingSet,
+    ) -> float:
+        am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
+            lt=lt, bt=bt, yy=y_idxs
+        )
+
+        res = 0.0
+
+        for s in y_idxs.ord:
+            for aggr_idx in aggr_idxs:
+                res += (
+                    tcap_plus.sel(index=(aggr_idx, ut_idx, s)).to_numpy()
+                    * am_indicator[s, y_idx]
+                    * capex[s]
+                    * disc_rate[y_idx]
+                    / lt
+                )
+
+        return res
+
+    @staticmethod
     def calculate_capex(
         indices: Indices,
         unit_index: IndexingSet,
@@ -401,8 +240,8 @@ class ResultsGroup(abc.ABC):
         bus_unit_mapping: dict[int, set[int]],
         aggr_unit_map: dict[int, set[int]],
         discount_rate: np.ndarray,
-        cap_plus: tupledict,
-        tcap_plus: tupledict,
+        cap_plus: Variable,
+        tcap_plus: Variable,
         aggr_t_map: dict[int, set[int]],
     ) -> dict[str, pd.DataFrame]:
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
@@ -420,11 +259,11 @@ class ResultsGroup(abc.ABC):
             bt = unit_type_param.bt[ut_idx]
             year_results = dict()
             for year_idx in year_idxs.ord:
-                unit_capex = LinExpr(0.0)
+                unit_capex = 0.0
                 if u_idx in non_lbs_unit_idxs:
-                    unit_capex += CapexObjectiveBuilder.global_capex_per_unit_per_year(
+                    unit_capex += ResultsGroup.global_capex_per_unit_per_year(
                         capex=capex,
-                        cap_plus=cap_plus,
+                        cap_plus=cap_plus.solution,
                         disc_rate=disc_rate,
                         bt=bt,
                         lt=lt,
@@ -433,9 +272,9 @@ class ResultsGroup(abc.ABC):
                         y_idxs=year_idxs,
                     )
                 elif (aggr_idxs := inverted_aggr_map.get(ut_idx)) is not None:
-                    unit_capex += CapexObjectiveBuilder.local_capex_per_unit_per_year(
+                    unit_capex += ResultsGroup.local_capex_per_unit_per_year(
                         capex=capex,
-                        tcap_plus=tcap_plus,
+                        tcap_plus=tcap_plus.solution,
                         disc_rate=disc_rate,
                         bt=bt,
                         lt=lt,
@@ -444,7 +283,7 @@ class ResultsGroup(abc.ABC):
                         aggr_idxs=aggr_idxs,
                         y_idxs=year_idxs,
                     )
-                year_results[indices.Y.mapping[year_idx]] = unit_capex.getValue()
+                year_results[indices.Y.mapping[year_idx]] = unit_capex
 
             result[unit_index.mapping[u_idx]] = pd.DataFrame.from_dict(
                 year_results, orient="index"
@@ -503,88 +342,71 @@ class GeneratorsResults(ResultsGroup):
         scenario_parameters: ScenarioParameters,
         indices: Indices,
     ) -> None:
-        self.gen = self.fetch_2d_variable(
-            indices.GEN, variable_group.gen, row_index=indices.H, column_index=indices.Y
-        )
-        self.gen_et = self.fetch_3d_variable(
-            indices.GEN,
-            indices.ET,
-            variable_group.gen_et,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.gen_dch = self.fetch_4d_variable(
-            indices.ET,
-            indices.DEMCH,
-            indices.GEN,
-            variable_group.gen_dch,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.dump = self.fetch_2d_variable(
-            indices.GEN,
-            variable_group.dump,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.dump_et = self.fetch_3d_variable(
-            indices.GEN,
-            indices.ET,
-            variable_group.dump_et,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.cap = self.fetch_1d_variable(
-            indices.GEN, variable_group.cap, row_index=indices.Y
-        )
-        self.tcap = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TGEN,
-            tvariable_group.tcap,
-            row_index=indices.Y,
-            index_map=indices.aggr_tgen_map,
-        )
-
-        self.cap_plus = self.fetch_1d_variable(
-            indices.GEN,
-            variable_group.cap_plus,
-            row_index=indices.Y,
-            filter_map=indices.aggr_gen_map,
-        )
-        self.tcap_plus = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TGEN,
-            tvariable_group.tcap_plus,
-            row_index=indices.Y,
-            index_map=indices.aggr_tgen_map,
-        )
-        self.cap_minus = self.fetch_2d_variable(
-            indices.GEN,
-            variable_group.cap_minus,
+        self.gen = self.process_gen(variable_group)
+        self.gen_et = self.process_gen_et(variable_group)
+        self.gen_dch = self.process_gen_dch(variable_group)
+        self.dump = self.process_dump(variable_group)
+        self.dump_et = self.process_dump_et(variable_group)
+        self.cap = self.process_cap(variable_group)
+        self.cap_plus = self.fetch_d_dataframe(
+            dimension=1,
+            index=indices.GEN,
+            variable=variable_group.cap_plus.sol.to_dataframe(),
             row_index=indices.Y,
             column_index=indices.Y,
             filter_map=indices.aggr_gen_map,
         )
-        self.tcap_minus = self.fetch_2d_tvariable(
-            indices.AGGR,
-            indices.TGEN,
-            tvariable_group.tcap_minus,
+        self.cap_minus = self.fetch_d_dataframe(
+            dimension=2,
+            index=indices.GEN,
+            variable=variable_group.cap_minus.sol.to_dataframe(),
+            row_index=indices.Y,
+            column_index=indices.Y,
+            filter_map=indices.aggr_gen_map,
+        )
+        self.tcap_plus = self.fetch_d_tvariable(
+            dimension=1,
+            aggr_index=indices.AGGR,
+            t_index=indices.TGEN,
+            variable=tvariable_group.tcap_plus.sol.to_dataframe(),
             row_index=indices.Y,
             column_index=indices.Y,
             index_map=indices.aggr_tgen_map,
         )
-        self.cap_base_minus = self.fetch_1d_variable(
-            indices.GEN,
-            variable_group.cap_base_minus,
-            row_index=indices.Y,
-            filter_map=indices.aggr_gen_map,
-        )
-        self.tcap_base_minus = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TGEN,
-            tvariable_group.tcap_base_minus,
+        self.tcap_minus = self.fetch_d_tvariable(
+            dimension=2,
+            aggr_index=indices.AGGR,
+            t_index=indices.TGEN,
+            variable=tvariable_group.tcap_minus.sol.to_dataframe(),
             row_index=indices.Y,
             index_map=indices.aggr_tgen_map,
+            column_index=indices.Y,
+        )
+        self.cap_base_minus = self.fetch_d_dataframe(
+            dimension=1,
+            index=indices.GEN,
+            variable=variable_group.cap_base_minus.sol.to_dataframe(),
+            row_index=indices.Y,
+            filter_map=indices.aggr_gen_map,
+            column_index=indices.Y,
+        )
+        self.tcap = self.fetch_d_tvariable(
+            dimension=1,
+            aggr_index=indices.AGGR,
+            t_index=indices.TGEN,
+            variable=tvariable_group.tcap.sol.to_dataframe(),
+            row_index=indices.Y,
+            index_map=indices.aggr_tgen_map,
+            column_index=indices.Y,
+        )
+        self.tcap_base_minus = self.fetch_d_tvariable(
+            dimension=1,
+            aggr_index=indices.AGGR,
+            t_index=indices.TGEN,
+            variable=tvariable_group.tcap_base_minus.sol.to_dataframe(),
+            row_index=indices.Y,
+            index_map=indices.aggr_tgen_map,
+            column_index=indices.Y,
         )
         self.capex = self.calculate_capex(
             indices=indices,
@@ -598,6 +420,189 @@ class GeneratorsResults(ResultsGroup):
             tcap_plus=tvariable_group.tcap_plus,
             aggr_t_map=indices.aggr_tgen_map,
         )
+
+    @staticmethod
+    def process_gen(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
+        return {
+            gen_name: df.reset_index(["gen"], drop=True).unstack().droplevel(0, axis=1)
+            for gen_name, df in variable_group.gen.sol.to_dataframe().groupby("gen")
+        }
+
+    @staticmethod
+    def process_gen_et(
+        variable_group: GeneratorVariables,
+    ) -> dict[str, dict[str, pd.DataFrame]]:
+        return {
+            gen_name: {
+                energy_type: et_df.reset_index(["gen", "et"], drop=True)
+                .unstack()
+                .droplevel(0, axis=1)
+                for energy_type, et_df in gen_df.groupby("et")
+            }
+            for gen_name, gen_df in variable_group.gen_et.sol.to_dataframe().groupby(
+                "gen"
+            )
+        }
+
+    @staticmethod
+    def process_gen_dch(
+        variable_group: GeneratorVariables,
+    ) -> dict[str, dict[str, dict[str, pd.DataFrame]]]:
+        return {
+            gen_name: {
+                energy_type: {
+                    demand_chunk: dch_df.reset_index(["gen", "et", "demch"], drop=True)
+                    .unstack()
+                    .droplevel(0, axis=1)
+                    for demand_chunk, dch_df in et_df.groupby("gen")
+                }
+                for energy_type, et_df in gen_df.groupby("demch")
+            }
+            for gen_name, gen_df in variable_group.gen_dch.sol.to_dataframe().groupby(
+                "et"
+            )
+        }
+
+    @staticmethod
+    def process_dump(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
+        return {
+            gen_name: dump_df.reset_index(["gen"], drop=True)
+            .unstack()
+            .droplevel(0, axis=1)
+            for gen_name, dump_df in variable_group.dump.sol.to_dataframe().groupby(
+                "gen"
+            )
+        }
+
+    @staticmethod
+    def process_dump_et(
+        variable_group: GeneratorVariables,
+    ) -> dict[str, dict[str, pd.DataFrame]]:
+        return {
+            gen_name: {
+                energy_type: et_df.reset_index(["gen", "et"], drop=True)
+                .unstack()
+                .droplevel(0, axis=1)
+                for energy_type, et_df in gen_df.groupby("et")
+            }
+            for gen_name, gen_df in variable_group.dump_et.sol.to_dataframe().groupby(
+                "gen"
+            )
+        }
+
+    @staticmethod
+    def process_cap(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
+        return {
+            gen_name: cap_df.reset_index(["gen"], drop=True).rename(
+                columns={"solution": "cap"}
+            )
+            for gen_name, cap_df in variable_group.cap.sol.to_dataframe().groupby("gen")
+        }
+
+    @staticmethod
+    def fetch_d_dataframe(
+        dimension: int,
+        index: IndexingSet,
+        variable: pd.DataFrame,
+        row_index: IndexingSet,
+        column_index: IndexingSet,
+        filter_map: dict[int, set] | set | None = None,
+    ) -> dict[str, pd.DataFrame]:
+        """Fetches a 1D variable from a DataFrame and returns a dictionary mapping names to 1D Pandas DataFrames.
+
+        Args:
+            index (IndexingSet): The indexing set for the variable.
+            variable (pd.DataFrame): The DataFrame containing the 1D variable to fetch.
+            row_index (IndexingSet): The indexing set for the variable's rows.
+            column_index (IndexingSet | None): The indexing set for the variable's columns.
+            filter_map (Dict | Set | None): dict of sets or set indices to filter from index mapping.
+
+        Returns:
+            Dict[str, pd.DataFrame]: A dictionary mapping names to 1D Pandas DataFrames.
+        """
+        match filter_map:
+            case dict():
+                filter_idxs = get_dict_vals(filter_map)
+            case set():
+                filter_idxs = filter_map
+            case _:
+                filter_idxs = set()
+
+        result_dict = dict()
+
+        for idx, name in index.mapping.items():
+            if idx in filter_idxs:
+                continue
+            if dimension == 1:
+                vals = variable[
+                    variable.index.isin([(idx, i) for i in row_index.ord])
+                ].values
+                df = pd.DataFrame(vals, index=row_index.ord)
+            elif dimension == 2:
+                vals = variable[
+                    variable.index.isin(
+                        [(idx, i, c) for i in row_index.ord for c in column_index.ord]
+                    )
+                ].values.reshape(len(column_index.ord), len(row_index.ord))
+                df = pd.DataFrame(vals)
+            # You can customize the renaming of axes based on your requirements
+            ResultsGroup._rename_axes(df, row_index, column_index)
+
+            result_dict[name] = df
+
+        return result_dict
+
+    @staticmethod
+    def fetch_d_tvariable(
+        dimension: int,
+        aggr_index: IndexingSet,
+        t_index: IndexingSet,
+        variable: pd.DataFrame,
+        row_index: IndexingSet,
+        index_map: dict[int, set],
+        column_index: IndexingSet,
+    ) -> dict[str, dict[str, pd.DataFrame]]:
+        """Fetches a 2D t_variable and returns a dictionary mapping names to 1D Pandas DataFrames.
+
+        Args:
+
+        aggr_index (IndexingSet): aggregate index
+        t_index (IndexingSet): technology type index
+        variable (Var): technology type variable
+        row_index (IndexingSet): The indexing set for the variable's rows.
+        column_index (IndexingSet): The indexing set for the variable's columns.
+        index_map (dict): technology types for a given aggregate.
+
+        Returns:
+            dict[str, dict[str, pd.DataFrame]]: A dictionary mapping aggr names, t_names into 1D Pandas DataFrames.
+        """
+        result_dict: dict[str, dict[str, pd.DataFrame]] = dict()
+        for aggr_idx, aggr_name in aggr_index.mapping.items():
+            result_dict[aggr_name] = dict()
+            for t_idx in index_map[aggr_idx]:
+                t_name = t_index.mapping[t_idx]
+                if dimension == 1:
+                    df = variable[
+                        variable.index.isin(
+                            [(aggr_idx, t_idx, row) for row in row_index.ord]
+                        )
+                    ]
+                    df.index = [tup[-1] for tup in df.index]
+                    df = df.sort_index()
+                elif dimension == 2:
+                    df = pd.DataFrame(
+                        variable[
+                            variable.index.isin(
+                                [
+                                    (aggr_idx, t_idx, row, col)
+                                    for row in row_index.ord
+                                    for col in column_index.ord
+                                ]
+                            )
+                        ].values.reshape(len(column_index.ord), len(row_index.ord))
+                    )
+                result_dict[aggr_name][t_name] = df
+        return result_dict
 
     def to_exportable(self) -> ExportableGeneratorsResults:
         return ExportableGeneratorsResults(
@@ -666,82 +671,50 @@ class StoragesResults(ResultsGroup):
         scenario_parameters: ScenarioParameters,
         indices: Indices,
     ) -> None:
-        self.gen = self.fetch_2d_variable(
-            indices.STOR,
-            variable_group.gen,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.gen_dch = self.fetch_3d_variable(
-            indices.DEMCH,
-            indices.STOR,
-            variable_group.gen_dch,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.load = self.fetch_2d_variable(
-            indices.STOR,
-            variable_group.load,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.soc = self.fetch_2d_variable(
-            indices.STOR,
-            variable_group.soc,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        self.cap = self.fetch_1d_variable(
-            indices.STOR, variable_group.cap, row_index=indices.Y
-        )
-        self.tcap = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TSTOR,
-            tvariable_group.tcap,
-            row_index=indices.Y,
-            index_map=indices.aggr_tstor_map,
-        )
-        self.tcap_plus = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TSTOR,
-            tvariable_group.tcap_plus,
-            row_index=indices.Y,
-            index_map=indices.aggr_tstor_map,
-        )
-        self.cap_plus = self.fetch_1d_variable(
-            indices.STOR,
-            variable_group.cap_plus,
-            row_index=indices.Y,
-            filter_map=indices.aggr_stor_map,
-        )
-        self.cap_minus = self.fetch_2d_variable(
-            indices.STOR,
-            variable_group.cap_minus,
-            row_index=indices.Y,
-            column_index=indices.Y,
-            filter_map=indices.aggr_stor_map,
-        )
-        self.tcap_minus = self.fetch_2d_tvariable(
-            indices.AGGR,
-            indices.TSTOR,
-            tvariable_group.tcap_minus,
-            row_index=indices.Y,
-            column_index=indices.Y,
-            index_map=indices.aggr_tstor_map,
-        )
-        self.cap_base_minus = self.fetch_1d_variable(
-            indices.STOR,
-            variable_group.cap_base_minus,
-            row_index=indices.Y,
-            filter_map=indices.aggr_stor_map,
-        )
-        self.tcap_base_minus = self.fetch_1d_tvariable(
-            indices.AGGR,
-            indices.TSTOR,
-            tvariable_group.tcap_base_minus,
-            row_index=indices.Y,
-            index_map=indices.aggr_tstor_map,
-        )
+        self.gen = {
+            stor_name: df.reset_index(["stor"], drop=True)
+            .unstack()
+            .droplevel(0, axis=1)
+            for stor_name, df in variable_group.gen.sol.to_dataframe().groupby("stor")
+        }
+        self.gen_dch = {
+            stor_name: {
+                energy_type: demch_df.reset_index(["stor", "demch"], drop=True)
+                .unstack()
+                .droplevel(0, axis=1)
+                for energy_type, demch_df in stor_df.groupby("stor")
+            }
+            for stor_name, stor_df in variable_group.gen_dch.sol.to_dataframe().groupby(
+                "demch"
+            )
+        }
+        self.load = {
+            stor_name: df.reset_index(["stor"], drop=True)
+            .unstack()
+            .droplevel(0, axis=1)
+            for stor_name, df in variable_group.load.sol.to_dataframe().groupby("stor")
+        }
+        self.soc = {
+            stor_name: df.reset_index(["stor"], drop=True)
+            .unstack()
+            .droplevel(0, axis=1)
+            for stor_name, df in variable_group.soc.sol.to_dataframe().groupby("stor")
+        }
+        self.cap = {
+            stor_name: cap_df.reset_index(["stor"], drop=True).rename(
+                columns={"solution": "cap"}
+            )
+            for stor_name, cap_df in variable_group.cap.sol.to_dataframe().groupby(
+                "stor"
+            )
+        }
+        self.tcap = tvariable_group.tcap.sol.to_dataframe()
+        self.tcap_plus = tvariable_group.tcap_plus.sol.to_dataframe()
+        self.cap_plus = variable_group.cap_plus.sol.to_dataframe()
+        self.cap_minus = variable_group.cap_minus.sol.to_dataframe()
+        self.tcap_minus = tvariable_group.tcap_minus.sol.to_dataframe()
+        self.cap_base_minus = variable_group.cap_base_minus.sol.to_dataframe()
+        self.tcap_base_minus = tvariable_group.tcap_base_minus.sol.to_dataframe()
         self.capex = self.calculate_capex(
             indices=indices,
             unit_index=indices.STOR,
@@ -764,7 +737,7 @@ class StoragesResults(ResultsGroup):
                 self.cap, column_name=STORAGE_LABEL
             ),
             capex=self.dict_of_1d_array_to_pandas(
-                self.capex, column_name=STORAGE_LABEL
+                self.capex, column_name=GENERATOR_LABEL
             ),
         )
 
@@ -782,12 +755,12 @@ class LinesResults(ResultsGroup):
     """ optimal line flows (exportable) """
 
     def __post_init__(self, variable_group: LineVariables, indices: Indices) -> None:
-        self.flow = self.fetch_2d_variable(
-            indices.LINE,
-            variable_group.flow,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
+        self.flow = {
+            line_name: df.reset_index(["line"], drop=True)
+            .unstack()
+            .droplevel(0, axis=1)
+            for line_name, df in variable_group.flow.sol.to_dataframe().groupby("line")
+        }
 
     def to_exportable(self) -> ExportableLinesResults:
         return ExportableLinesResults(
@@ -813,12 +786,15 @@ class FractionsResults(ResultsGroup):
         self, variable_group: FractionVariables, indices: Indices
     ) -> None:
         self.frac = {
-            aggr_name: self.fetch_1d_variable(
-                indices.LBS,
-                variable_group.fraction[aggr_idx, :, :],
-                row_index=indices.Y,
+            aggr_name: {
+                consumer_name: df.reset_index(["aggr", "lbs"], drop=True).rename(
+                    columns={"solution": "frac"}
+                )
+                for consumer_name, df in aggr_df.groupby("lbs")
+            }
+            for aggr_name, aggr_df in variable_group.fraction.sol.to_dataframe().groupby(
+                "aggr"
             )
-            for aggr_idx, aggr_name in indices.AGGR.mapping.items()
         }
 
     def to_exportable(self) -> ExportableFractionsResults:
@@ -837,53 +813,36 @@ class BusResults(ResultsGroup):
     """Bus results"""
 
     variable_group: InitVar[BusVariables]
-    """Initial value hint for the BusVariables object"""
+    """Initial value hint for the GeneratorVariables object"""
     indices: InitVar[Indices]
     """Initial value hint for the Indices object"""
 
     bus_ens: dict[str, pd.DataFrame] = field(init=False)
     """ ens generator per bus """
 
-    parameters: InitVar[BusParameters | None]
-    """Initial value hint for the BusVariables object"""
-
-    def __post_init__(
-        self,
-        variable_group: BusVariables,
-        indices: Indices,
-        parameters: BusParameters = None,
-    ) -> None:
-        self.bus_ens = self.fetch_2d_variable(
-            indices.BUS,
-            variable_group.bus_ens,
-            row_index=indices.H,
-            column_index=indices.Y,
-        )
-        filter_map = {
-            v: {k}
-            for k, v in indices.BUS.mapping.items()
-            if k not in parameters.dsr_type
+    def __post_init__(self, variable_group: BusVariables, indices: Indices) -> None:
+        self.bus_ens = {
+            bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
+            for bus_name, df in variable_group.bus_ens.sol.to_dataframe().groupby("bus")
         }
-        self.shift_minus = self.fetch_2d_variable(
-            indices.BUS,
-            variable_group.shift_minus,
-            row_index=indices.H,
-            column_index=indices.Y,
-            filter_map=filter_map,
-        )
-        self.shift_plus = self.fetch_2d_variable(
-            indices.BUS,
-            variable_group.shift_plus,
-            row_index=indices.H,
-            column_index=indices.Y,
-            filter_map=filter_map,
-        )
+        self.shift_plus = {
+            bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
+            for bus_name, df in variable_group.shift_plus.sol.to_dataframe().groupby(
+                "bus"
+            )
+        }
+        self.shift_minus = {
+            bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
+            for bus_name, df in variable_group.shift_minus.sol.to_dataframe().groupby(
+                "bus"
+            )
+        }
 
     def to_exportable(self) -> ExportableBusResults:
         return ExportableBusResults(
             generation_ens=self.dict_of_2d_array_to_pandas(self.bus_ens),
-            shift_minus=self.dict_of_2d_array_to_pandas(self.shift_minus),
             shift_plus=self.dict_of_2d_array_to_pandas(self.shift_plus),
+            shift_minus=self.dict_of_2d_array_to_pandas(self.shift_minus),
         )
 
 
@@ -953,6 +912,4 @@ class Results:
         self.fractions_results = FractionsResults(
             variable_group=variables.frac, indices=indices
         )
-        self.bus_results = BusResults(
-            variable_group=variables.bus, indices=indices, parameters=parameters.bus
-        )
+        self.bus_results = BusResults(variable_group=variables.bus, indices=indices)

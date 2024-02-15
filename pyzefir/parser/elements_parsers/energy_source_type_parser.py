@@ -146,9 +146,9 @@ class EnergySourceTypeParser(AbstractElementParser):
             energy_types=energy_types,
             emission_reduction=self.generators_emission_reduction.loc[name].to_dict(),
             fuel=None if pd.isna(fuel).all() else fuel.iloc[0],
-            capacity_factor=None
-            if pd.isna(capacity_factor).all()
-            else capacity_factor.iloc[0],
+            capacity_factor=(
+                None if pd.isna(capacity_factor).all() else capacity_factor.iloc[0]
+            ),
             power_utilization=power_utilization,
             ramp=ramp,
             tags=create_tags_list(df_row[5:]),

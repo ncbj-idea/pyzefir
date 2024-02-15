@@ -37,7 +37,7 @@ def test_main(output_path: str) -> None:
         run_structure_creator_cli,
         args=[
             "--input_path",
-            RESOURCES_PATH,
+            Path(RESOURCES_PATH) / "structure_creator_resources",
             "--output_path",
             output_path,
             "--scenario_name",

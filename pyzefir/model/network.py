@@ -159,20 +159,20 @@ class Network:
         self.generators: NetworkElementsDict[Generator] = NetworkElementsDict()
         self.storages: NetworkElementsDict[Storage] = NetworkElementsDict()
         self.lines: NetworkElementsDict[Line] = NetworkElementsDict()
-        self.transmission_fees: NetworkElementsDict[
-            TransmissionFee
-        ] = NetworkElementsDict()
+        self.transmission_fees: NetworkElementsDict[TransmissionFee] = (
+            NetworkElementsDict()
+        )
         self.emission_fees: NetworkElementsDict[EmissionFee] = NetworkElementsDict()
-        self.local_balancing_stacks: NetworkElementsDict[
-            LocalBalancingStack
-        ] = NetworkElementsDict()
-        self.aggregated_consumers: NetworkElementsDict[
-            AggregatedConsumer
-        ] = NetworkElementsDict()
+        self.local_balancing_stacks: NetworkElementsDict[LocalBalancingStack] = (
+            NetworkElementsDict()
+        )
+        self.aggregated_consumers: NetworkElementsDict[AggregatedConsumer] = (
+            NetworkElementsDict()
+        )
         self.fuels: NetworkElementsDict[Fuel] = NetworkElementsDict()
-        self.capacity_factors: NetworkElementsDict[
-            CapacityFactor
-        ] = NetworkElementsDict()
+        self.capacity_factors: NetworkElementsDict[CapacityFactor] = (
+            NetworkElementsDict()
+        )
 
         self.generator_types: NetworkElementsDict[GeneratorType] = NetworkElementsDict()
         self.storage_types: NetworkElementsDict[StorageType] = NetworkElementsDict()

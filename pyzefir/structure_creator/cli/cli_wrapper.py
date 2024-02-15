@@ -34,7 +34,7 @@ def create_structure(
     n_years: int,
 ) -> None:
     input_data = InputData.load_input_data(
-        input_path=Path(input_path) / SubDirectory.structure_creator_resources,
+        input_path=Path(input_path),
         scenario_name=scenario_name,
         n_hours=n_hours,
         n_years=n_years,

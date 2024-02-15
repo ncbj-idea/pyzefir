@@ -21,12 +21,14 @@ from pyzefir.optimization.input_data import OptimizationInputData
 from pyzefir.optimization.results import Results
 
 
+class OptimizationError(Exception):
+    pass
+
+
 class OptimizationStatus(enum.Enum):
     NOT_COMPUTED = enum.auto()
     OPTIMAL = enum.auto()
-    INFEASIBLE = enum.auto()
-    UNBOUNDED = enum.auto()
-    UNKNOWN = enum.auto()
+    WARNING = enum.auto()
 
 
 class OptimizationModel(metaclass=abc.ABCMeta):

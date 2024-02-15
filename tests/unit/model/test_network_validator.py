@@ -42,7 +42,7 @@ from pyzefir.parser.network_creator import NetworkCreator
 from pyzefir.utils.path_manager import CsvPathManager
 from tests.unit.defaults import CO2_EMISSION, ELECTRICITY, HEATING, PM10_EMISSION
 from tests.unit.model.test_network_elements.helpers import assert_same_exception_list
-from tests.unit.optimization.gurobi.test_model.utils import (
+from tests.unit.optimization.linopy.test_model.utils import (
     set_network_elements_parameters,
 )
 

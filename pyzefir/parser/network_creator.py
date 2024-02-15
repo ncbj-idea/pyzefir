@@ -194,9 +194,9 @@ class NetworkCreator:
             )
             for col_name in rel_emission_lim_df.columns
         }
-        constants_dict[
-            DataSubCategories.RELATIVE_EMISSION_LIMITS
-        ] = rel_emission_lim_dict
+        constants_dict[DataSubCategories.RELATIVE_EMISSION_LIMITS] = (
+            rel_emission_lim_dict
+        )
         constants_dict["base_total_emission"] = (
             df_dict[DataCategories.STRUCTURE][DataSubCategories.EMISSION_TYPES]
             .pivot_table(columns="name", dropna=False)

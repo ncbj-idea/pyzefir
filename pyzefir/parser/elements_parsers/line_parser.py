@@ -40,7 +40,9 @@ class LineParser(AbstractElementParser):
             to=df_row["bus_to"],
             transmission_loss=df_row["transmission_loss"],
             max_capacity=df_row["max_capacity"],
-            transmission_fee=None
-            if pd.isnull(df_row["transmission_fee"])
-            else df_row["transmission_fee"],
+            transmission_fee=(
+                None
+                if pd.isnull(df_row["transmission_fee"])
+                else df_row["transmission_fee"]
+            ),
         )

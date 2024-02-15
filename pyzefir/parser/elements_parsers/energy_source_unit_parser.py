@@ -94,9 +94,11 @@ class EnergySourceUnitParser(AbstractElementParser):
             ].reindex(range(self.n_years)),
             min_device_nom_power=get_float_or_none(df_row["min_device_nom_power"]),
             max_device_nom_power=get_float_or_none(df_row["max_device_nom_power"]),
-            emission_fee=set(self.generator_emission_fee[name])
-            if name in self.generator_emission_fee
-            else set(),
+            emission_fee=(
+                set(self.generator_emission_fee[name])
+                if name in self.generator_emission_fee
+                else set()
+            ),
             tags=create_tags_list(df_row[4:]),
         )
 
