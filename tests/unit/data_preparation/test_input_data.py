@@ -23,7 +23,11 @@ import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
 
-from pyzefir.structure_creator.input_data import InputData, ScenarioData, StructureData
+from pyzefir.structure_creator.data_loader.input_data import (
+    InputData,
+    InputStructureData,
+    ScenarioData,
+)
 
 
 @pytest.fixture
@@ -42,22 +46,12 @@ def mock_load_fractions(
     }
 
 
-@pytest.fixture
-def mock_load_json_config(*args: Any, **kwargs: Any) -> dict[str, dict]:
-    return {"MockJson": {"MockJsonField": 1}}
-
-
-@pytest.fixture
-def mock_load_json(*args: Any, **kwargs: Any) -> dict[str, int]:
-    return {"MockJsonField": 1}
-
-
 def test_load_scenario_data(
     mock_read_excel: dict[str, pd.DataFrame],
     mock_load_fractions: dict[str, dict[str, pd.DataFrame]],
 ) -> None:
     with patch(
-        "pyzefir.structure_creator.input_data.pd.read_excel",
+        "pyzefir.structure_creator.data_loader.input_data.pd.read_excel",
         return_value=mock_read_excel,
     ), patch.object(ScenarioData, "_load_fractions", return_value=mock_load_fractions):
         scenario_data = ScenarioData.load_scenario_data(Path("/mocked/path"))
@@ -80,38 +74,28 @@ def test_load_scenario_data(
 
 def test_load_structure_data(
     mock_read_excel: dict[str, pd.DataFrame],
-    mock_load_json_config: dict[str, dict],
-    mock_load_json: dict[str, int],
 ) -> None:
-    expected_config = pd.DataFrame(data=[1], columns=["Config"])
     with patch(
-        "pyzefir.structure_creator.input_data.pd.read_excel",
+        "pyzefir.structure_creator.data_loader.input_data.pd.read_excel",
         return_value=mock_read_excel,
-    ), patch(
-        "pyzefir.structure_creator.input_data.pd.read_json",
-        return_value=expected_config,
-    ), patch(
-        "pyzefir.structure_creator.input_data.load_json",
-        return_value=mock_load_json,
     ), patch.object(
-        StructureData, "_load_json_files_config", return_value=mock_load_json_config
+        InputStructureData,
+        "_load_lbs_files",
+        return_value=mock_read_excel,
     ):
-        structure_data = StructureData.load_structure_data(Path("/mocked/path"), 24, 5)
+        structure_data = InputStructureData.load_structure_data(
+            Path("/mocked/path"), 24, 5
+        )
 
         for field in fields(structure_data):
+            if field.name in ["n_hours", "n_years"]:
+                continue
             actual_value = getattr(structure_data, field.name)
-            if field.name in ["configuration", "cap_min", "cap_max", "cap_base"]:
-                check_excel_file(
-                    expected_excel=mock_read_excel,
-                    actual_value=actual_value,
-                )
-            elif field.name in ["subsystem_types", "lbs_types"]:
-                assert actual_value == mock_load_json_config
+            check_excel_file(
+                expected_excel=mock_read_excel,
+                actual_value=actual_value,
+            )
 
-            elif field.name in ["aggregate_types", "emission_fees"]:
-                assert actual_value == mock_load_json
-
-        assert_frame_equal(structure_data.global_technologies, expected_config)
         assert structure_data.n_hours == 24
         assert structure_data.n_years == 5
 
@@ -119,7 +103,9 @@ def test_load_structure_data(
 def test_load_input_data() -> None:
     with patch.object(
         ScenarioData, "load_scenario_data", return_value="ScenarioData"
-    ), patch.object(StructureData, "load_structure_data", return_value="StructureData"):
+    ), patch.object(
+        InputStructureData, "load_structure_data", return_value="StructureData"
+    ):
         input_data = InputData.load_input_data(
             Path("/mocked/path"), "scenario_name", 24, 5
         )

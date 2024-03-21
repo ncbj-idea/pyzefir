@@ -86,6 +86,7 @@ class CsvParser:
         )
         dataset_reference = get_dataset_reference(category, dataset_name)
         DataFrameValidator(
+            df=df,
             dataframe_structure=columns_dict,
             valid_structure=columns_valid_config,
             dataset_reference=dataset_reference,

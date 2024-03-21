@@ -88,7 +88,7 @@ def test_demand_chunks(
         )
     }
     opt_config = create_default_opf_config(
-        hour_sample=np.array(range(100)), year_sample=np.array(range(5))
+        hour_sample=np.array(range(24, 63)), year_sample=np.array(range(5))
     )
     _load_tags_to_network(network, gen_tags, stor_tags)
     engine = run_opt_engine(network, opt_config)

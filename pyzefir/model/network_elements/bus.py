@@ -32,6 +32,10 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
+class BusValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class Bus(NetworkElement):
     """
@@ -77,9 +81,9 @@ class Bus(NetworkElement):
         elif self.energy_type not in network.energy_types:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Bus {self.name} has energy type {self.energy_type}"
-                    " which is not compliant with the network"
-                    f" energy types: {sorted(network.energy_types)}"
+                    f"Energy type {self.energy_type} "
+                    "is not compliant with the network "
+                    f"energy types: {sorted(network.energy_types)}"
                 )
             )
 
@@ -102,7 +106,7 @@ class Bus(NetworkElement):
         self._validate_energy_type(network, exception_list)
         self._validate_dsr_mapping(network, exception_list)
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise BusValidatorExceptionGroup(
                 f"While adding Bus {self.name} following errors occurred: ",
                 exception_list,
             )
@@ -175,12 +179,12 @@ class Bus(NetworkElement):
             if not isinstance(self.dsr_type, str):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"DSR type of bus {self.name} must be type of str, not type {type(self.dsr_type).__name__}"
+                        f"DSR type must be type of str, not type {type(self.dsr_type).__name__}"
                     )
                 )
             elif self.dsr_type not in network.dsr:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"DSR type {self.dsr_type} of bus {self.name} not exists in Network DSR"
+                        f"DSR type {self.dsr_type} does not exist in Network DSR"
                     )
                 )

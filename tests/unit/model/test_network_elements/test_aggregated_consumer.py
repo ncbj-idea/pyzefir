@@ -178,30 +178,19 @@ def test_aggregate_validation_should_rise_exception(
         (
             "demand_profile",
             None,
-            [
-                NetworkValidatorException(
-                    "Demand for AggregatedConsumer aggregate_1 must be given as a string"
-                )
-            ],
+            [NetworkValidatorException("Demand must be given as a string")],
         ),
         (
             "demand_profile",
             123,
-            [
-                NetworkValidatorException(
-                    "Demand for AggregatedConsumer aggregate_1 must be given as a string"
-                )
-            ],
+            [NetworkValidatorException("Demand must be given as a string")],
         ),
         (
             "stack_base_fraction",
             {"stack_1": 0.5, "stack_2": 0.2, "stack_3": 0.3},
             [
                 NetworkValidatorException(
-                    (
-                        "Local balancing stack stack_3 available for aggregated "
-                        "consumer aggregate_1 does not exist in the network"
-                    ),
+                    ("Local balancing stack stack_3 does not exist in the network"),
                 )
             ],
         ),
@@ -210,8 +199,7 @@ def test_aggregate_validation_should_rise_exception(
             {"stack_1": 0.5, "stack_2": 0.2},
             [
                 NetworkValidatorException(
-                    "Local balancing stack fractions for aggregated consumer "
-                    "aggregate_1 do not sum to 1, but to 0.7 instead"
+                    "Local balancing stack fractions do not sum to 1, but to 0.7 instead"
                 )
             ],
         ),
@@ -220,8 +208,7 @@ def test_aggregate_validation_should_rise_exception(
             {"stack_1": 2, "stack_2": -2},
             [
                 NetworkValidatorException(
-                    "Local balancing stack fractions for aggregated consumer "
-                    "aggregate_1 do not sum to 1, but to 0 instead"
+                    "Local balancing stack fractions do not sum to 1, but to 0 instead"
                 ),
                 NetworkValidatorException(
                     "The value of the stack_1 is inconsistent with th expected bounds of the interval: 0 <= 2 <= 1"
@@ -236,7 +223,7 @@ def test_aggregate_validation_should_rise_exception(
             [{"stack_1": 2}],
             [
                 NetworkValidatorException(
-                    "Stack base fractions for AggregatedConsumer aggregate_1 must be given as a dictionary"
+                    "Stack base fractions must be given as a dictionary"
                 ),
             ],
         ),
@@ -245,7 +232,7 @@ def test_aggregate_validation_should_rise_exception(
             {"stack_1": "2", "stack_2": -2},
             [
                 NetworkValidatorException(
-                    "Stack base fractions for AggregatedConsumer aggregate_1 "
+                    "Stack base fractions "
                     "must be given as a dictionary with values of type float"
                 ),
             ],
@@ -255,7 +242,7 @@ def test_aggregate_validation_should_rise_exception(
             {12: 2, "stack_2": -2},
             [
                 NetworkValidatorException(
-                    "Stack base fractions for AggregatedConsumer aggregate_1 "
+                    "Stack base fractions "
                     "must be given as a dictionary with keys of type str"
                 ),
             ],
@@ -265,11 +252,11 @@ def test_aggregate_validation_should_rise_exception(
             {1: "stack_1", 2: "stack_2"},
             [
                 NetworkValidatorException(
-                    "Stack base fractions for AggregatedConsumer aggregate_1 "
+                    "Stack base fractions "
                     "must be given as a dictionary with keys of type str"
                 ),
                 NetworkValidatorException(
-                    "Stack base fractions for AggregatedConsumer aggregate_1 "
+                    "Stack base fractions "
                     "must be given as a dictionary with values of type float"
                 ),
             ],
@@ -351,11 +338,11 @@ def test_aggregate_element_structure_and_fractions_validation(
             {HEATING: pd.Series(data=range(5))},
             [
                 NetworkValidatorException(
-                    "Energy types of aggregated consumer aggregate_1 are different than "
+                    "Energy types are different than "
                     "energy types defined in the connected stack stack_1. Difference: {'ELECTRICITY'}"
                 ),
                 NetworkValidatorException(
-                    "Energy types of aggregated consumer aggregate_1 are different than "
+                    "Energy types are different than "
                     "energy types defined in the connected stack stack_2. Difference: {'ELECTRICITY'}"
                 ),
             ],
@@ -367,7 +354,7 @@ def test_aggregate_element_structure_and_fractions_validation(
             },
             [
                 NetworkValidatorException(
-                    "Yearly energy usage series for aggregated consumer aggregate_1 must have the same index"
+                    "Yearly energy usage series must have the same index"
                 )
             ],
         ),
@@ -378,7 +365,7 @@ def test_aggregate_element_structure_and_fractions_validation(
             },
             [
                 NetworkValidatorException(
-                    "Yearly energy usage series for aggregated consumer aggregate_1 must have the same index"
+                    "Yearly energy usage series must have the same index"
                 )
             ],
         ),
@@ -432,9 +419,7 @@ def test_aggregate_yearly_energy_usage(
                 {"stack_1", "stack_2"},
             ],
             [
-                NetworkValidatorException(
-                    "Fraction min_fraction for aggregate_1 must be of dict type"
-                ),
+                NetworkValidatorException("Fraction min_fraction must be of dict type"),
             ],
             id="Fraction list not dict type",
         ),
@@ -445,7 +430,7 @@ def test_aggregate_yearly_energy_usage(
             },
             [
                 NetworkValidatorException(
-                    "Aggregate in fraction min_fraction for aggregate_1 must be of <class 'str'> type"
+                    "Aggregate in fraction min_fraction must be of <class 'str'> type"
                 ),
             ],
             id="Dict keys are not str",
@@ -457,7 +442,7 @@ def test_aggregate_yearly_energy_usage(
             },
             [
                 NetworkValidatorException(
-                    "Fraction_series in fraction min_fraction for aggregate_1 must be "
+                    "Fraction_series in fraction min_fraction must be "
                     "of <class 'pandas.core.series.Series'> type"
                 ),
             ],
@@ -498,8 +483,7 @@ def test_aggregate_yearly_energy_usage(
             },
             [
                 NetworkValidatorException(
-                    "Fraction min_fraction in LBS stack_1 for AggregatedConsumer "
-                    "aggregate_1 values must be given in range <0:1> but"
+                    "Fraction min_fraction in LBS stack_1 values must be given in range <0:1> but"
                     " [-0.5, 1.23] given instead"
                 ),
             ],
@@ -876,11 +860,11 @@ def test_n_consumer(
             ),
             [
                 NetworkValidatorException(
-                    "Energy types of aggregated consumer aggregate_2 are different than "
+                    "Energy types are different than "
                     "energy types defined in the connected stack stack_3. Difference: {'HEATING'}"
                 ),
                 NetworkValidatorException(
-                    "Energy types of aggregated consumer demand profile aggregate_2 are different than energy"
+                    "Energy types of demand profile are different than energy"
                     " types defined in the connected stack stack_3. Difference: {'HEATING'}"
                 ),
             ],
@@ -910,7 +894,7 @@ def test_n_consumer(
             ),
             [
                 NetworkValidatorException(
-                    "Energy types of aggregated consumer demand profile aggregate_3 are different than energy"
+                    "Energy types of demand profile are different than energy"
                     " types defined in the connected stack stack_3. Difference: {'HEATING'}"
                 ),
             ],
@@ -969,11 +953,7 @@ def test_incomplete_stack_energy_types(
                 n_consumers=pd.Series([1000] * default_network_constants.n_years),
                 average_area="string",  # noqa
             ),
-            [
-                NetworkValidatorException(
-                    "Average area for AggregatedConsumer aggregate_1 must be given as float"
-                )
-            ],
+            [NetworkValidatorException("Average area must be given as float")],
         ),
     ),
 )

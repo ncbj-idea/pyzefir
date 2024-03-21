@@ -123,7 +123,7 @@ class LinopyOptimizationModel(OptimizationModel):
         self._parameters: OptimizationParameters | None = None
         self._variables: OptimizationVariables | None = None
 
-        self._results: Results
+        self._results: Results | None = None
         self._status = OptimizationStatus.NOT_COMPUTED
 
     def build(self, input_data: OptimizationInputData) -> None:
@@ -192,8 +192,8 @@ class LinopyOptimizationModel(OptimizationModel):
                 parameters=self.parameters,
             )
         else:
-            logging.warning(
-                f"model cannot be solved, optimization status is {self.status.name}"
+            logging.getLogger(__name__).warning(
+                "Model cannot be solved, optimization status is %s", self.status.name
             )
 
     @property

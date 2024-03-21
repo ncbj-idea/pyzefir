@@ -94,6 +94,11 @@ class XlsxExporter(Exporter):
                 (root_path / field_name).with_suffix(".xlsx"), engine="xlsxwriter"
             ) as writer:
                 if isinstance(field_value, dict):
+                    if not field_value:
+                        _logger.info(
+                            f"No results found for: {field_name} when saving results to xlsx.  "
+                        )
+                        continue
                     df = pd.concat(field_value, axis=1).sort_index(axis=1)
                 else:
                     df = field_value

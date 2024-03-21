@@ -77,8 +77,8 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Bus bus_A can not be declared as an outlet bus of local balancing "
-                    f"stack lb_heating for energy {TRANSPORT}, since its energy type is {ELECTRICITY}.",
+                    f"Bus bus_A can not be declared as an outlet bus for energy {TRANSPORT}, "
+                    f"since its energy type is {ELECTRICITY}.",
                 )
             ],
             id="wrong_type",
@@ -90,12 +90,10 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Bus bus_D which is declared as an outlet bus of local balancing "
-                    "stack lb_heating does not exist in the network.",
+                    "Bus bus_D which is declared as an outlet bus does not exist in the network.",
                 ),
                 NetworkValidatorException(
-                    "Bus bus_E which is declared as an outlet bus of local balancing "
-                    "stack lb_heating does not exist in the network.",
+                    "Bus bus_E which is declared as an outlet bus does not exist in the network.",
                 ),
             ],
             id="non_existing_bus",
@@ -107,8 +105,7 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Bus bus_B can not be declared as an outlet bus of local balancing "
-                    f"stack lb_heating for energy {HEATING}, since its energy type is "
+                    f"Bus bus_B can not be declared as an outlet bus for energy {HEATING}, since its energy type is "
                     f"{ELECTRICITY}.",
                 )
             ],
@@ -118,7 +115,7 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             {"name": "lb_bad", "buses_out": ["bus_A", "bus_B"]},
             [
                 NetworkValidatorException(
-                    "Outlet buses of local balancing stack lb_bad must be a dict, not <class 'list'>.",
+                    "Outlet buses must be a dict, not <class 'list'>.",
                 )
             ],
             id="wrong_buses_out_type",
@@ -127,7 +124,7 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             {"name": "lb_bad", "buses_out": {ELECTRICITY: 1, HEATING: "bus_A"}},
             [
                 NetworkValidatorException(
-                    "Outlet bus name for energy type ELECTRICITY of local balancing stack lb_bad "
+                    "Outlet bus name for energy type ELECTRICITY "
                     "must be a string, not <class 'int'>.",
                 )
             ],
@@ -140,7 +137,7 @@ def test_if_validate_buses_out_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Energy type for outlet bus bus_A of local balancing stack lb_bad "
+                    "Energy type for outlet bus bus_A "
                     "must be a string, not <class 'int'>.",
                 )
             ],
@@ -256,7 +253,7 @@ def test_validate_buses_subtypes(
                     "Buses energy type TRANSPORT is not defined in the Network"
                 ),
                 NetworkValidatorException(
-                    "Energy type for bus_C in lb_electric must match with energy type for the same bus in Network"
+                    "Energy type for bus_C must match with energy type for the same bus in Network"
                 ),
             ],
         ),
@@ -271,7 +268,7 @@ def test_validate_buses_subtypes(
                     "Buses energy type TRANSPORT is not defined in the Network"
                 ),
                 NetworkValidatorException(
-                    "Energy type for bus_A in lb_electric must match with energy type for the same bus in Network"
+                    "Energy type for bus_A must match with energy type for the same bus in Network"
                 ),
             ],
         ),
@@ -295,10 +292,10 @@ def test_validate_buses_subtypes(
             ),
             [
                 NetworkValidatorException(
-                    "Energy type for bus_C in lb_electric must match with energy type for the same bus in Network"
+                    "Energy type for bus_C must match with energy type for the same bus in Network"
                 ),
                 NetworkValidatorException(
-                    "Energy type for bus_B in lb_electric must match with energy type for the same bus in Network"
+                    "Energy type for bus_B must match with energy type for the same bus in Network"
                 ),
             ],
         ),

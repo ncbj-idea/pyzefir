@@ -1,8 +1,0 @@
-{
-  "subsystem_name": "heating_subsystem",
-  "energy_type": "HEAT_END",
-  "technologies": [
-    "CHP_COAL_SIEKIERKI", "CHP_COAL_ZERAN", "BIG_HEAT_PUMP_FUTURE", "HEAT_PLANT_COAL_KAWECZYN"
-  ],
-  "transmission_loss": 0.13
-}

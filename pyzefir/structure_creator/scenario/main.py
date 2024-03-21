@@ -19,15 +19,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from pyzefir.structure_creator.input_data import ScenarioData
+from pyzefir.structure_creator.data_loader.input_data import ScenarioData
+from pyzefir.structure_creator.excel_writer import write_to_excel
 from pyzefir.structure_creator.scenario.constants_enums import (
     ScenarioSheetName,
     ScenarioSheetsColumnName,
 )
-from pyzefir.structure_creator.utils import (
+from pyzefir.structure_creator.scenario.utils import (
     get_lbs_name,
     interpolate_missing_df_values,
-    write_to_excel,
 )
 
 

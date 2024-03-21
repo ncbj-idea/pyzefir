@@ -30,6 +30,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class LineValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class Line(NetworkElement):
     """
@@ -98,8 +102,7 @@ class Line(NetworkElement):
             if connected_bus_name not in network.buses:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Cannot set the {line_type_name} of the line "
-                        f"{self.name} to bus "
+                        f"Cannot set the {line_type_name} of the line to bus "
                         f"{connected_bus_name}. Bus {connected_bus_name} "
                         f"does not exist in the network"
                     )
@@ -108,12 +111,10 @@ class Line(NetworkElement):
             if network.buses[connected_bus_name].energy_type != self.energy_type:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Cannot set {line_type_name} of the line {self.name} "
-                        f"to bus {connected_bus_name}. "
+                        f"Cannot set {line_type_name} of the line to bus {connected_bus_name}. "
                         f"Bus {connected_bus_name} energy type is "
                         f"{network.buses[connected_bus_name].energy_type}, "
-                        f"which is different from the line {self.name} "
-                        f"energy type: {self.energy_type}."
+                        f"which is different from the line energy type: {self.energy_type}."
                     )
                 )
 
@@ -129,7 +130,7 @@ class Line(NetworkElement):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Cannot add a line {self.name} between buses {self.fr} and "
+                    f"Cannot add a line between buses {self.fr} and "
                     f"{self.to} with different energy types "
                     f"{network.buses[self.fr].energy_type} != "
                     f"{network.buses[self.to].energy_type}"
@@ -200,13 +201,13 @@ class Line(NetworkElement):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Cannot set a transmission fee for the line {self.name}. "
+                    f"Cannot set a transmission fee for the line. "
                     f"Transmission fee {self.transmission_fee} does not exist in the network"
                 )
             )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise LineValidatorExceptionGroup(
                 f"While adding Line {self.name} following errors occurred: ",
                 exception_list,
             )

@@ -34,6 +34,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class AggregatedConsumerValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class AggregatedConsumer(NetworkElement):
     """
@@ -115,17 +119,13 @@ class AggregatedConsumer(NetworkElement):
         """
         if not isinstance(self.demand_profile, str):
             exception_list.append(
-                NetworkValidatorException(
-                    f"Demand for AggregatedConsumer {self.name} "
-                    "must be given as a string"
-                )
+                NetworkValidatorException("Demand must be given as a string")
             )
-            return  # do not need validate if demand_profile is not str
+            return  # do not need to validate if demand_profile is not str
         if network.demand_profiles.get(self.demand_profile) is None:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Demand {self.demand_profile} for AggregatedConsumer {self.name} "
-                    "must be defined in the network"
+                    f"Demand {self.demand_profile} must be defined in the network"
                 )
             )
         else:
@@ -143,7 +143,7 @@ class AggregatedConsumer(NetworkElement):
                 ):
                     exception_list.append(
                         NetworkValidatorException(
-                            f"Energy types of aggregated consumer demand profile {self.name} "
+                            f"Energy types of demand profile "
                             f"are different than energy types defined in the connected stack {stack_name}. "
                             f"Difference: {diff}"
                         )
@@ -169,8 +169,7 @@ class AggregatedConsumer(NetworkElement):
         if not isinstance(self.stack_base_fraction, dict):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Stack base fractions for AggregatedConsumer {self.name} "
-                    "must be given as a dictionary"
+                    "Stack base fractions must be given as a dictionary"
                 )
             )
             return False
@@ -183,8 +182,7 @@ class AggregatedConsumer(NetworkElement):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Stack base fractions for AggregatedConsumer {self.name} "
-                    "must be given as a dictionary with values of type float"
+                    "Stack base fractions must be given as a dictionary with values of type float"
                 )
             )
             is_validation_ok = False
@@ -192,8 +190,7 @@ class AggregatedConsumer(NetworkElement):
         if not all(isinstance(key, str) for key in self.stack_base_fraction.keys()):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Stack base fractions for AggregatedConsumer {self.name} "
-                    "must be given as a dictionary with keys of type str"
+                    "Stack base fractions must be given as a dictionary with keys of type str"
                 )
             )
             is_validation_ok = False
@@ -222,8 +219,7 @@ class AggregatedConsumer(NetworkElement):
         if not math.isclose(1, fraction_sum := sum(self.stack_base_fraction.values())):
             exception_list.append(
                 NetworkValidatorException(
-                    "Local balancing stack fractions for aggregated consumer "
-                    f"{self.name} do not sum to 1, "
+                    "Local balancing stack fractions do not sum to 1, "
                     f"but to {fraction_sum} instead"
                 )
             )
@@ -240,9 +236,7 @@ class AggregatedConsumer(NetworkElement):
             if stack not in network.local_balancing_stacks:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Local balancing stack {stack} available for "
-                        "aggregated consumer "
-                        f"{self.name} does not exist in the network"
+                        f"Local balancing stack {stack} does not exist in the network"
                     )
                 )
             if network.constants.binary_fraction and fraction not in [0, 1]:
@@ -328,8 +322,7 @@ class AggregatedConsumer(NetworkElement):
         if not all(self.yearly_energy_usage[key].index.equals(index) for key in keys):
             exception_list.append(
                 NetworkValidatorException(
-                    "Yearly energy usage series for aggregated consumer "
-                    f"{self.name} must have the same index"
+                    "Yearly energy usage series must have the same index"
                 )
             )
 
@@ -341,8 +334,7 @@ class AggregatedConsumer(NetworkElement):
             if diff := set(stack_energy_types).symmetric_difference(keys):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy types of aggregated consumer {self.name} "
-                        f"are different than energy types defined in the connected stack {stack_name}. "
+                        f"Energy types are different than energy types defined in the connected stack {stack_name}. "
                         f"Difference: {diff}"
                     )
                 )
@@ -373,7 +365,7 @@ class AggregatedConsumer(NetworkElement):
             dict_to_validate=getattr(self, fraction_name),
             key_type=str,
             value_type=pd.Series,
-            parameter_name=f"fraction {fraction_name} for {self.name}",
+            parameter_name=f"fraction {fraction_name}",
             key_parameter_name="aggregate",
             value_parameter_name="fraction_series",
             exception_list=exception_list,
@@ -417,8 +409,7 @@ class AggregatedConsumer(NetworkElement):
                 if not values_outside_range.empty:
                     exception_list.append(
                         NetworkValidatorException(
-                            f"Fraction {fraction_name} in LBS {stack} for AggregatedConsumer "
-                            f"{self.name} values must be given in range"
+                            f"Fraction {fraction_name} in LBS {stack} values must be given in range"
                             f" <0:1> but {values_outside_range.tolist()} given instead"
                         )
                     )
@@ -668,13 +659,11 @@ class AggregatedConsumer(NetworkElement):
         if self.average_area is not None:
             if not isinstance(self.average_area, float):
                 exception_list.append(
-                    NetworkValidatorException(
-                        f"Average area for AggregatedConsumer {self.name} must be given as float"
-                    )
+                    NetworkValidatorException("Average area must be given as float")
                 )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise AggregatedConsumerValidatorExceptionGroup(
                 f"While adding AggregatedConsumer {self.name} following errors occurred: ",
                 exception_list,
             )

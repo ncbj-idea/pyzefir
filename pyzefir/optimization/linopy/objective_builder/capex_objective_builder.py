@@ -26,7 +26,7 @@ from pyzefir.optimization.linopy.preprocessing.parameters.generator_type_paramet
 from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameters import (
     StorageTypeParameters,
 )
-from pyzefir.utils.functions import get_dict_vals, invert_dict_of_sets
+from pyzefir.utils.functions import get_dict_vals
 
 
 class CapexObjectiveBuilder(ObjectiveBuilder):
@@ -72,6 +72,19 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         unit_type_idx: dict,
         non_lbs_unit_idxs: set,
     ) -> LinearExpression | float:
+        """
+        Total investment cost for global (non-lbs) technologies for all years
+
+        Args:
+            cap_plus (Variable): capex increase labeled by unit index
+            unit_type_param (GeneratorTypeParameters | StorageTypeParameters): technology type index
+            unit_type_idx: dict[int, int]: technology index of a given unit index
+            non_lbs_unit_idxs: set[int]: set of non-lbs (global) units
+
+        Returns:
+            Linear expression of capex cost
+
+        """
         disc_rate = self.expr.discount_rate(
             self.parameters.scenario_parameters.discount_rate
         )
@@ -81,20 +94,17 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
             ut_idx = unit_type_idx[u_idx]
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
-            bt = unit_type_param.bt[ut_idx]
 
-            for y_idx in y_idxs.ord:
+            for s_idx in y_idxs.ord:
                 unit_capex += self.global_capex_per_unit_per_year(
                     capex=capex,
                     cap_plus=cap_plus,
                     disc_rate=disc_rate,
                     lt=lt,
-                    bt=bt,
-                    y_idx=y_idx,
+                    s_idx=s_idx,
                     u_idx=u_idx,
                     y_idxs=y_idxs,
                 )
-
         return unit_capex
 
     @staticmethod
@@ -102,25 +112,42 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         capex: np.ndarray,
         cap_plus: Variable,
         disc_rate: np.ndarray,
-        bt: int,
         lt: int,
-        y_idx: int,
+        s_idx: int,
         u_idx: int,
         y_idxs: IndexingSet,
     ) -> LinearExpression | float:
+        """
+        Capex for a given year for global (non-lbs) technologies
+        Takes a single year index as a single argument s_idx, calculates the corresponding capex cost in this year
+        The function also requires the whole set of years, given by y_idxs
+
+
+        Args:
+            capex (ndarray): yearly capex cost parameter
+            cap_plus (Variable): capex increase labeled by unit index
+            disc_rate (ndarray): yearly discount rate
+            lt (int): life time of a given technology
+            s_idx (int): single year index, specifying the year for capex calculation
+            ut_idx (int): technology type index
+            aggr_idx (int): index of a given aggregate
+            y_idxs (IndexingSet): set of years
+
+        Returns:
+            Linear expression of a yearly investment cost
+        """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
-            lt=lt, bt=bt, yy=y_idxs
+            lt=lt, yy=y_idxs
         )
         res = 0.0
-        for s in y_idxs.ord:
+        for y_idx in y_idxs.ord:
             res += (
-                cap_plus.sel(index=(u_idx, s))
-                * am_indicator[s, y_idx]
-                * capex[s]
+                am_indicator[s_idx, y_idx]
+                * capex[s_idx]
+                * cap_plus.sel(index=(u_idx, s_idx))
                 * disc_rate[y_idx]
                 / lt
             )
-
         return res
 
     def _local_capex(
@@ -129,30 +156,39 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
         aggr_map: dict[..., set],
     ) -> LinearExpression | float:
+        """
+        Total investment cost for local (lbs) technologies for all years
+
+        Args:
+            tcap_plus (Variable): capex increase labeled by unit type index and aggregate index
+            unit_type_param (GeneratorTypeParameters | StorageTypeParameters): technology type index
+            unit_type_idx: dict[int, int]: technology index of a given unit index
+            non_lbs_unit_idxs: set[int]: set of non-lbs (global) units
+
+        Returns:
+            Linear expression of capex cost
+
+        """
         disc_rate = self.expr.discount_rate(
             self.parameters.scenario_parameters.discount_rate
         )
         y_idxs = self.indices.Y
         unit_type_capex = 0.0
-        inverted_aggr_map = invert_dict_of_sets(aggr_map)
-        for ut_idx, aggr_idxs in inverted_aggr_map.items():
-            capex = unit_type_param.capex[ut_idx]
-            lt = unit_type_param.lt[ut_idx]
-            bt = unit_type_param.bt[ut_idx]
-
-            for y_idx in y_idxs.ord:
-                unit_type_capex += self.local_capex_per_unit_per_year(
-                    capex=capex,
-                    tcap_plus=tcap_plus,
-                    disc_rate=disc_rate,
-                    bt=bt,
-                    lt=lt,
-                    y_idx=y_idx,
-                    ut_idx=ut_idx,
-                    aggr_idxs=aggr_idxs,
-                    y_idxs=y_idxs,
-                )
-
+        for aggr_idx, ut_idxs in aggr_map.items():
+            for ut_idx in ut_idxs:
+                capex = unit_type_param.capex[ut_idx]
+                lt = unit_type_param.lt[ut_idx]
+                for s_idx in y_idxs.ord:
+                    unit_type_capex += self.local_capex_per_unit_per_year(
+                        capex=capex,
+                        tcap_plus=tcap_plus,
+                        disc_rate=disc_rate,
+                        lt=lt,
+                        s_idx=s_idx,
+                        ut_idx=ut_idx,
+                        aggr_idx=aggr_idx,
+                        y_idxs=y_idxs,
+                    )
         return unit_type_capex
 
     @staticmethod
@@ -160,51 +196,65 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         capex: np.ndarray,
         tcap_plus: Variable,
         disc_rate: np.ndarray,
-        bt: int,
         lt: int,
-        y_idx: int,
+        s_idx: int,
         ut_idx: int,
-        aggr_idxs: set[int],
+        aggr_idx: int,
         y_idxs: IndexingSet,
     ) -> LinearExpression | float:
+        """
+        Capex for a given year for local (lbs) technologies
+        Takes a single year index as a single argument s_idx, calculates the corresponding capex cost in this year
+        The function also requires the whole set of years, given by y_idxs
+
+        Args:
+            capex (ndarray): yearly capex cost parameter
+            tcap_plus (Variable): capex increase labeled by unit type index and aggregate index
+            disc_rate (ndarray): yearly discount rate
+            lt (int): life time of a given technology
+            s_idx (int): single year index, specifying the year for capex calculation
+            ut_idx (int): technology type index
+            aggr_idx (int): index of a given aggregate
+            y_idxs (IndexingSet): set of years
+
+        Returns:
+            Linear expression of a yearly investment cost
+        """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
-            lt=lt, bt=bt, yy=y_idxs
+            lt=lt, yy=y_idxs
         )
-
         res = 0.0
-
-        for s in y_idxs.ord:
-            for aggr_idx in aggr_idxs:
-                res += (
-                    tcap_plus.sel(index=(aggr_idx, ut_idx, s))
-                    * am_indicator[s, y_idx]
-                    * capex[s]
-                    * disc_rate[y_idx]
-                    / lt
-                )
-
+        for y_idx in y_idxs.ord:
+            res += (
+                am_indicator[s_idx, y_idx]
+                * tcap_plus.sel(index=(aggr_idx, ut_idx, s_idx))
+                * capex[s_idx]
+                * disc_rate[y_idx]
+                / lt
+            )
         return res
 
     @staticmethod
     def _amortization_matrix_indicator(
         lt: int,
-        bt: int,
         yy: IndexingSet,
     ) -> np.ndarray:
         """
-        Indicator matrix for y-index range in capex expression.
+        Indicator matrix for y-index range in capex expression specifying the summation in capex expression
+        The resulting matrix is composed of 0 and 1; zero means there is no capex contribution from the corresponding
+        element
 
-        :param lt: unit lifetime
-        :param bt: unit build time
-        :param yy: year indices
-        :return: np.ndarray
+        Args:
+            lt (int): unit lifetime
+            yy (IndexingSet): year indices
+
+        Returns:
+            np.ndarray
         """
 
         return np.array(
             [
-                ((yy.ord >= y + bt) & (yy.ord <= min(y + bt + lt - 1, len(yy)))).astype(
-                    int
-                )
+                ((yy.ord >= y) & (yy.ord <= min(y + lt - 1, len(yy)))).astype(int)
                 for y in yy.ord
             ]
         )

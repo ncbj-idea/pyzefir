@@ -1,9 +1,0 @@
-{
-  "subsystem_name": "kse_subsystem",
-  "energy_type": "ELECTRICITY_END",
-  "technologies": [
-    "KSE_VIRTUAL_GENERATOR"
-  ],
-  "transmission_loss": 0.04,
-  "dsr_type": "dsr_subsystem"
-}

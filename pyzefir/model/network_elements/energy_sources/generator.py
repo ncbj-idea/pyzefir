@@ -30,6 +30,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class GeneratorValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class Generator(EnergySource):
     """
@@ -83,7 +87,7 @@ class Generator(EnergySource):
         if not all(isinstance(item, str) for item in self.buses):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator attribute 'buses' for {self.name} must contain only strings"
+                    "Generator attribute 'buses' must contain only strings"
                 )
             )
         self._validate_attribute_type(
@@ -97,7 +101,7 @@ class Generator(EnergySource):
             if bus_name not in network.buses:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Cannot attach generator {self.name} to a bus {bus_name} - bus does not exist in the network"
+                        f"Cannot attach generator to a bus {bus_name} - bus does not exist in the network"
                     )
                 )
                 should_check_conversion_rate = False
@@ -112,7 +116,7 @@ class Generator(EnergySource):
                 )
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Unable to attach generator {self.name} to a bus {bus_name}. "
+                        f"Unable to attach generator to a bus {bus_name}. "
                         f"Bus energy type ({network.buses[bus_name].energy_type}) "
                         f"and generator energy types ({gen_en_types}) do not match"
                     )
@@ -127,7 +131,7 @@ class Generator(EnergySource):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator {self.name} has conversion_rate for energy types: "
+                    f"Conversion_rate for energy types: "
                     f"{sorted(list(diff))} which are not in connected buses energy types"
                 )
             )
@@ -151,9 +155,7 @@ class Generator(EnergySource):
         """
         if generator_type is None:
             exception_list.append(
-                NetworkValidatorException(
-                    f"Network does not contain generator type {self.name}"
-                )
+                NetworkValidatorException("Network does not contain generator type")
             )
             return
         if not isinstance(generator_type, GeneratorType):
@@ -167,8 +169,8 @@ class Generator(EnergySource):
         if not generator_type.energy_types.issubset(network.energy_types):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator {self.name} has gen energy types:{gen_energy_types}"
-                    " which is not compliant with the network"
+                    f"Gen energy types: {gen_energy_types}"
+                    " are not compliant with the network"
                     f" energy types: {sorted(network.energy_types)}"
                 )
             )
@@ -209,7 +211,7 @@ class Generator(EnergySource):
             ):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"In {self.name} there are fees: {sorted(list(duplicated_fees))} which"
+                        f"There are fees: {sorted(list(duplicated_fees))} which"
                         f" apply to the same type of emission: {emission_type}"
                     )
                 )
@@ -251,8 +253,8 @@ class Generator(EnergySource):
             )
         self._validate_emission_fee(network=network, exception_list=exception_list)
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
-                f"While adding Generator {self.name} following errors occurred: ",
+            raise GeneratorValidatorExceptionGroup(
+                f"While adding Generator {self.name} with type {self.energy_source_type} following errors occurred: ",
                 exception_list,
             )
 

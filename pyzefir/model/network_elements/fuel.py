@@ -32,6 +32,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class FuelValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class Fuel(NetworkElement):
     """
@@ -121,7 +125,7 @@ class Fuel(NetworkElement):
             self._validate_emission(network, exception_list)
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise FuelValidatorExceptionGroup(
                 f"While adding Fuel {self.name} following errors occurred: ",
                 exception_list,
             )

@@ -379,7 +379,8 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                 )
                 self.model.add_constraints(
                     min_aggregated_power
-                    <= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y}),
+                    <= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y})
+                    + self.parameters.scenario_parameters.numeric_tolerance,
                     name=f"{aggr_idx}_{u_name}_{y}_DEVICE_MIN_POWER_CONSTRAINT",
                 )
             if u_idx in unit_par.max_device_nom_power:
@@ -392,6 +393,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                 )
                 self.model.add_constraints(
                     max_aggregated_power
+                    + self.parameters.scenario_parameters.numeric_tolerance
                     >= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y}),
                     name=f"{aggr_idx}_{u_name}_{y}_DEVICE_MAX_POWER_CONSTRAIN",
                 )

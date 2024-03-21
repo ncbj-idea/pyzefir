@@ -82,7 +82,7 @@ class EnergySource(NetworkElement, ABC):
         if not isinstance(nom_power, int | float | None):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Energy source {self.name} has invalid {nom_power_name}. "
+                    f"Invalid {nom_power_name}. "
                     f"{nom_power_name} must be an instance of one of the types: float, int or None, "
                     f"not {type(nom_power).__name__}"
                 )
@@ -90,7 +90,7 @@ class EnergySource(NetworkElement, ABC):
         elif nom_power is not None and not nom_power >= 0:
             exception_list.append(
                 NetworkValidatorException(
-                    f"{nom_power_name} for {self.name} has invalid value. "
+                    f"{nom_power_name.capitalize()} has invalid value. "
                     f"It must be greater or equal to zero, but it is: {nom_power}"
                 )
             )
@@ -117,7 +117,7 @@ class EnergySource(NetworkElement, ABC):
         if not isinstance(self.energy_source_type, str):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Energy source {self.name} has invalid energy source type."
+                    f"Invalid energy source type."
                     " Energy source type must be a string, "
                     f"not {type(self.energy_source_type).__name__}"
                 )
@@ -126,7 +126,7 @@ class EnergySource(NetworkElement, ABC):
         if not isinstance(self.unit_base_cap, (int, float)):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Energy source {self.name} has invalid unit base capacity. "
+                    f"Invalid unit base capacity. "
                     "Unit base capacity must be numeric, "
                     f"not {type(self.unit_base_cap).__name__}"
                 )
@@ -136,9 +136,7 @@ class EnergySource(NetworkElement, ABC):
             not isinstance(t, str) for t in self.tags
         ):
             exception_list.append(
-                NetworkValidatorException(
-                    f"Energy source {self.name} has invalid tags: {self.tags}. "
-                )
+                NetworkValidatorException(f"Invalid tags: {self.tags}. ")
             )
 
         for attr in [
@@ -149,7 +147,7 @@ class EnergySource(NetworkElement, ABC):
         ]:
             series = getattr(self, attr)
             if validate_series(
-                name=f"Energy source {self.name} {attr}",
+                name=f"{attr.capitalize()}",
                 series=series,
                 length=network.constants.n_years,
                 exception_list=exception_list,
@@ -157,7 +155,7 @@ class EnergySource(NetworkElement, ABC):
             ) and not pd.isnull(series.iloc[0]):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy source {self.name} {attr} must have a NaN value for the base year"
+                        f"{attr.capitalize()} must have a NaN value for the base year"
                     )
                 )
 

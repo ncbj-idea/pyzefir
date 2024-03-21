@@ -23,6 +23,8 @@ import linopy
 import numpy as np
 import pandas as pd
 
+from pyzefir.cli.logger import DEFAULT_LOG_LEVEL, LOG_LEVEL_MAPPING
+
 
 class ConfigException(Exception):
     pass
@@ -67,6 +69,10 @@ class ConfigParams:
     solver: str | None = None
     structure_creator_input_path: Path | None = None
     """ path to the creator input files """
+    format_exceptions: bool = True
+    """ whether to format exceptions or not handle them at all """
+    log_level: int
+    """ logging level """
 
     def __post_init__(self) -> None:
         """Validate parameters."""
@@ -208,8 +214,13 @@ class ConfigLoader:
             "ens": _opt,
             "use_hourly_scale": _opt,
             "solver": _opt,
+            "numeric_tolerance": _opt,
         },
         "create": {"n_years": _opt, "n_hours": _opt, "input_path": _opt},
+        "debug": {
+            "format_network_exceptions": _opt,
+            "log_level": _opt,
+        },
     }
     _sections = _mandatory_sections | _optional_sections
 
@@ -312,20 +323,35 @@ class ConfigLoader:
                 is not None
                 else None
             ),
+            format_exceptions=self.config.getboolean(
+                "debug", "format_network_exceptions", fallback=True
+            ),
+            log_level=self._get_log_level(),
         )
 
+    def _get_log_level(self) -> int:
+        config_log_level = self.config.get("debug", "log_level", fallback="")
+        if (log_level := LOG_LEVEL_MAPPING.get(config_log_level.lower())) is not None:
+            return log_level
+        return DEFAULT_LOG_LEVEL
+
     def _load_network_config(self) -> dict[str, Any]:
+        network_config: dict[str, Any] = {}
         if "optimization" not in self.config.sections():
-            return dict()
+            return network_config
         optimization_section = self.config["optimization"]
-        binary_fraction = (
+        network_config["binary_fraction"] = (
             optimization_section.getboolean("binary_fraction")
             if "binary_fraction" in optimization_section
             else False
         )
-        return {
-            "binary_fraction": binary_fraction,
-        }
+        if (
+            numeric_tolerance := optimization_section.getfloat(
+                "numeric_tolerance", fallback=None
+            )
+        ) is not None:
+            network_config["numeric_tolerance"] = numeric_tolerance
+        return network_config
 
     def _load_parameter_from_csv(self, parameter: str) -> np.ndarray | None:
         path = self._get_path("parameters", parameter)

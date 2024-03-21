@@ -428,7 +428,7 @@ def test_network_creator_create_assertion_occurred() -> None:
     )
     assert (
         str(error_info.value.args[1][1].args[1][0])
-        == "Cannot attach generator gen_B to a bus bus_B - bus does not exist in the network"
+        == "Cannot attach generator to a bus bus_B - bus does not exist in the network"
     )
     line_ac = Line(
         name="A->B",
@@ -479,12 +479,12 @@ def test_network_creator_create_assertion_occurred() -> None:
     )
     assert (
         str(error_info.value.args[1][1].args[1][0])
-        == "Cannot set end of the line A->B to bus bus_B. Bus bus_B energy type is HEATING, which is different"
-        " from the line A->B energy type: ELECTRICITY."
+        == "Cannot set end of the line to bus bus_B. Bus bus_B energy type is HEATING, which is different"
+        " from the line energy type: ELECTRICITY."
     )
     assert (
         str(error_info.value.args[1][1].args[1][1])
-        == "Cannot add a line A->B between buses bus_A and bus_B with different energy types ELECTRICITY != HEATING"
+        == "Cannot add a line between buses bus_A and bus_B with different energy types ELECTRICITY != HEATING"
     )
     assert (
         str(error_info.value.args[1][0].args[1][0])

@@ -165,7 +165,7 @@ def test_storage_type_instance(
                 series_length=default_network_constants.n_years,
                 energy_type="COLD",
             ),
-            "StorageType default has energy type COLD which is not compliant with the network "
+            "Energy type COLD is not compliant with the network "
             "energy types: ['ELECTRICITY', 'HEATING']",
             id="energy_type_not_in_network_COLD",
         ),
@@ -174,7 +174,7 @@ def test_storage_type_instance(
                 series_length=default_network_constants.n_years,
                 energy_type="HEAT_USAGE",
             ),
-            "StorageType default has energy type HEAT_USAGE which is not compliant with the network "
+            "Energy type HEAT_USAGE is not compliant with the network "
             "energy types: ['ELECTRICITY', 'HEATING']",
             id="energy_type_not_in_network_HEAT_USAGE",
         ),
@@ -183,7 +183,7 @@ def test_storage_type_instance(
                 series_length=default_network_constants.n_years,
                 energy_type="ELECT",
             ),
-            "StorageType default has energy type ELECT which is not compliant with the network "
+            "Energy type ELECT is not compliant with the network "
             "energy types: ['ELECTRICITY', 'HEATING']",
             id="energy_type_not_in_network_ELECT",
         ),

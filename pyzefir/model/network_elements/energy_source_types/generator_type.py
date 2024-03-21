@@ -34,6 +34,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class GeneratorTypeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class GeneratorType(EnergySourceType):
     """
@@ -102,8 +106,8 @@ class GeneratorType(EnergySourceType):
         if self.capacity_factor is not None and self.fuel is not None:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator type {self.name} can have either capacity "
-                    f"factor or fuel at the same time"
+                    "Generator type can have either capacity "
+                    "factor or fuel at the same time"
                 )
             )
         for name, gen_type in network.generator_types.items():
@@ -125,12 +129,12 @@ class GeneratorType(EnergySourceType):
         elif not np.isnan(self.ramp) and not 0 < self.ramp < 1:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Ramp value for {self.name} must be "
+                    f"Ramp value must be "
                     f"greater than 0 and less than 1, but it is {self.ramp}"
                 )
             )
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise GeneratorTypeValidatorExceptionGroup(
                 f"While adding GeneratorType {self.name} following "
                 f"errors occurred: ",
                 exception_list,
@@ -164,13 +168,13 @@ class GeneratorType(EnergySourceType):
             exception_list.append(
                 NetworkValidatorException(
                     "None or str type for fuel expected but type:"
-                    f" {type(self.fuel)} for generator type: {self.name} given"
+                    f" {type(self.fuel)} given"
                 )
             )
         if self.fuel is not None and self.fuel not in network.fuels:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator {self.name} fuel {self.fuel} has not been added to the network"
+                    f"Fuel {self.fuel} has not been added to the network"
                 )
             )
 
@@ -196,7 +200,7 @@ class GeneratorType(EnergySourceType):
             exception_list.append(
                 NetworkValidatorException(
                     f"None or str type for capacity factor expected but type: "
-                    f"{type(self.capacity_factor)} for generator type: {self.name} given"
+                    f"{type(self.capacity_factor)} given"
                 )
             )
         if (
@@ -205,7 +209,7 @@ class GeneratorType(EnergySourceType):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Generator type '{self.name}' capacity factor "
+                    f"Capacity factor "
                     f"'{self.capacity_factor}' has not been added to the network"
                 )
             )
@@ -229,15 +233,13 @@ class GeneratorType(EnergySourceType):
         """
         if self.conversion_rate is None:
             exception_list.append(
-                NetworkValidatorException(
-                    f"Conversion rate of generator type: {self.name} cannot be None."
-                )
+                NetworkValidatorException("Conversion rate cannot be None.")
             )
             return
         if not set(self.conversion_rate.keys()).issubset(network.energy_types):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Conversion rate energy types of {self.name} do not exist "
+                    f"Conversion rate energy types do not exist "
                     f"in network energy types: {sorted(network.energy_types)}"
                 )
             )
@@ -259,15 +261,13 @@ class GeneratorType(EnergySourceType):
         """
         if self.efficiency is None:
             exception_list.append(
-                NetworkValidatorException(
-                    f"Efficiency of generator type: {self.name} cannot be None."
-                )
+                NetworkValidatorException("Efficiency cannot be None.")
             )
             return
         if not set(self.efficiency.keys()).issubset(network.energy_types):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Efficiency energy types of {self.name} do not exist "
+                    f"Efficiency energy types do not exist "
                     f"in network energy types: {sorted(network.energy_types)}"
                 )
             )
@@ -289,9 +289,7 @@ class GeneratorType(EnergySourceType):
         """
         if self.emission_reduction is None:
             exception_list.append(
-                NetworkValidatorException(
-                    f"Emission reduction of generator type: {self.name} cannot be None."
-                )
+                NetworkValidatorException("Emission reduction cannot be None.")
             )
             return
         if emission_diff := set(self.emission_reduction.keys()).difference(
@@ -299,8 +297,7 @@ class GeneratorType(EnergySourceType):
         ):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Emission reduction emission types {emission_diff} of "
-                    f"{self.name} do not exist "
+                    f"Emission reduction emission types {emission_diff} do not exist "
                     f"in network emission types: {sorted(network.emission_types)}"
                 )
             )
@@ -379,7 +376,7 @@ class GeneratorType(EnergySourceType):
                 incorrect_hours = incorrect_rows.index[~incorrect_rows].to_list()
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Power utilization values for {self.name} must be greater "
+                        f"Power utilization values must be greater "
                         f"or equal 0, but for hours: {incorrect_hours} it is not"
                     )
                 )

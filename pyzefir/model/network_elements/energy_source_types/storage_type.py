@@ -32,6 +32,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class StorageTypeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class StorageType(EnergySourceType):
     """
@@ -106,8 +110,8 @@ class StorageType(EnergySourceType):
         if self.energy_type not in network.energy_types:
             exception_list.append(
                 NetworkValidatorException(
-                    f"StorageType {self.name} has energy type {self.energy_type}"
-                    " which is not compliant with the network"
+                    f"Energy type {self.energy_type}"
+                    " is not compliant with the network"
                     f" energy types: {sorted(network.energy_types)}"
                 )
             )
@@ -128,7 +132,7 @@ class StorageType(EnergySourceType):
                 )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise StorageTypeValidatorExceptionGroup(
                 f"While adding StorageType {self.name} following errors occurred: ",
                 exception_list,
             )

@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.4.1] - 2024-03-14
+### Added
+
+- Implemented new way of logging
+- Numeric tolerance added to configuration
+
+### Fixed
+- Fixed balancing and scenario constraints
+- Fixed capex calculations methods
+
+### Changed
+- Structure Creator implementation changed
+
+
 ## [0.3.0] - 2024-02-16
 
 ### Added

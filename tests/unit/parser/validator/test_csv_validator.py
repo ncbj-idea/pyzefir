@@ -17,6 +17,7 @@
 from typing import Type
 from unittest import mock
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -160,12 +161,13 @@ def test_csv_validator_translate_pandas_type_to_python_type(
 )
 def test_csv_validator_check_dataframe_dynamic_structure(
     valid_structure: DatasetConfig,
-    dataframe_structure: dict[str, DataFramesColumnsType],
+    dataframe_structure: dict[str, str],
     error_msg: str | set[str],
 ) -> None:
     exception_list: list[DataFrameValidatorException] = []
-
+    df = pd.DataFrame({"hour_idx": [1, 2], "CO2": [1.2, 3.4], "SO2": [2.1, 2.4]})
     DataFrameValidator(
+        df=df,
         valid_structure=valid_structure,
         dataframe_structure=dataframe_structure,
         dataset_reference="test name",
@@ -185,7 +187,7 @@ def test_csv_validator_check_dataframe_dynamic_structure(
 @pytest.mark.parametrize(
     "valid_columns_dict, dataframe_structure, error_msg",
     [
-        (
+        pytest.param(
             {"generator_name": str, "conversion_rate": float, "efficiency": int},
             {
                 "generator_name": "object",
@@ -193,8 +195,9 @@ def test_csv_validator_check_dataframe_dynamic_structure(
                 "efficiency": "int64",
             },
             "",
+            id="No error, all types correct",
         ),
-        (
+        pytest.param(
             {"generator_name": str, "conversion_rate": float, "efficiency": int},
             {
                 "generator_name": "object",
@@ -203,8 +206,9 @@ def test_csv_validator_check_dataframe_dynamic_structure(
             },
             "Dataframe column name generator_diamond not found in required "
             "structure ['generator_name', 'conversion_rate', 'efficiency']",
+            id="Wrong generator_diamond df column name",
         ),
-        (
+        pytest.param(
             {"generator_name": str, "conversion_rate": float, "efficiency": int},
             {
                 "generator_name": "object",
@@ -217,8 +221,9 @@ def test_csv_validator_check_dataframe_dynamic_structure(
                 "Column conversion_rate is misplaced. Should be on index 1, "
                 "but it is on 2 instead",
             },
+            id="Misplaced columns efficiency and conversion_rate order ",
         ),
-        (
+        pytest.param(
             {"generator_name": str, "conversion_rate": float, "efficiency": int},
             {
                 "generator_name": "object",
@@ -227,8 +232,9 @@ def test_csv_validator_check_dataframe_dynamic_structure(
             },
             "Dataframe column efficiency type <class 'str'> is different "
             "as in required structure <class 'int'>",
+            id="efficiency column type str instead of required int",
         ),
-        (
+        pytest.param(
             {"generator_name": str, "conversion_rate": float, "efficiency": int},
             {
                 "generator_name": "object",
@@ -243,20 +249,25 @@ def test_csv_validator_check_dataframe_dynamic_structure(
                 "Dataframe column efficiency type <class 'str'> is different "
                 "as in required structure <class 'int'>",
             },
+            id="Misplaced columns efficiency and conversion_rate order and efficiency columns wrong type",
         ),
     ],
 )
 def test_csv_validator_check_dataframe_static_structure(
     valid_columns_dict: dict[str, DataFramesColumnsType],
-    dataframe_structure: dict[str, DataFramesColumnsType],
+    dataframe_structure: dict[str, str],
     error_msg: str | set[str],
 ) -> None:
     exception_list: list[DataFrameValidatorException] = []
     valid_structure = DatasetConfig(
         dataset_name="Test_dataset", columns=valid_columns_dict
     )
+    df = pd.DataFrame(
+        {"generator_name": ["gen_name"], "conversion_rate": [1.23], "efficiency": [15]}
+    )
 
     DataFrameValidator(
+        df=df,
         valid_structure=valid_structure,
         dataframe_structure=dataframe_structure,
         dataset_reference="df_name",
@@ -275,11 +286,12 @@ def test_csv_validator_check_dataframe_static_structure(
 
 
 @pytest.mark.parametrize(
-    "dataframe_structure, valid_structure, error",
+    "dataframe_structure, valid_structure, df, error",
     [
         (
             {"name": "object"},
             DatasetConfig(dataset_name="Energy_Types", columns={"name": str}),
+            pd.DataFrame({"name": ["object"]}),
             None,
         ),
         (
@@ -287,6 +299,12 @@ def test_csv_validator_check_dataframe_static_structure(
             DatasetConfig(
                 dataset_name="Technology",
                 columns={"technology": str, "base_capacity": float},
+            ),
+            pd.DataFrame(
+                {
+                    "technology": ["object"],
+                    "base_capacity": [1.23],
+                }
             ),
             None,
         ),
@@ -306,6 +324,14 @@ def test_csv_validator_check_dataframe_static_structure(
                     "loss_out": float,
                 },
             ),
+            pd.DataFrame(
+                {
+                    "name": ["object"],
+                    "energy_type": ["heat"],
+                    "loss_in": [1.23],
+                    "loss_out": [1],
+                }
+            ),
             None,
         ),
         (
@@ -314,6 +340,14 @@ def test_csv_validator_check_dataframe_static_structure(
                 dataset_name="Fuel_Prices",
                 columns={"year_idx": int},
                 default_type={int},
+            ),
+            pd.DataFrame(
+                {
+                    "year_idx": [1],
+                    "COAL": [2],
+                    "PV": [3],
+                    "SOLAR": [4],
+                }
             ),
             None,
         ),
@@ -324,12 +358,26 @@ def test_csv_validator_check_dataframe_static_structure(
                 columns={"year_idx": int},
                 default_type={float, int},
             ),
+            pd.DataFrame(
+                {
+                    "year_idx": [1],
+                    "COAL": [2],
+                    "PV": [3],
+                    "SOLAR": ["Panel"],
+                }
+            ),
             True,
         ),
         (
             {"name": "object", "demandtype": "object"},  # noqa typo
             DatasetConfig(
                 dataset_name="Aggregates", columns={"name": str, "demand_type": str}
+            ),
+            pd.DataFrame(
+                {
+                    "name": ["object"],
+                    "demandtype": ["object"],
+                }
             ),
             True,
         ),
@@ -338,9 +386,11 @@ def test_csv_validator_check_dataframe_static_structure(
 def test_csv_validator_validate(
     dataframe_structure: dict[str, str],
     valid_structure: DatasetConfig,
+    df: pd.DataFrame,
     error: bool | None,
 ) -> None:
     validator = DataFrameValidator(
+        df=df,
         dataframe_structure=dataframe_structure,
         valid_structure=valid_structure,
         dataset_reference="dataset id",
@@ -376,6 +426,7 @@ def test_csv_validator_validate_lfs_files(category: str, xlsx_path: str) -> None
         tested = get_dataset_config_from_categories(category, dataset_name)
         columns_dict = ExcelToCsvConverter._get_dataframe_structure(df, tested)
         DataFrameValidator(
+            df=df,
             dataframe_structure=columns_dict,
             valid_structure=tested,
             dataset_reference="dataset id",
@@ -383,19 +434,61 @@ def test_csv_validator_validate_lfs_files(category: str, xlsx_path: str) -> None
 
 
 @pytest.mark.parametrize(
-    "type_a, type_b, expected",
+    "type_a, type_b, column_name, expected",
     (
-        (str, str, True),
-        (str, int, False),
-        (int, float, True),
-        (float, int, False),
-        (bool, int, False),
-        (int, bool, False),
+        (str, str, "default_column", True),
+        (str, int, "default_column", False),
+        (int, float, "default_column", True),
+        (float, int, "default_column", False),
+        (float, int, "nan_columns", True),
+        (bool, int, "default_column", False),
+        (int, bool, "default_column", False),
     ),
 )
 def test_column_type_match(
     type_a: DataFramesColumnsType,
     type_b: DataFramesColumnsType,
+    column_name: str,
     expected: bool,
 ) -> None:
-    assert DataFrameValidator._check_type_match(type_a, type_b) == expected
+    df = pd.DataFrame({"default_column": [0, 1], "nan_columns": [np.nan, np.nan]})
+    assert (
+        DataFrameValidator._check_type_match(type_a, type_b, df, column_name)
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "dataframe_structure, valid_structure",
+    [
+        pytest.param(
+            {"target_column": "float64"},
+            DatasetConfig(dataset_name="", columns={"target_column": int}),
+            id="Required int",
+        ),
+        pytest.param(
+            {"target_column": "float64"},
+            DatasetConfig(dataset_name="", columns={"target_column": bool}),
+            id="Required bool",
+        ),
+        pytest.param(
+            {"target_column": "float64"},
+            DatasetConfig(dataset_name="", columns={"target_column": str}),
+            id="Required str",
+        ),
+    ],
+)
+def test_empty_column(
+    dataframe_structure: dict[str, str], valid_structure: DatasetConfig
+) -> None:
+    logger_msg = "Dataframe column target_column it's empty"
+    df = pd.DataFrame({"target_column": [np.nan, np.nan, np.nan]})
+
+    with mock.patch("logging.Logger.debug") as mock_logger:
+        DataFrameValidator(
+            df=df,
+            dataframe_structure=dataframe_structure,
+            valid_structure=valid_structure,
+            dataset_reference="dataset id",
+        ).validate()
+        mock_logger.assert_called_with(logger_msg)

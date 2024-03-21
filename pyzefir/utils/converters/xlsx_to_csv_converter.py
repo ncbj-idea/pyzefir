@@ -108,6 +108,7 @@ class ExcelToCsvConverter(AbstractConverter):
                 category, valid_structure.dataset_name
             )
             DataFrameValidator(
+                df=df,
                 dataframe_structure=dataframe_structure,
                 valid_structure=valid_structure,
                 dataset_reference=dataset_reference,

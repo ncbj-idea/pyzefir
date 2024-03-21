@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from enum import StrEnum, auto
+from enum import StrEnum, auto, unique
 
 
+@unique
 class ScenarioSheetName(StrEnum):
     COST_PARAMETERS = "Cost Parameters"
     YEARLY_ENERGY_USAGE = "Yearly Demand"
@@ -33,6 +34,7 @@ class ScenarioSheetName(StrEnum):
     CURTAILMENT_COST = "Curtailment Cost"
 
 
+@unique
 class ScenarioSheetsColumnName(StrEnum):
     OPEX = "OPEX"
     CAPEX = "CAPEX"

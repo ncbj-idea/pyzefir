@@ -39,6 +39,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.fuel import FuelValidatorExceptionGroup
 from tests.unit.defaults import (
     CO2_EMISSION,
     ELECTRICITY,
@@ -84,7 +85,7 @@ def test_add_bus(network: Network) -> None:
         network.add_bus(bus_c)
     assert len(e_info.value.exceptions) == 1
     assert str(e_info.value.exceptions[0]) == (
-        "Bus bus_C has energy type TRANSPORT which "
+        "Energy type TRANSPORT "
         "is not compliant with the network energy types: ['ELECTRICITY', 'HEATING']"
     )
     bus_d = Bus(name="bus_D", energy_type=124224)  # noqa
@@ -180,8 +181,7 @@ def test_add_storage(network: Network) -> None:
         network.add_storage(storage_c)
     assert len(e_info.value.exceptions) == 1
     assert str(e_info.value.exceptions[0]) == (
-        "Bus bus_B energy type (HEATING) is different, than the storage "
-        "storage_c energy type (ELECTRICITY) attached to this bus"
+        "Bus bus_B energy type (HEATING) is different, than energy type (ELECTRICITY) attached to this bus"
     )
     assert len(network.storages) == 1
 
@@ -281,12 +281,12 @@ def test_add_line(network: Network) -> None:
         network.add_line(line_between_two_energy_types)
     assert len(e_info.value.exceptions) == 2
     assert str(e_info.value.exceptions[0]) == (
-        "Cannot set end of the line line_between_to_energy_types to bus bus_B. "
+        "Cannot set end of the line to bus bus_B. "
         "Bus bus_B energy type is HEATING, which is different from the line "
-        "line_between_to_energy_types energy type: ELECTRICITY."
+        "energy type: ELECTRICITY."
     )
     assert str(e_info.value.exceptions[1]) == (
-        "Cannot add a line line_between_to_energy_types between buses bus_A and "
+        "Cannot add a line between buses bus_A and "
         "bus_B with different energy types ELECTRICITY != HEATING"
     )
     line = Line(
@@ -302,10 +302,10 @@ def test_add_line(network: Network) -> None:
     assert len(network.lines) == 1
     assert len(e_info.value.exceptions) == 2
     assert str(e_info.value.exceptions[0]) == (
-        "Cannot set the beginning of the line None->None to bus None. Bus None does not exist in the network"
+        "Cannot set the beginning of the line to bus None. Bus None does not exist in the network"
     )
     assert str(e_info.value.exceptions[1]) == (
-        "Cannot set the end of the line None->None to bus None2. Bus None2 does not exist in the network"
+        "Cannot set the end of the line to bus None2. Bus None2 does not exist in the network"
     )
 
 
@@ -335,13 +335,13 @@ def test_heating_line_between_electric_buses() -> None:
         "Energy type of line HEATING not found in the Network energy types: ['ELECTRICITY']"
     )
     assert str(e_info.value.exceptions[1]) == (
-        "Cannot set beginning of the line A->C to bus bus_A. Bus bus_A energy "
-        "type is ELECTRICITY, which is different from the line A->C "
+        "Cannot set beginning of the line to bus bus_A. Bus bus_A energy "
+        "type is ELECTRICITY, which is different from the line "
         "energy type: HEATING."
     )
     assert str(e_info.value.exceptions[2]) == (
-        "Cannot set end of the line A->C to bus bus_C. Bus bus_C energy type "
-        "is ELECTRICITY, which is different from the line A->C energy type: HEATING."
+        "Cannot set end of the line to bus bus_C. Bus bus_C energy type "
+        "is ELECTRICITY, which is different from the line energy type: HEATING."
     )
 
 
@@ -535,7 +535,7 @@ def test_add_incorrect_fuel(fuel: Fuel, expected_info: str | tuple[str]) -> None
     )
     with pytest.raises(NetworkValidatorException) as e_info:
         network.add_fuel(fuel)
-    if e_info.type is NetworkValidatorExceptionGroup:
+    if e_info.type is FuelValidatorExceptionGroup:
         if isinstance(expected_info, tuple):
             expected_exceptions = {str(e) for e in e_info.value.exceptions}
             actual_exceptions = set(expected_info)

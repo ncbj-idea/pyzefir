@@ -32,6 +32,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class CapacityFactorValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class CapacityFactor(NetworkElement):
     """
@@ -64,7 +68,7 @@ class CapacityFactor(NetworkElement):
         )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise CapacityFactorValidatorExceptionGroup(
                 f"While adding Capacity Factor {self.name} following errors occurred: ",
                 exception_list,
             )

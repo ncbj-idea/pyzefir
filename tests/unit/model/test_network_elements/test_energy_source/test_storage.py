@@ -132,7 +132,7 @@ def test_if_all_validators_called(
             ),
             [
                 NetworkValidatorException(
-                    "Energy source stor_A has invalid unit base capacity. Unit base capacity must be numeric, not str"
+                    "Invalid unit base capacity. Unit base capacity must be numeric, not str"
                 ),
                 NetworkValidatorException("Bus bus_A does not exist in the network"),
             ],
@@ -154,16 +154,16 @@ def test_if_all_validators_called(
             ),
             [
                 NetworkValidatorException(
-                    "Energy source stor_A unit_min_capacity must be a pandas Series, but str given"
+                    "Unit_min_capacity must be a pandas Series, but str given"
                 ),
                 NetworkValidatorException(
-                    "Energy source stor_A unit_max_capacity must be a pandas Series, but str given"
+                    "Unit_max_capacity must be a pandas Series, but str given"
                 ),
                 NetworkValidatorException(
-                    "Energy source stor_A unit_min_capacity_increase must be a pandas Series, but str given"
+                    "Unit_min_capacity_increase must be a pandas Series, but str given"
                 ),
                 NetworkValidatorException(
-                    "Energy source stor_A unit_max_capacity_increase must be a pandas Series, but str given"
+                    "Unit_max_capacity_increase must be a pandas Series, but str given"
                 ),
                 NetworkValidatorException("Bus bus_A does not exist in the network"),
             ],
@@ -207,7 +207,7 @@ def test_bus_energy_type_corresponds_to_storage_energy_type(
     exception_list = [
         NetworkValidatorException(
             "Bus bus_A energy type (TRANSPORT) is different, "
-            "than the storage stor_A energy type (ELECTRICITY) attached to this bus"
+            "than energy type (ELECTRICITY) attached to this bus"
         )
     ]
     network_fixture.add_storage_type(storage_type)

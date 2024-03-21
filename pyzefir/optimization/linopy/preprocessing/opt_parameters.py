@@ -134,6 +134,7 @@ class OptimizationParameters:
                 network.constants.max_generation_fraction, indices.TAGS.inverse
             ),
             power_reserves=network.constants.power_reserves,
+            numeric_tolerance=network.constants.numeric_tolerance,
         )
         self.emf: EmissionFeeParameters = EmissionFeeParameters(
             network.emission_fees, indices, scale=opt_config.money_scale

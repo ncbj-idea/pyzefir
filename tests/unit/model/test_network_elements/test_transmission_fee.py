@@ -67,7 +67,7 @@ def test_if_all_validators_are_called(network: Network, mocker: Any) -> None:
     transmission_fee.validate(network)
 
     validate_series_mock.assert_called_once_with(
-        name="TransmissionFee test_transmission_fee",
+        name="TransmissionFee",
         series=test_series,
         length=default_network_constants.n_hours,
         allow_null=False,
@@ -98,7 +98,7 @@ def test_if_transmission_fee_correctly_raises_exception(network: Network) -> Non
         exception_list=list(exception_info.value.exceptions),
         actual_exception_list=[
             NetworkValidatorException(
-                "TransmissionFee test_transmission_fee must have 24 values",
+                "TransmissionFee must have 24 values",
             )
         ],
     )

@@ -136,7 +136,6 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
             )
         return result
 
-    # TODO - refactor
     def demand_chunk_balancing_constraint(self) -> None:
         dch_params = self.parameters.demand_chunks_parameters
         generators_energy_type = self.parameters.gen.ett
@@ -158,18 +157,24 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
             time_period_idx = 0
             for p_start, p_end in dch_params.periods[dem_idx]:
                 h_range = range(p_start, p_end + 1)
-                from_gen = gen_dch_var.isel(
-                    et=dch_et_idx,
-                    demch=dem_idx,
-                    gen=list(gen_idxs),
-                    hour=h_range,
-                ).sum(["gen", "hour"])
+                from_gen = (
+                    gen_dch_var.isel(
+                        et=dch_et_idx,
+                        demch=dem_idx,
+                        gen=list(gen_idxs),
+                    )
+                    .sel(hour=h_range)
+                    .sum(["gen", "hour"])
+                )
 
-                from_stor = stor_dch_var.isel(
-                    demch=dem_idx,
-                    stor=list(stor_idxs),
-                    hour=h_range,
-                ).sum(["stor", "hour"])
+                from_stor = (
+                    stor_dch_var.isel(
+                        demch=dem_idx,
+                        stor=list(stor_idxs),
+                    )
+                    .sel(hour=h_range)
+                    .sum(["stor", "hour"])
+                )
 
                 demand = dem_val[time_period_idx][: len(self.indices.Y.ord)]
                 self.model.add_constraints(

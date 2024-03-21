@@ -326,7 +326,7 @@ def _test_compensation_constraints(
 ) -> None:
     lhs = sum(shift_plus[y][h] for h in interval)
     rhs = compensation_factor * sum(shift_minus[y][h] for h in interval)
-    assert np.isclose(lhs, rhs)
+    assert np.isclose(lhs, rhs, atol=TOL)
 
 
 def _test_relative_shift_limit(

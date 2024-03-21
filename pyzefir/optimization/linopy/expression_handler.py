@@ -129,8 +129,9 @@ class ExpressionHandler:
         Returns:
             MLinExpr: Linear expression for storage installed power
         """
-        k, v = self.parameters.stor.p2cap[st_idx], self.variables.stor.cap.isel(
-            stor=st_idx
+        k, v = (
+            self.parameters.stor.p2cap[st_idx],
+            self.variables.stor.cap.isel(stor=st_idx),
         )
         return self.scale(k, v)
 
