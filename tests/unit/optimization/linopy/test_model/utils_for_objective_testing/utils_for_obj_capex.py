@@ -28,7 +28,7 @@ from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameter
     StorageTypeParameters,
 )
 from pyzefir.optimization.results import Results
-from pyzefir.utils.functions import get_dict_vals, invert_dict_of_sets
+from pyzefir.utils.functions import get_dict_vals
 
 
 def objective_capex(
@@ -106,7 +106,6 @@ def _global_capex(
         ut_idx = unit_type_idx[u_idx]
         capex = unit_type_param.capex[ut_idx]
         lt = unit_type_param.lt[ut_idx]
-        bt = unit_type_param.bt[ut_idx]
 
         unit_capex += sum(
             global_capex_per_unit_per_year(
@@ -115,12 +114,11 @@ def _global_capex(
                 cap_plus=cap_plus,
                 disc_rate=disc_rate,
                 lt=lt,
-                bt=bt,
-                y_idx=y_idx,
+                s_idx=s_idx,
                 u_idx=u_idx,
                 y_idxs=y_idxs,
             )
-            for y_idx in y_idxs.ord
+            for s_idx in y_idxs.ord
         )
     return unit_capex
 
@@ -130,20 +128,19 @@ def global_capex_per_unit_per_year(
     capex: np.ndarray,
     cap_plus: dict[str, pd.DataFrame],
     disc_rate: np.ndarray,
-    bt: int,
     lt: int,
-    y_idx: int,
+    s_idx: int,
     u_idx: int,
     y_idxs: IndexingSet,
 ) -> float:
-    am_indicator = _amortization_matrix_indicator(lt=lt, bt=bt, yy=y_idxs)
+    am_indicator = _amortization_matrix_indicator(lt=lt, yy=y_idxs)
     return sum(
-        am_indicator[s, y_idx]
-        * capex[s]
-        * cap_plus[unit_indices.mapping[u_idx]][0][s]
+        am_indicator[s_idx, y_idx]
+        * capex[s_idx]
+        * cap_plus[unit_indices.mapping[u_idx]][0][s_idx]
         * disc_rate[y_idx]
         / lt
-        for s in y_idxs.ord
+        for y_idx in y_idxs.ord
     )
 
 
@@ -158,29 +155,25 @@ def _local_capex(
     disc_rate = discount_rate(parameters.scenario_parameters.discount_rate)
     y_idxs = indices.Y
     unit_type_capex = 0.0
-    inverted_aggr_map = invert_dict_of_sets(aggr_map)
-    for ut_idx, aggr_idxs in inverted_aggr_map.items():
-        capex = unit_type_param.capex[ut_idx]
-        lt = unit_type_param.lt[ut_idx]
-        bt = unit_type_param.bt[ut_idx]
-        ut_name = unit_indices.mapping[ut_idx]
-
-        unit_type_capex += sum(
-            local_capex_per_unit_per_year(
-                indices=indices,
-                capex=capex,
-                tcap_plus=tcap_plus,
-                disc_rate=disc_rate,
-                bt=bt,
-                lt=lt,
-                y_idx=y_idx,
-                ut_name=ut_name,
-                aggr_idxs=aggr_idxs,
-                y_idxs=y_idxs,
+    for aggr_idx, ut_idxs in aggr_map.items():
+        for ut_idx in ut_idxs:
+            capex = unit_type_param.capex[ut_idx]
+            lt = unit_type_param.lt[ut_idx]
+            ut_name = unit_indices.mapping[ut_idx]
+            unit_type_capex += sum(
+                local_capex_per_unit_per_year(
+                    indices=indices,
+                    capex=capex,
+                    tcap_plus=tcap_plus,
+                    disc_rate=disc_rate,
+                    lt=lt,
+                    s_idx=s_idx,
+                    ut_name=ut_name,
+                    aggr_idx=aggr_idx,
+                    y_idxs=y_idxs,
+                )
+                for s_idx in y_idxs.ord
             )
-            for y_idx in y_idxs.ord
-        )
-
     return unit_type_capex
 
 
@@ -189,24 +182,22 @@ def local_capex_per_unit_per_year(
     capex: np.ndarray,
     tcap_plus: dict[str, dict[str, pd.DataFrame]],
     disc_rate: np.ndarray,
-    bt: int,
     lt: int,
-    y_idx: int,
+    s_idx: int,
     ut_name: str,
-    aggr_idxs: set[int],
+    aggr_idx: int,
     y_idxs: IndexingSet,
 ) -> float:
-    am_indicator = _amortization_matrix_indicator(lt=lt, bt=bt, yy=y_idxs)
+    am_indicator = _amortization_matrix_indicator(lt=lt, yy=y_idxs)
     aggr_map = indices.AGGR.mapping
 
     return sum(
-        am_indicator[s, y_idx]
-        * capex[s]
-        * tcap_plus[aggr_map[aggr_idx]][ut_name]["solution"][s]
+        am_indicator[s_idx, y_idx]
+        * capex[s_idx]
+        * tcap_plus[aggr_map[aggr_idx]][ut_name]["solution"][s_idx]
         * disc_rate[y_idx]
         / lt
-        for s in y_idxs.ord
-        for aggr_idx in aggr_idxs
+        for y_idx in y_idxs.ord
     )
 
 
@@ -221,7 +212,6 @@ def discount_rate(yearly_rate: np.ndarray) -> np.ndarray:
 
 def _amortization_matrix_indicator(
     lt: int,
-    bt: int,
     yy: IndexingSet,
 ) -> np.ndarray:
     """
@@ -235,7 +225,7 @@ def _amortization_matrix_indicator(
 
     return np.array(
         [
-            ((yy.ord >= y + bt) & (yy.ord <= min(y + bt + lt - 1, len(yy)))).astype(int)
+            ((yy.ord >= y) & (yy.ord <= min(y + lt - 1, len(yy)))).astype(int)
             for y in yy.ord
         ]
     )

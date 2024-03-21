@@ -71,7 +71,7 @@ def test_emission_fee_called_validators(
     )
     emission_fee.validate(network)
     validate_series_mock.assert_called_once_with(
-        name=f"EmissionFee {emission_fee.name}",
+        name="EmissionFee",
         series=emission_fee.price,
         length=network.constants.n_years,
         exception_list=[],
@@ -113,25 +113,25 @@ def test_emission_fee_validation(
         pytest.param(
             CO2_EMISSION,
             pd.Series(data=[0.1, 0.5, 0.4, 0.12, 0.5, 0.41, 0.1]),
-            "EmissionFee ETS must have 4 values",
+            "EmissionFee must have 4 values",
             id="Price lenght more than n_years",
         ),
         pytest.param(
             CO2_EMISSION,
             pd.Series(data=[0.5, 0.5, 0.5, 0.5], index=[0.1, 0.2, 0.3, 0.4]),
-            "EmissionFee ETS index type is float64 but should be integer",
+            "EmissionFee index type is float64 but should be integer",
             id="Price index not int",
         ),
         pytest.param(
             CO2_EMISSION,
             pd.Series(data=[15, 25, 25, 22]),
-            "EmissionFee ETS type is int64 but should be floating",
+            "EmissionFee type is int64 but should be floating",
             id="Price values int not float",
         ),
         pytest.param(
             CO2_EMISSION,
             pd.Series(data=[0.2, 0.1, np.nan, 0.4]),
-            "EmissionFee ETS must not contain null values",
+            "EmissionFee must not contain null values",
             id="Price contain nulls",
         ),
     ),

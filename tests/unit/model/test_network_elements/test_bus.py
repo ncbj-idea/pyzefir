@@ -86,7 +86,7 @@ def test_bus_init(bus: Bus) -> None:
             TRANSPORT,
             [
                 NetworkValidatorException(
-                    "Bus bus_1 has energy type TRANSPORT which is not compliant "
+                    "Energy type TRANSPORT is not compliant "
                     "with the network energy types: ['ELECTRICITY', 'HEATING']"
                 )
             ],
@@ -118,7 +118,7 @@ def test_validate_energy_type(
                 1,
                 [
                     NetworkValidatorException(
-                        "DSR type of bus bus_1 must be type of str, not type int"
+                        "DSR type must be type of str, not type int"
                     )
                 ],
                 id="incorrect_dsr_type",
@@ -128,7 +128,7 @@ def test_validate_energy_type(
             "not_existing_dsr",
             [
                 NetworkValidatorException(
-                    "DSR type not_existing_dsr of bus bus_1 not exists in Network DSR"
+                    "DSR type not_existing_dsr does not exist in Network DSR"
                 )
             ],
             id="dsr_type_not_exist_in_network_dsr",

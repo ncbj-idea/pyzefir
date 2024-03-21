@@ -94,7 +94,6 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
     def _generator_type_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source_type(
             energy_source_idx=self.indices.GEN,
-            energy_source_type_idx=self.indices.TGEN,
             energy_source_to_type_dict=self.parameters.gen.tgen,
             type_parameters=self.parameters.tgen,
             variables=self.variables.gen,
@@ -104,7 +103,6 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
     def _storage_type_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source_type(
             energy_source_idx=self.indices.STOR,
-            energy_source_type_idx=self.indices.TSTOR,
             energy_source_to_type_dict=self.parameters.stor.tstor,
             type_parameters=self.parameters.tstor,
             variables=self.variables.stor,
@@ -179,13 +177,12 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
     def _add_cap_constraints_per_energy_source_type(
         self,
         energy_source_idx: IndexingSet,
-        energy_source_type_idx: IndexingSet,
         energy_source_to_type_dict: dict[int, int],
         type_parameters: GeneratorTypeParameters | StorageTypeParameters,
         variables: GeneratorVariables | StorageVariables,
         element_name: str,
     ) -> None:
-        for type_idx in energy_source_type_idx.mapping.keys():
+        for type_idx in dict.fromkeys(energy_source_to_type_dict.values()):
             energy_sources_idx = [
                 energy_source_idx
                 for energy_source_idx in energy_source_idx.mapping.keys()

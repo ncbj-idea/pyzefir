@@ -29,6 +29,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class StorageValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class Storage(EnergySource):
     """
@@ -82,13 +86,13 @@ class Storage(EnergySource):
                 NetworkValidatorException(
                     f"Bus {self.bus} energy type "
                     f"({network.buses[self.bus].energy_type}) is different, "
-                    f"than the storage {self.name} energy type "
+                    f"than energy type "
                     f"({storage_type.energy_type}) attached to this bus"
                 )
             )
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
-                f"While adding Storage {self.name} following errors occurred: ",
+            raise StorageValidatorExceptionGroup(
+                f"While adding Storage {self.name} with type {self.energy_source_type} following errors occurred: ",
                 exception_list,
             )
 

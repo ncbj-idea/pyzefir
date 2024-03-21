@@ -33,6 +33,7 @@ class NetworkConstants:
     min_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
     max_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
     binary_fraction: bool = False
+    numeric_tolerance: float = 1e-6
 
 
 def _check_if_series_has_numeric_values(series: pd.Series) -> bool:

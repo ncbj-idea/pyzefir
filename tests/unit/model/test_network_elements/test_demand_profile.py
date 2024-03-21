@@ -95,12 +95,8 @@ def test_if_all_validators_are_called(network: Network) -> None:
                 HEATING: pd.Series(data=[0.0, 1.0, 0.5, 0.10]),
             },
             [
-                NetworkValidatorException(
-                    "Energy type ELECTRICITY in test_demand_profile is not normalized"
-                ),
-                NetworkValidatorException(
-                    "Energy type HEATING in test_demand_profile is not normalized"
-                ),
+                NetworkValidatorException("Energy type ELECTRICITY is not normalized"),
+                NetworkValidatorException("Energy type HEATING is not normalized"),
             ],
             id="not normalized and does not sum to 1",
         ),
@@ -111,7 +107,7 @@ def test_if_all_validators_are_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Normalized profile in test_demand_profile has different "
+                    "Normalized profile has different "
                     "length for different energy types"
                 )
             ],
@@ -124,15 +120,11 @@ def test_if_all_validators_are_called(network: Network) -> None:
             },
             [
                 NetworkValidatorException(
-                    "Normalized profile in test_demand_profile has different "
+                    "Normalized profile has different "
                     "length for different energy types"
                 ),
-                NetworkValidatorException(
-                    "Energy type ELECTRICITY in test_demand_profile is not normalized"
-                ),
-                NetworkValidatorException(
-                    "Energy type HEATING in test_demand_profile is not normalized"
-                ),
+                NetworkValidatorException("Energy type ELECTRICITY is not normalized"),
+                NetworkValidatorException("Energy type HEATING is not normalized"),
             ],
             id="different length and not normalized",
         ),

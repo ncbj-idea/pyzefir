@@ -80,6 +80,9 @@ def config_parser(
                 "use_hourly_scale": True,
                 "solver": solver,
             },
+            "debug": {
+                "format_network_exceptions": False,
+            },
         }
     )
     return config
@@ -123,6 +126,9 @@ def config_parser_with_creator(
                 "n_hours": 8760,
                 "n_years": 20,
                 "input_path": str(tmp_dir_with_files / "structure_creator_resources"),
+            },
+            "debug": {
+                "format_network_exceptions": False,
             },
         }
     )

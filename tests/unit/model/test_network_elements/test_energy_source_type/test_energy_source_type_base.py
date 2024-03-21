@@ -69,7 +69,7 @@ def test_energy_source_type() -> EnergySourceTypeTest:
             },
             [
                 NetworkValidatorException(
-                    "Energy source test has invalid build_time. Build_time must be an integer, not str"
+                    "Invalid build_time. Build_time must be an integer, not str"
                 )
             ],
             id="invalid build_time",
@@ -87,16 +87,16 @@ def test_energy_source_type() -> EnergySourceTypeTest:
             },
             [
                 NetworkValidatorException(
-                    "Energy source type test min_capacity must have a NaN value for the base year"
+                    "Min_capacity must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source type test max_capacity must have a NaN value for the base year"
+                    "Max_capacity must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source type test min_capacity_increase must have a NaN value for the base year"
+                    "Min_capacity_increase must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source type test max_capacity_increase must have a NaN value for the base year"
+                    "Max_capacity_increase must have a NaN value for the base year"
                 ),
             ],
             id="not nan for first year",
@@ -105,11 +105,7 @@ def test_energy_source_type() -> EnergySourceTypeTest:
             {
                 "tags": ["abc", 12, False],
             },
-            [
-                NetworkValidatorException(
-                    "Energy source type test has invalid tags: ['abc', 12, False]. "
-                )
-            ],
+            [NetworkValidatorException("Invalid tags: ['abc', 12, False]. ")],
             id="incorrect tags values",
         ),
         pytest.param(
@@ -118,7 +114,7 @@ def test_energy_source_type() -> EnergySourceTypeTest:
             },
             [
                 NetworkValidatorException(
-                    "Energy source type test has invalid tags: ('example_t_tag_1', 'example_t_tag_2'). "
+                    "Invalid tags: ('example_t_tag_1', 'example_t_tag_2'). "
                 )
             ],
             id="incorrect tags type",

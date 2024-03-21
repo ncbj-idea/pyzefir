@@ -85,12 +85,12 @@ def test_validate_energy_type(line: Line, network: Network) -> None:
             ELECTRICITY,
             [
                 NetworkValidatorException(
-                    "Cannot set end of the line line_1 to bus bus_C. "
+                    "Cannot set end of the line to bus bus_C. "
                     "Bus bus_C energy type is HEATING, which is different from "
-                    "the line line_1 energy type: ELECTRICITY."
+                    "the line energy type: ELECTRICITY."
                 ),
                 NetworkValidatorException(
-                    "Cannot add a line line_1 between buses bus_A and bus_C with "
+                    "Cannot add a line between buses bus_A and bus_C with "
                     "different energy types ELECTRICITY != HEATING"
                 ),
             ],
@@ -101,11 +101,11 @@ def test_validate_energy_type(line: Line, network: Network) -> None:
             TRANSPORT,
             [
                 NetworkValidatorException(
-                    "Cannot set the beginning of the line line_1 to bus bus_404. "
+                    "Cannot set the beginning of the line to bus bus_404. "
                     "Bus bus_404 does not exist in the network"
                 ),
                 NetworkValidatorException(
-                    "Cannot set the end of the line line_1 to bus bus_501. "
+                    "Cannot set the end of the line to bus bus_501. "
                     "Bus bus_501 does not exist in the network"
                 ),
             ],
@@ -116,7 +116,7 @@ def test_validate_energy_type(line: Line, network: Network) -> None:
             ELECTRICITY,
             [
                 NetworkValidatorException(
-                    "Cannot set the beginning of the line line_1 to bus bus_404. "
+                    "Cannot set the beginning of the line to bus bus_404. "
                     "Bus bus_404 does not exist in the network"
                 )
             ],
@@ -257,7 +257,7 @@ def test_validate_transmission_fee(network: Network) -> None:
         actual_exception_list=list(exc_info.value.exceptions),
         exception_list=[
             NetworkValidatorException(
-                "Cannot set a transmission fee for the line line_1. "
+                "Cannot set a transmission fee for the line. "
                 "Transmission fee fee_2 does not exist in the network"
             )
         ],

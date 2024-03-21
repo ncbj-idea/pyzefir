@@ -87,10 +87,10 @@ def network() -> Network:
             ),
             [
                 NetworkValidatorException(
-                    "Generator type gen_type_cap_fuel can have either capacity factor or fuel at the same time"
+                    "Generator type can have either capacity factor or fuel at the same time"
                 ),
                 NetworkValidatorException(
-                    "Generator type 'gen_type_cap_fuel' capacity factor 'dummy_cap_f' has not been added to the network"
+                    "Capacity factor 'dummy_cap_f' has not been added to the network"
                 ),
             ],
         ),
@@ -102,7 +102,7 @@ def network() -> Network:
             ),
             [
                 NetworkValidatorException(
-                    "Ramp value for gen_type_cap_fuel must be greater than 0 and less than 1, but it is 1"
+                    "Ramp value must be greater than 0 and less than 1, but it is 1"
                 ),
             ],
         ),
@@ -125,11 +125,9 @@ def test_generator_type_validate(
             GeneratorType(**default_generator_type | {"fuel": 1, "name": "gen_type_E"}),
             [
                 NetworkValidatorException(
-                    "None or str type for fuel expected but type: <class 'int'> for generator type: gen_type_E given"
+                    "None or str type for fuel expected but type: <class 'int'> given"
                 ),
-                NetworkValidatorException(
-                    "Generator gen_type_E fuel 1 has not been added to the network"
-                ),
+                NetworkValidatorException("Fuel 1 has not been added to the network"),
             ],
         ),
     ],
@@ -154,11 +152,10 @@ def test_fuel_validators(
             ),
             [
                 NetworkValidatorException(
-                    "None or str type for capacity factor expected but type: <class 'int'> for generator type: "
-                    "gen_type_F given"
+                    "None or str type for capacity factor expected but type: <class 'int'> given"
                 ),
                 NetworkValidatorException(
-                    "Generator type 'gen_type_F' capacity factor '1' has not been added to the network"
+                    "Capacity factor '1' has not been added to the network"
                 ),
             ],
         ),
@@ -169,7 +166,7 @@ def test_fuel_validators(
             ),
             [
                 NetworkValidatorException(
-                    "Generator type 'gen_type_I' capacity factor 'test_gen_I' has not been added to the network"
+                    "Capacity factor 'test_gen_I' has not been added to the network"
                 ),
             ],
         ),
@@ -198,7 +195,7 @@ def test_capacity_factor_validators(
             ),
             [
                 NetworkValidatorException(
-                    "Efficiency energy types of gen_type_L do not exist in network energy types: "
+                    "Efficiency energy types do not exist in network energy types: "
                     "['ELECTRICITY', 'HEATING']"
                 )
             ],
@@ -208,11 +205,7 @@ def test_capacity_factor_validators(
                 **default_generator_type
                 | {"name": "gen_type_no_eff", "efficiency": None}
             ),
-            [
-                NetworkValidatorException(
-                    "Efficiency of generator type: gen_type_no_eff cannot be None."
-                )
-            ],
+            [NetworkValidatorException("Efficiency cannot be None.")],
         ),
     ],
 )
@@ -234,11 +227,7 @@ def test_efficiency_validators(
                 **default_generator_type
                 | {"name": "gen_type_no_e_r", "emission_reduction": None}
             ),
-            [
-                NetworkValidatorException(
-                    "Emission reduction of generator type: gen_type_no_e_r cannot be None."
-                )
-            ],
+            [NetworkValidatorException("Emission reduction cannot be None.")],
         ),
         (
             GeneratorType(
@@ -250,8 +239,7 @@ def test_efficiency_validators(
             ),
             [
                 NetworkValidatorException(
-                    "Emission reduction emission types {'DUMMY_E_R'} of "
-                    "gen_type_non_existed_e_r do not exist in network "
+                    "Emission reduction emission types {'DUMMY_E_R'} do not exist in network "
                     "emission types: ['CO2', 'PM10']"
                 )
             ],
@@ -276,11 +264,7 @@ def test_emission_reduction_validators(
                 **default_generator_type
                 | {"name": "gen_type_no_conv_rate", "conversion_rate": None}
             ),
-            [
-                NetworkValidatorException(
-                    "Conversion rate of generator type: gen_type_no_conv_rate cannot be None."
-                )
-            ],
+            [NetworkValidatorException("Conversion rate cannot be None.")],
         ),
         (
             GeneratorType(
@@ -292,7 +276,7 @@ def test_emission_reduction_validators(
             ),
             [
                 NetworkValidatorException(
-                    "Conversion rate energy types of gen_type_non_existed_conv_rate do not exist "
+                    "Conversion rate energy types do not exist "
                     "in network energy types: ['ELECTRICITY', 'HEATING']"
                 )
             ],
@@ -342,7 +326,7 @@ def test_conversion_rate_validators(
             },
             [
                 NetworkValidatorException(
-                    "Power utilization values for default_generator_type must be greater "
+                    "Power utilization values must be greater "
                     f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS))} it is not"
                 )
             ],
@@ -357,7 +341,7 @@ def test_conversion_rate_validators(
             },
             [
                 NetworkValidatorException(
-                    "Power utilization values for default_generator_type must be greater "
+                    "Power utilization values must be greater "
                     f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS-2))} it is not"
                 )
             ],

@@ -82,7 +82,7 @@ from pyzefir.optimization.linopy.preprocessing.variables.storage_type_variables 
 from pyzefir.optimization.linopy.preprocessing.variables.storage_variables import (
     StorageVariables,
 )
-from pyzefir.utils.functions import get_dict_vals, invert_dict_of_sets
+from pyzefir.utils.functions import get_dict_vals
 
 HOUR_LABEL: Final[str] = "Hour"
 YEAR_LABEL: Final[str] = "Year"
@@ -180,21 +180,20 @@ class ResultsGroup(abc.ABC):
         capex: np.ndarray,
         cap_plus: xr.DataArray,
         disc_rate: np.ndarray,
-        bt: int,
         lt: int,
-        y_idx: int,
+        s_idx: int,
         u_idx: int,
         y_idxs: IndexingSet,
     ) -> float:
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
-            lt=lt, bt=bt, yy=y_idxs
+            lt=lt, yy=y_idxs
         )
         res = 0.0
-        for s in y_idxs.ord:
+        for y_idx in y_idxs.ord:
             res += (
-                cap_plus.sel(index=(u_idx, s)).to_numpy()
-                * am_indicator[s, y_idx]
-                * capex[s]
+                cap_plus.sel(index=(u_idx, s_idx)).to_numpy()
+                * am_indicator[s_idx, y_idx]
+                * capex[s_idx]
                 * disc_rate[y_idx]
                 / lt
             )
@@ -206,29 +205,25 @@ class ResultsGroup(abc.ABC):
         capex: np.ndarray,
         tcap_plus: xr.DataArray,
         disc_rate: np.ndarray,
-        bt: int,
         lt: int,
-        y_idx: int,
+        s_idx: int,
         ut_idx: int,
-        aggr_idxs: set[int],
+        aggr_idx: int,
         y_idxs: IndexingSet,
     ) -> float:
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
-            lt=lt, bt=bt, yy=y_idxs
+            lt=lt, yy=y_idxs
         )
 
         res = 0.0
-
-        for s in y_idxs.ord:
-            for aggr_idx in aggr_idxs:
-                res += (
-                    tcap_plus.sel(index=(aggr_idx, ut_idx, s)).to_numpy()
-                    * am_indicator[s, y_idx]
-                    * capex[s]
-                    * disc_rate[y_idx]
-                    / lt
-                )
-
+        for y_idx in y_idxs.ord:
+            res += (
+                tcap_plus.sel(index=(aggr_idx, ut_idx, s_idx)).to_numpy()
+                * am_indicator[s_idx, y_idx]
+                * capex[s_idx]
+                * disc_rate[y_idx]
+                / lt
+            )
         return res
 
     @staticmethod
@@ -242,10 +237,9 @@ class ResultsGroup(abc.ABC):
         discount_rate: np.ndarray,
         cap_plus: Variable,
         tcap_plus: Variable,
-        aggr_t_map: dict[int, set[int]],
+        money_scale: float,
     ) -> dict[str, pd.DataFrame]:
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
-        inverted_aggr_map = invert_dict_of_sets(aggr_t_map)
         non_lbs_unit_idxs = get_dict_vals(bus_unit_mapping).difference(
             get_dict_vals(aggr_unit_map)
         )
@@ -256,33 +250,39 @@ class ResultsGroup(abc.ABC):
             ut_idx = unit_type_map[u_idx]
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
-            bt = unit_type_param.bt[ut_idx]
             year_results = dict()
             for year_idx in year_idxs.ord:
                 unit_capex = 0.0
                 if u_idx in non_lbs_unit_idxs:
-                    unit_capex += ResultsGroup.global_capex_per_unit_per_year(
-                        capex=capex,
-                        cap_plus=cap_plus.solution,
-                        disc_rate=disc_rate,
-                        bt=bt,
-                        lt=lt,
-                        y_idx=year_idx,
-                        u_idx=u_idx,
-                        y_idxs=year_idxs,
+                    unit_capex += (
+                        money_scale
+                        * ResultsGroup.global_capex_per_unit_per_year(
+                            capex=capex,
+                            cap_plus=cap_plus.solution,
+                            disc_rate=disc_rate,
+                            lt=lt,
+                            s_idx=year_idx,
+                            u_idx=u_idx,
+                            y_idxs=year_idxs,
+                        )
                     )
-                elif (aggr_idxs := inverted_aggr_map.get(ut_idx)) is not None:
-                    unit_capex += ResultsGroup.local_capex_per_unit_per_year(
-                        capex=capex,
-                        tcap_plus=tcap_plus.solution,
-                        disc_rate=disc_rate,
-                        bt=bt,
-                        lt=lt,
-                        y_idx=year_idx,
-                        ut_idx=ut_idx,
-                        aggr_idxs=aggr_idxs,
-                        y_idxs=year_idxs,
-                    )
+                else:
+                    aggr_idxs = {k for k, v in aggr_unit_map.items() if u_idx in v}
+                    for aggr_idx in aggr_idxs:
+                        unit_capex += (
+                            money_scale
+                            * ResultsGroup.local_capex_per_unit_per_year(
+                                capex=capex,
+                                tcap_plus=tcap_plus.solution,
+                                disc_rate=disc_rate,
+                                lt=lt,
+                                s_idx=year_idx,
+                                ut_idx=ut_idx,
+                                aggr_idx=aggr_idx,
+                                y_idxs=year_idxs,
+                            )
+                        )
+
                 year_results[indices.Y.mapping[year_idx]] = unit_capex
 
             result[unit_index.mapping[u_idx]] = pd.DataFrame.from_dict(
@@ -351,7 +351,7 @@ class GeneratorsResults(ResultsGroup):
         self.cap_plus = self.fetch_d_dataframe(
             dimension=1,
             index=indices.GEN,
-            variable=variable_group.cap_plus.sol.to_dataframe(),
+            variable=variable_group.cap_plus.solution.to_dataframe(),
             row_index=indices.Y,
             column_index=indices.Y,
             filter_map=indices.aggr_gen_map,
@@ -359,7 +359,7 @@ class GeneratorsResults(ResultsGroup):
         self.cap_minus = self.fetch_d_dataframe(
             dimension=2,
             index=indices.GEN,
-            variable=variable_group.cap_minus.sol.to_dataframe(),
+            variable=variable_group.cap_minus.solution.to_dataframe(),
             row_index=indices.Y,
             column_index=indices.Y,
             filter_map=indices.aggr_gen_map,
@@ -368,7 +368,7 @@ class GeneratorsResults(ResultsGroup):
             dimension=1,
             aggr_index=indices.AGGR,
             t_index=indices.TGEN,
-            variable=tvariable_group.tcap_plus.sol.to_dataframe(),
+            variable=tvariable_group.tcap_plus.solution.to_dataframe(),
             row_index=indices.Y,
             column_index=indices.Y,
             index_map=indices.aggr_tgen_map,
@@ -377,7 +377,7 @@ class GeneratorsResults(ResultsGroup):
             dimension=2,
             aggr_index=indices.AGGR,
             t_index=indices.TGEN,
-            variable=tvariable_group.tcap_minus.sol.to_dataframe(),
+            variable=tvariable_group.tcap_minus.solution.to_dataframe(),
             row_index=indices.Y,
             index_map=indices.aggr_tgen_map,
             column_index=indices.Y,
@@ -385,7 +385,7 @@ class GeneratorsResults(ResultsGroup):
         self.cap_base_minus = self.fetch_d_dataframe(
             dimension=1,
             index=indices.GEN,
-            variable=variable_group.cap_base_minus.sol.to_dataframe(),
+            variable=variable_group.cap_base_minus.solution.to_dataframe(),
             row_index=indices.Y,
             filter_map=indices.aggr_gen_map,
             column_index=indices.Y,
@@ -394,7 +394,7 @@ class GeneratorsResults(ResultsGroup):
             dimension=1,
             aggr_index=indices.AGGR,
             t_index=indices.TGEN,
-            variable=tvariable_group.tcap.sol.to_dataframe(),
+            variable=tvariable_group.tcap.solution.to_dataframe(),
             row_index=indices.Y,
             index_map=indices.aggr_tgen_map,
             column_index=indices.Y,
@@ -403,7 +403,7 @@ class GeneratorsResults(ResultsGroup):
             dimension=1,
             aggr_index=indices.AGGR,
             t_index=indices.TGEN,
-            variable=tvariable_group.tcap_base_minus.sol.to_dataframe(),
+            variable=tvariable_group.tcap_base_minus.solution.to_dataframe(),
             row_index=indices.Y,
             index_map=indices.aggr_tgen_map,
             column_index=indices.Y,
@@ -418,14 +418,16 @@ class GeneratorsResults(ResultsGroup):
             discount_rate=scenario_parameters.discount_rate,
             cap_plus=variable_group.cap_plus,
             tcap_plus=tvariable_group.tcap_plus,
-            aggr_t_map=indices.aggr_tgen_map,
+            money_scale=scenario_parameters.money_scale,
         )
 
     @staticmethod
     def process_gen(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
         return {
             gen_name: df.reset_index(["gen"], drop=True).unstack().droplevel(0, axis=1)
-            for gen_name, df in variable_group.gen.sol.to_dataframe().groupby("gen")
+            for gen_name, df in variable_group.gen.solution.to_dataframe().groupby(
+                "gen"
+            )
         }
 
     @staticmethod
@@ -439,7 +441,7 @@ class GeneratorsResults(ResultsGroup):
                 .droplevel(0, axis=1)
                 for energy_type, et_df in gen_df.groupby("et")
             }
-            for gen_name, gen_df in variable_group.gen_et.sol.to_dataframe().groupby(
+            for gen_name, gen_df in variable_group.gen_et.solution.to_dataframe().groupby(
                 "gen"
             )
         }
@@ -458,7 +460,7 @@ class GeneratorsResults(ResultsGroup):
                 }
                 for energy_type, et_df in gen_df.groupby("demch")
             }
-            for gen_name, gen_df in variable_group.gen_dch.sol.to_dataframe().groupby(
+            for gen_name, gen_df in variable_group.gen_dch.solution.to_dataframe().groupby(
                 "et"
             )
         }
@@ -469,7 +471,7 @@ class GeneratorsResults(ResultsGroup):
             gen_name: dump_df.reset_index(["gen"], drop=True)
             .unstack()
             .droplevel(0, axis=1)
-            for gen_name, dump_df in variable_group.dump.sol.to_dataframe().groupby(
+            for gen_name, dump_df in variable_group.dump.solution.to_dataframe().groupby(
                 "gen"
             )
         }
@@ -485,7 +487,7 @@ class GeneratorsResults(ResultsGroup):
                 .droplevel(0, axis=1)
                 for energy_type, et_df in gen_df.groupby("et")
             }
-            for gen_name, gen_df in variable_group.dump_et.sol.to_dataframe().groupby(
+            for gen_name, gen_df in variable_group.dump_et.solution.to_dataframe().groupby(
                 "gen"
             )
         }
@@ -496,7 +498,9 @@ class GeneratorsResults(ResultsGroup):
             gen_name: cap_df.reset_index(["gen"], drop=True).rename(
                 columns={"solution": "cap"}
             )
-            for gen_name, cap_df in variable_group.cap.sol.to_dataframe().groupby("gen")
+            for gen_name, cap_df in variable_group.cap.solution.to_dataframe().groupby(
+                "gen"
+            )
         }
 
     @staticmethod
@@ -675,7 +679,9 @@ class StoragesResults(ResultsGroup):
             stor_name: df.reset_index(["stor"], drop=True)
             .unstack()
             .droplevel(0, axis=1)
-            for stor_name, df in variable_group.gen.sol.to_dataframe().groupby("stor")
+            for stor_name, df in variable_group.gen.solution.to_dataframe().groupby(
+                "stor"
+            )
         }
         self.gen_dch = {
             stor_name: {
@@ -684,7 +690,7 @@ class StoragesResults(ResultsGroup):
                 .droplevel(0, axis=1)
                 for energy_type, demch_df in stor_df.groupby("stor")
             }
-            for stor_name, stor_df in variable_group.gen_dch.sol.to_dataframe().groupby(
+            for stor_name, stor_df in variable_group.gen_dch.solution.to_dataframe().groupby(
                 "demch"
             )
         }
@@ -692,29 +698,33 @@ class StoragesResults(ResultsGroup):
             stor_name: df.reset_index(["stor"], drop=True)
             .unstack()
             .droplevel(0, axis=1)
-            for stor_name, df in variable_group.load.sol.to_dataframe().groupby("stor")
+            for stor_name, df in variable_group.load.solution.to_dataframe().groupby(
+                "stor"
+            )
         }
         self.soc = {
             stor_name: df.reset_index(["stor"], drop=True)
             .unstack()
             .droplevel(0, axis=1)
-            for stor_name, df in variable_group.soc.sol.to_dataframe().groupby("stor")
+            for stor_name, df in variable_group.soc.solution.to_dataframe().groupby(
+                "stor"
+            )
         }
         self.cap = {
             stor_name: cap_df.reset_index(["stor"], drop=True).rename(
                 columns={"solution": "cap"}
             )
-            for stor_name, cap_df in variable_group.cap.sol.to_dataframe().groupby(
+            for stor_name, cap_df in variable_group.cap.solution.to_dataframe().groupby(
                 "stor"
             )
         }
-        self.tcap = tvariable_group.tcap.sol.to_dataframe()
-        self.tcap_plus = tvariable_group.tcap_plus.sol.to_dataframe()
-        self.cap_plus = variable_group.cap_plus.sol.to_dataframe()
-        self.cap_minus = variable_group.cap_minus.sol.to_dataframe()
-        self.tcap_minus = tvariable_group.tcap_minus.sol.to_dataframe()
-        self.cap_base_minus = variable_group.cap_base_minus.sol.to_dataframe()
-        self.tcap_base_minus = tvariable_group.tcap_base_minus.sol.to_dataframe()
+        self.tcap = tvariable_group.tcap.solution.to_dataframe()
+        self.tcap_plus = tvariable_group.tcap_plus.solution.to_dataframe()
+        self.cap_plus = variable_group.cap_plus.solution.to_dataframe()
+        self.cap_minus = variable_group.cap_minus.solution.to_dataframe()
+        self.tcap_minus = tvariable_group.tcap_minus.solution.to_dataframe()
+        self.cap_base_minus = variable_group.cap_base_minus.solution.to_dataframe()
+        self.tcap_base_minus = tvariable_group.tcap_base_minus.solution.to_dataframe()
         self.capex = self.calculate_capex(
             indices=indices,
             unit_index=indices.STOR,
@@ -725,7 +735,7 @@ class StoragesResults(ResultsGroup):
             discount_rate=scenario_parameters.discount_rate,
             cap_plus=variable_group.cap_plus,
             tcap_plus=tvariable_group.tcap_plus,
-            aggr_t_map=indices.aggr_tstor_map,
+            money_scale=scenario_parameters.money_scale,
         )
 
     def to_exportable(self) -> ExportableStorageResults:
@@ -759,7 +769,9 @@ class LinesResults(ResultsGroup):
             line_name: df.reset_index(["line"], drop=True)
             .unstack()
             .droplevel(0, axis=1)
-            for line_name, df in variable_group.flow.sol.to_dataframe().groupby("line")
+            for line_name, df in variable_group.flow.solution.to_dataframe().groupby(
+                "line"
+            )
         }
 
     def to_exportable(self) -> ExportableLinesResults:
@@ -792,7 +804,7 @@ class FractionsResults(ResultsGroup):
                 )
                 for consumer_name, df in aggr_df.groupby("lbs")
             }
-            for aggr_name, aggr_df in variable_group.fraction.sol.to_dataframe().groupby(
+            for aggr_name, aggr_df in variable_group.fraction.solution.to_dataframe().groupby(
                 "aggr"
             )
         }
@@ -823,17 +835,19 @@ class BusResults(ResultsGroup):
     def __post_init__(self, variable_group: BusVariables, indices: Indices) -> None:
         self.bus_ens = {
             bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
-            for bus_name, df in variable_group.bus_ens.sol.to_dataframe().groupby("bus")
+            for bus_name, df in variable_group.bus_ens.solution.to_dataframe().groupby(
+                "bus"
+            )
         }
         self.shift_plus = {
             bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
-            for bus_name, df in variable_group.shift_plus.sol.to_dataframe().groupby(
+            for bus_name, df in variable_group.shift_plus.solution.to_dataframe().groupby(
                 "bus"
             )
         }
         self.shift_minus = {
             bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
-            for bus_name, df in variable_group.shift_minus.sol.to_dataframe().groupby(
+            for bus_name, df in variable_group.shift_minus.solution.to_dataframe().groupby(
                 "bus"
             )
         }

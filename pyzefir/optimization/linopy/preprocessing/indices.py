@@ -203,7 +203,7 @@ class Indices:
         }
         """ aggregated consumer generator type index """
 
-        return aggr_tgens, aggr_tgens
+        return aggr_gens, aggr_tgens
 
     def _init_aggr_stor_indices(self, network: Network) -> tuple[dict, dict]:
         aggr_stors = {

@@ -29,6 +29,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class LocalBalancingStackValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class LocalBalancingStack(NetworkElement):
     """
@@ -66,8 +70,7 @@ class LocalBalancingStack(NetworkElement):
         if not isinstance(self.buses_out, dict):
             exception_list.append(
                 NetworkValidatorException(
-                    f"Outlet buses of local balancing stack {self.name} must be a dict, "
-                    f"not {type(self.buses_out)}."
+                    f"Outlet buses must be a dict, " f"not {type(self.buses_out)}."
                 )
             )
             return
@@ -76,7 +79,7 @@ class LocalBalancingStack(NetworkElement):
             if not isinstance(bus_name, str):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Outlet bus name for energy type {energy_type} of local balancing stack {self.name} "
+                        f"Outlet bus name for energy type {energy_type} "
                         f"must be a string, not {type(bus_name)}."
                     )
                 )
@@ -84,7 +87,7 @@ class LocalBalancingStack(NetworkElement):
             if not isinstance(energy_type, str):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy type for outlet bus {bus_name} of local balancing stack {self.name} "
+                        f"Energy type for outlet bus {bus_name} "
                         f"must be a string, not {type(energy_type)}."
                     )
                 )
@@ -93,16 +96,16 @@ class LocalBalancingStack(NetworkElement):
             if bus_name not in network.buses:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Bus {bus_name} which is declared as an outlet bus of "
-                        f"local balancing stack {self.name} does not exist "
+                        f"Bus {bus_name} which is declared as an outlet bus "
+                        f"does not exist "
                         "in the network."
                     )
                 )
             elif network.buses[bus_name].energy_type != energy_type:
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Bus {bus_name} can not be declared as an outlet bus of "
-                        f"local balancing stack {self.name} for energy "
+                        f"Bus {bus_name} can not be declared as an outlet bus "
+                        f"for energy "
                         f"{energy_type}, since its energy type is "
                         f"{network.buses[bus_name].energy_type}."
                     )
@@ -192,7 +195,7 @@ class LocalBalancingStack(NetworkElement):
                 elif not energy_type == network.buses[bus_name].energy_type:
                     exception_list.append(
                         NetworkValidatorException(
-                            f"Energy type for {bus_name} in {self.name} must match "
+                            f"Energy type for {bus_name} must match "
                             f"with energy type for the same bus in Network"
                         )
                     )
@@ -214,7 +217,7 @@ class LocalBalancingStack(NetworkElement):
         self._validate_buses_out(network=network, exception_list=exception_list)
         self._validate_buses(network=network, exception_list=exception_list)
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise LocalBalancingStackValidatorExceptionGroup(
                 f"While adding Local Balancing Stack {self.name} following errors occurred: ",
                 exception_list,
             )

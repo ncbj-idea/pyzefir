@@ -18,11 +18,11 @@ from pathlib import Path
 
 import click
 
-from pyzefir.structure_creator.constants_enums import SubDirectory
-from pyzefir.structure_creator.input_data import InputData
+from pyzefir.structure_creator.data_loader.constants_enums import SubDirectory
+from pyzefir.structure_creator.data_loader.input_data import InputData
 from pyzefir.structure_creator.scenario.main import create_scenario
-from pyzefir.structure_creator.structure_and_initial_state.main import (
-    create_structure_and_initial,
+from pyzefir.structure_creator.structure_and_initial_state.create_structures import (
+    StructureCreator,
 )
 
 
@@ -39,8 +39,8 @@ def create_structure(
         n_hours=n_hours,
         n_years=n_years,
     )
-    create_structure_and_initial(
-        structure_data=input_data.structure_data, output_path=Path(output_path)
+    StructureCreator.create_structure_and_initial(
+        input_structure=input_data.structure_data, output_path=Path(output_path)
     )
     create_scenario(
         scenario_data=input_data.scenario_data,

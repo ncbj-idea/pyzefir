@@ -4,6 +4,8 @@ else
     VENV_ACTIVATE := .venv/bin/activate
 endif
 
+.PHONY: install lint unit test clean update
+
 $(VENV_ACTIVATE): pyproject.toml .pre-commit-config.yaml
 	python3.11 -m venv .venv
 	. $(VENV_ACTIVATE) && pip install --upgrade pip \
@@ -12,15 +14,18 @@ $(VENV_ACTIVATE): pyproject.toml .pre-commit-config.yaml
 
 install: $(VENV_ACTIVATE)
 
-lint: $(VENV_ACTIVATE)
+lint: install
 	. $(VENV_ACTIVATE) && black . && pylama pyzefir tests -l mccabe,pycodestyle,pyflakes,radon,mypy --async
 
-unit: $(VENV_ACTIVATE) lint
+unit: install lint
 	. $(VENV_ACTIVATE) && pytest -vvv tests/unit && tox -e fast_integration --skip-pkg-install
 
-test: $(VENV_ACTIVATE) lint unit
+test: install lint unit
 	. $(VENV_ACTIVATE) && tox -e integration --skip-pkg-install
 
 clean:
 	rm -rf $(VENV_ACTIVATE) .mypy_cache .pytest_cache .tox
 	find . | grep -E "(/__pycache__$$|\.pyc$|\.pyo$$)" | xargs rm -rf
+
+update: install
+	. $(VENV_ACTIVATE) && pre-commit autoupdate && pre-commit run --all-files

@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class DemandChunkValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class DemandChunk(NetworkElement):
     """
@@ -166,7 +170,7 @@ class DemandChunk(NetworkElement):
         self._validate_periods_and_demand(exception_list, network)
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise DemandChunkValidatorExceptionGroup(
                 f"While adding DemandChunk {self.name} " "following errors occurred: ",
                 exception_list,
             )

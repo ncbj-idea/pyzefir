@@ -98,7 +98,7 @@ class EnergySourceType(NetworkElement, ABC):
             if not isinstance(getattr(self, attr), int):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy source {self.name} has invalid {attr}."
+                        f"Invalid {attr}."
                         f" {attr.capitalize()} must be an integer, "
                         f"not {type(getattr(self, attr)).__name__}"
                     )
@@ -106,7 +106,7 @@ class EnergySourceType(NetworkElement, ABC):
 
         for attr in ["capex", "opex"]:
             validate_series(
-                name=f"Energy source {self.name} {attr}",
+                name=f"Energy source {attr}",
                 series=getattr(self, attr),
                 length=network.constants.n_years,
                 exception_list=exception_list,
@@ -120,7 +120,7 @@ class EnergySourceType(NetworkElement, ABC):
         ]:
             series = getattr(self, attr)
             if validate_series(
-                name=f"Energy source type {self.name} {attr}",
+                name=f"Energy source type {attr}",
                 series=series,
                 length=network.constants.n_years,
                 exception_list=exception_list,
@@ -128,7 +128,7 @@ class EnergySourceType(NetworkElement, ABC):
             ) and not pd.isnull(series.iloc[0]):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy source type {self.name} {attr} must have a NaN value for the base year"
+                        f"{attr.capitalize()} must have a NaN value for the base year"
                     )
                 )
 
@@ -137,7 +137,5 @@ class EnergySourceType(NetworkElement, ABC):
             not isinstance(t, str) for t in self.tags
         ):
             exception_list.append(
-                NetworkValidatorException(
-                    f"Energy source type {self.name} has invalid tags: {self.tags}. "
-                )
+                NetworkValidatorException(f"Invalid tags: {self.tags}. ")
             )

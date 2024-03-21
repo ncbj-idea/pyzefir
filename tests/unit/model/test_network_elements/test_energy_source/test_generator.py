@@ -183,7 +183,7 @@ def test_add_generator_to_network_without_generator_types(network: Network) -> N
     )
 
     expected_exception_list: list[NetworkValidatorException] = [
-        NetworkValidatorException("Network does not contain generator type gen_I")
+        NetworkValidatorException("Network does not contain generator type")
     ]
     with pytest.raises(NetworkValidatorException) as e_info:
         gen.validate(network)
@@ -216,7 +216,7 @@ def test_add_generator_with_unmatchable_energy_type(network: Network) -> None:
     actual_exception_list: list[NetworkValidatorException] = []
     expected_exception_list: list[NetworkValidatorException] = [
         NetworkValidatorException(
-            "Unable to attach generator gen_d to a bus bus_A. Bus energy type (ELECTRICITY) "
+            "Unable to attach generator to a bus bus_A. Bus energy type (ELECTRICITY) "
             "and generator energy types (['HEATING']) do not match"
         )
     ]
@@ -243,7 +243,7 @@ def test_add_generator_with_non_existing_bus_name(network: Network) -> None:
     actual_exception_list: list[NetworkValidatorException] = []
     expected_exception_list: list[NetworkValidatorException] = [
         NetworkValidatorException(
-            "Cannot attach generator gen_B to a bus non_existing_bus_name - bus "
+            "Cannot attach generator to a bus non_existing_bus_name - bus "
             "does not exist in the network"
         )
     ]
@@ -274,7 +274,7 @@ def test_add_generator_with_wrong_energy_type(network: Network) -> None:
     )
     expected_exception_list: list[NetworkValidatorException] = [
         NetworkValidatorException(
-            "Generator gen_c has gen energy types:['TRANSPORT'] which is not "
+            "Gen energy types: ['TRANSPORT'] are not "
             "compliant with the network energy types: ['ELECTRICITY', 'HEATING']"
         )
     ]
@@ -305,7 +305,7 @@ def test_generator_is_connected_to_correct_bus(network: Network) -> None:
         list(e_info.value.exceptions),
         [
             NetworkValidatorException(
-                "Generator test_gen has conversion_rate for energy types: "
+                "Conversion_rate for energy types: "
                 "['HEATING'] which are not in connected buses energy types"
             )
         ],
@@ -345,7 +345,7 @@ def test_generator_is_connected_to_correct_bus(network: Network) -> None:
                     "but it is an instance of <class 'list'> instead"
                 ),
                 NetworkValidatorException(
-                    "Generator gen_c has conversion_rate for energy types: ['ELECTRICITY', 'HEATING'] "
+                    "Conversion_rate for energy types: ['ELECTRICITY', 'HEATING'] "
                     "which are not in connected buses energy types"
                 ),
             ],
@@ -376,13 +376,13 @@ def test_generator_is_connected_to_correct_bus(network: Network) -> None:
             ),
             [
                 NetworkValidatorException(
-                    "Generator attribute 'buses' for gen_d must contain only strings"
+                    "Generator attribute 'buses' must contain only strings"
                 ),
                 NetworkValidatorException(
-                    "Cannot attach generator gen_d to a bus 1 - bus does not exist in the network"
+                    "Cannot attach generator to a bus 1 - bus does not exist in the network"
                 ),
                 NetworkValidatorException(
-                    "Cannot attach generator gen_d to a bus 2.0 - bus does not exist in the network"
+                    "Cannot attach generator to a bus 2.0 - bus does not exist in the network"
                 ),
             ],
         ),
@@ -475,7 +475,7 @@ def test_validate_emission_fee_validator(network: Network) -> None:
         list(e_info.value.exceptions),
         [
             NetworkValidatorException(
-                "In gen_A there are fees: ['EFee_A', 'EFee_C', 'EFee_D'] which apply "
+                "There are fees: ['EFee_A', 'EFee_C', 'EFee_D'] which apply "
                 "to the same type of emission: CO2"
             )
         ],

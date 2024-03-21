@@ -551,7 +551,7 @@ from tests.utils import get_resources
                 }
             },
             {},
-            (19 / 6) + (310 / 27),
+            (19 / 6) + (340 / 27),
             False,
             id="constant_capex_variable_yearly_energy_usage_non_constant_discount_rate",
         ),
@@ -608,7 +608,7 @@ from tests.utils import get_resources
                 }
             },
             {},
-            (19 / 6) + (310 / 27),
+            (19 / 6) + (340 / 27),
             True,
             id="ens_constant_capex_variable_yearly_energy_usage_non_constant_discount_rate",
         ),

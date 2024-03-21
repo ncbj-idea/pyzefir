@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from pathlib import Path
-from traceback import TracebackException
 
 import click
 
-from pyzefir.cli.logger import get_cli_logger, tear_down_logger
-from pyzefir.model.exceptions import NetworkValidatorExceptionGroup
+from pyzefir.cli.logger import setup_logging, tear_down_logger
+from pyzefir.model.exception_formatter import NetworkExceptionFormatter
 from pyzefir.model.network import Network
 from pyzefir.model.network_validator import NetworkValidator
 from pyzefir.optimization.exportable_results import ExportableResults
@@ -41,26 +41,37 @@ from pyzefir.utils.path_manager import CsvPathManager
 class CliRunner:
     def __init__(self, config_path: Path) -> None:
         self.config_params = ConfigLoader(config_path).load()
-        self.logger = get_cli_logger(
-            name=__name__, log_file_path=self.config_params.output_path / "cli.log"
-        )
+        self._logger = logging.getLogger(__name__)
 
     def run(self) -> None:
+        try:
+            self._run()
+        except Exception as exc:
+            if self.config_params.format_exceptions:
+                NetworkExceptionFormatter(exc).format(self._logger)
+                exit(1)
+            raise
+
+    def _run(self) -> None:
+        setup_logging(
+            log_file_path=self.config_params.output_path / "cli.log",
+            level=self.config_params.log_level,
+        )
+        self._logger.info("Starting CLI Runner...")
         self._structure_create()
         self._convert_input_data_to_csv()
         network = self._create_network_object()
-        NetworkValidator(network).validate()
         opt_config = self._create_opt_config(network)
         results = self._run_optimization(network, opt_config)
         self._run_postprocessing(results.to_exportable())
-        tear_down_logger(self.logger.name)
+        tear_down_logger(self._logger.name)
 
     def _structure_create(self) -> None:
         if (
             self.config_params.n_hours is not None
             and self.config_params.n_years is not None
         ):
-            self.logger.info("Triggered structure creator to run ... ")
+            self._logger.info("Triggered structure creator to run ... ")
             create_structure(
                 input_path=self.config_params.structure_creator_input_path,
                 output_path=self.config_params.input_path,
@@ -74,9 +85,11 @@ class CliRunner:
             self.config_params.input_format == "xlsx"
             and self.config_params.csv_dump_path is not None
         ):
-            self.logger.info(
-                f"Converting xlsx input files from {self.config_params.input_path} to csv files, result will be saved "
-                f"to {self.config_params.csv_dump_path}..."
+            self._logger.info(
+                "Converting xlsx input files from %s to csv files, result will be saved "
+                "to %s...",
+                self.config_params.input_path,
+                self.config_params.csv_dump_path,
             )
             ExcelToCsvConverter(
                 input_files_path=self.config_params.input_path,
@@ -85,10 +98,11 @@ class CliRunner:
                 / "scenarios"
                 / f"{self.config_params.scenario}.xlsx",
             ).convert()
-            self.logger.info("Done.")
 
     def _create_network_object(self) -> Network:
-        self.logger.info(f"Loading csv data from {self.config_params.csv_dump_path}...")
+        self._logger.info(
+            "Loading csv data from %s...", self.config_params.csv_dump_path
+        )
         input_csv_path = (
             self.config_params.csv_dump_path or self.config_params.input_path
         )
@@ -98,16 +112,11 @@ class CliRunner:
                 scenario_name=self.config_params.scenario,
             )
         ).load_dfs()
-        self.logger.info("Done.")
         config_dict = self.config_params.network_config
-        try:
-            return NetworkCreator.create(loaded_csv_data, config_dict)
-        except NetworkValidatorExceptionGroup as exc:
-            t = TracebackException.from_exception(
-                exc, max_group_depth=1000, max_group_width=1000
-            )
-            self.logger.error("".join(t.format()))
-            raise exc
+        network = NetworkCreator.create(loaded_csv_data, config_dict)
+        NetworkValidator(network).validate()
+
+        return network
 
     def _create_opt_config(self, network: Network) -> OptConfig:
         return OptConfig(
@@ -126,27 +135,25 @@ class CliRunner:
 
     def _run_optimization(self, network: Network, opt_config: OptConfig) -> Results:
         engine = LinopyOptimizationModel()
-        self.logger.info("Building optimization model...")
+        self._logger.info("Building optimization model...")
         engine.build(OptimizationInputData(network, opt_config))
-        self.logger.info("Done.")
-        self.logger.info("Running optimization...")
+        self._logger.info("Running optimization...")
         engine.optimize()
-        self.logger.info("Done.")
         return engine.results
 
     def _run_postprocessing(self, results: ExportableResults) -> None:
         handler = ResultsHandler(CsvExporter())
-        self.logger.info(
-            f"Dumping *.csv results to {self.config_params.output_path}..."
+        self._logger.info(
+            "Saving *.csv results to %s...",
+            self.config_params.output_path,
         )
         handler.export_results(self.config_params.output_path / "csv", results)
-        self.logger.info("Csv dumping done.")
-        self.logger.info(
-            f"Dumping *.xlsx results to {self.config_params.output_path}..."
+        self._logger.info(
+            "Saving *.xlsx results to %s...", self.config_params.output_path
         )
         handler.exporter = XlsxExporter()
         handler.export_results(self.config_params.output_path / "xlsx", results)
-        self.logger.info("Xlsx dumping done.")
+        self._logger.info("Xlsx results saved.")
 
 
 @click.command()

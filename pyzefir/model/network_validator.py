@@ -362,6 +362,7 @@ class BaseCapacityValidator(BasicValidator):
         aggr: AggregatedConsumer,
         base_fraction: float,
         base_cap: float,
+        num_tol: float,
         exception_list: list[NetworkValidatorException],
     ) -> None:
         if min_power is None or max_power is None:
@@ -375,18 +376,22 @@ class BaseCapacityValidator(BasicValidator):
             n_consumer = aggr.n_consumers[0]
             if not (
                 (
-                    base_fraction * n_consumer * min_power <= base_cap
-                    or math.isclose(base_fraction * n_consumer * min_power, base_cap)
+                    base_fraction * n_consumer * min_power <= base_cap + num_tol
+                    or math.isclose(
+                        base_fraction * n_consumer * min_power, base_cap + num_tol
+                    )
                 )
                 and (
-                    base_cap <= base_fraction * n_consumer * max_power
-                    or math.isclose(base_cap, base_fraction * n_consumer * max_power)
+                    base_cap <= base_fraction * n_consumer * max_power + num_tol
+                    or math.isclose(
+                        base_cap, base_fraction * n_consumer * max_power + num_tol
+                    )
                 )
             ):
                 exception_list.append(
                     NetworkValidatorException(
                         f"In energy source {unit_name}, if base capacity has been defined, "
-                        f"the compound inequality must be true: "
+                        f"the compound inequality must be true with numerical tolerance: {num_tol:.2E}: "
                         f"base_fraction * n_consumers * min_device_nom_power <= base_capacity <= "
                         f"base_fraction * n_consumers * max_device_nom_power, but it is "
                         f"{base_fraction} * {n_consumer} * {min_power} "
@@ -402,6 +407,7 @@ class BaseCapacityValidator(BasicValidator):
         unit_dict: NetworkElementsDict[Generator] | NetworkElementsDict[Storage],
         aggregated_consumers: NetworkElementsDict[AggregatedConsumer],
         stack_aggr_map: dict[str, str],
+        num_tol: float,
         exception_list: list[NetworkValidatorException],
     ) -> None:
         for unit_name, stack in unit_stack_mapping.items():
@@ -425,6 +431,7 @@ class BaseCapacityValidator(BasicValidator):
                     aggr=aggr,
                     base_fraction=base_fraction,
                     base_cap=base_cap,
+                    num_tol=num_tol,
                     exception_list=exception_list,
                 )
             else:
@@ -469,6 +476,7 @@ class BaseCapacityValidator(BasicValidator):
             unit_dict=network.generators,
             aggregated_consumers=network.aggregated_consumers,
             stack_aggr_map=stack_aggr_map,
+            num_tol=network.constants.numeric_tolerance,
             exception_list=exception_list,
         )
         BaseCapacityValidator._check_base_cap(
@@ -476,6 +484,7 @@ class BaseCapacityValidator(BasicValidator):
             unit_dict=network.storages,
             aggregated_consumers=network.aggregated_consumers,
             stack_aggr_map=stack_aggr_map,
+            num_tol=network.constants.numeric_tolerance,
             exception_list=exception_list,
         )
 

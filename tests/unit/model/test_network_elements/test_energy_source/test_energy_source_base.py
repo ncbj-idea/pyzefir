@@ -73,7 +73,7 @@ def test_energy_source() -> EnergySource:
             },
             [
                 NetworkValidatorException(
-                    "Energy source test has invalid energy source type. Energy source type must be a string, not int"
+                    "Invalid energy source type. Energy source type must be a string, not int"
                 )
             ],
             id="invalid energy_source_type",
@@ -84,7 +84,7 @@ def test_energy_source() -> EnergySource:
             },
             [
                 NetworkValidatorException(
-                    "Energy source test has invalid unit base capacity. Unit base capacity must be numeric, not str"
+                    "Invalid unit base capacity. Unit base capacity must be numeric, not str"
                 )
             ],
             id="invalid unit_base_cap",
@@ -102,16 +102,16 @@ def test_energy_source() -> EnergySource:
             },
             [
                 NetworkValidatorException(
-                    "Energy source test unit_min_capacity must have a NaN value for the base year"
+                    "Unit_min_capacity must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source test unit_max_capacity must have a NaN value for the base year"
+                    "Unit_max_capacity must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source test unit_min_capacity_increase must have a NaN value for the base year"
+                    "Unit_min_capacity_increase must have a NaN value for the base year"
                 ),
                 NetworkValidatorException(
-                    "Energy source test unit_max_capacity_increase must have a NaN value for the base year"
+                    "Unit_max_capacity_increase must have a NaN value for the base year"
                 ),
             ],
             id="not nan for first year",
@@ -121,9 +121,7 @@ def test_energy_source() -> EnergySource:
                 "tags": [0, None, "abc"],
             },
             [
-                NetworkValidatorException(
-                    "Energy source test has invalid tags: [0, None, 'abc']. "
-                ),
+                NetworkValidatorException("Invalid tags: [0, None, 'abc']. "),
             ],
             id="incorrect tags",
         ),
@@ -164,7 +162,7 @@ def test_correct_series_validation(network: Network, mocker: Any) -> None:
         [
             mocker.call(
                 series=getattr(test_energy_source, attr),
-                name=f"Energy source test {attr}",
+                name=f"{attr.capitalize()}",
                 exception_list=[],
                 length=default_network_constants.n_years,
                 is_numeric=True,
@@ -187,12 +185,12 @@ def test_correct_series_validation(network: Network, mocker: Any) -> None:
             "test_max_dev_nom_power",
             [
                 NetworkValidatorException(
-                    "Energy source test has invalid min_device_nom_power. "
+                    "Invalid min_device_nom_power. "
                     "min_device_nom_power must be an instance of "
                     "one of the types: float, int or None, not str"
                 ),
                 NetworkValidatorException(
-                    "Energy source test has invalid max_device_nom_power. "
+                    "Invalid max_device_nom_power. "
                     "max_device_nom_power must be an instance of "
                     "one of the types: float, int or None, not str"
                 ),
@@ -203,7 +201,7 @@ def test_correct_series_validation(network: Network, mocker: Any) -> None:
             0,
             [
                 NetworkValidatorException(
-                    "min_device_nom_power for test has invalid value. "
+                    "Min_device_nom_power has invalid value. "
                     "It must be greater or equal to zero, but it is: -1.0"
                 ),
             ],

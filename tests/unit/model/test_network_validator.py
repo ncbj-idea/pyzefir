@@ -198,13 +198,13 @@ def test_base_total_emission_validation(
         pytest.param(
             "generator_types",
             {"CHP_COAL": {"fuel": "uranium"}},
-            "Generator CHP_COAL fuel uranium has not been added to the network",
+            "Fuel uranium has not been added to the network",
             id="Changing the generator_type CHP_COAL fuel that is not available in the network",
         ),
         pytest.param(
             "local_balancing_stacks",
             {"LKT2": {"buses_out": ["LKT2_EE", "LKT2_H"]}},
-            "Outlet buses of local balancing stack LKT2 must be a dict, not <class 'list'>.",
+            "Outlet buses must be a dict, not <class 'list'>.",
             id="Changing type buses_out to list instead of required dict",
         ),
         pytest.param(
@@ -324,8 +324,8 @@ def test_unit_not_connected_to_single_stack(network: Network) -> None:
             [
                 NetworkValidatorException(
                     "In energy source BOILER_COAL_LKT2, if base capacity has been defined, "
-                    "the compound inequality must be true: base_fraction * n_consumers "
-                    "* min_device_nom_power <= base_capacity <= base_fraction * n_consumers "
+                    "the compound inequality must be true with numerical tolerance: 1.00E-06: base_fraction "
+                    "* n_consumers * min_device_nom_power <= base_capacity <= base_fraction * n_consumers "
                     "* max_device_nom_power, but it is "
                     "0.7 * 50000 * 10.0 (350000.0) <= 0 <= 0.7 * 50000 * 30.0 (1050000.0) instead"
                 )

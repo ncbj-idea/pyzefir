@@ -18,12 +18,14 @@ import logging
 from itertools import zip_longest
 from typing import Type
 
+import pandas as pd
+
 from pyzefir.parser.validator.valid_structure import (
     DataFramesColumnsType,
     DatasetConfig,
 )
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class DataFrameValidatorException(Exception):
@@ -40,6 +42,7 @@ class DataFrameValidatorGroupException(
 class DataFrameValidator:
     def __init__(
         self,
+        df: pd.DataFrame,
         dataframe_structure: dict[str, str],
         valid_structure: DatasetConfig,
         dataset_reference: str,
@@ -49,6 +52,7 @@ class DataFrameValidator:
         )
         self.valid_structure = valid_structure
         self.dataset_reference = dataset_reference
+        self._df = df
 
     def validate(self) -> None:
         exception_list: list[DataFrameValidatorException] = []
@@ -74,7 +78,7 @@ class DataFrameValidator:
                 )
             )
         elif not any(
-            self._check_type_match(column_type, d)
+            self._check_type_match(column_type, d, self._df, column_name)
             for d in self.valid_structure.default_type
         ):
             exception_list.append(
@@ -86,13 +90,21 @@ class DataFrameValidator:
 
     @staticmethod
     def _check_type_match(
-        type_a: DataFramesColumnsType, type_b: DataFramesColumnsType
+        type_a: DataFramesColumnsType,
+        type_b: DataFramesColumnsType,
+        df: pd.DataFrame,
+        column_name: str,
     ) -> bool:
         """
+        Checks whether type_a is float and columns contains only NaN then return True
+        (we allowed empty columns at this step)
         Checks whether type b matches type a.
         Note the order of arguments i.e. int matches float,
         but float does not match int (you can't cast float to int without an information loss)
         """
+        if type_a is float and df[column_name].isnull().all():
+            _logger.debug(f"Dataframe column {column_name} it's empty")
+            return True
         return type_a == type_b or (type_a is int and type_b is float)
 
     def _check_static_column(
@@ -113,7 +125,9 @@ class DataFrameValidator:
                     )
                 )
                 misplaced_column_type = self.valid_structure.columns[column_name]
-                if not self._check_type_match(column_type, misplaced_column_type):
+                if not self._check_type_match(
+                    column_type, misplaced_column_type, self._df, column_name
+                ):
                     exception_list.append(
                         DataFrameValidatorException(
                             f"Dataframe column {column_name} type {column_type} "
@@ -127,7 +141,7 @@ class DataFrameValidator:
                         f" {list(self.valid_structure.columns)}"
                     )
                 )
-        elif not self._check_type_match(column_type, valid_type):
+        elif not self._check_type_match(column_type, valid_type, self._df, column_name):
             exception_list.append(
                 DataFrameValidatorException(
                     f"Dataframe column {column_name} type {column_type} "
@@ -185,7 +199,7 @@ class DataFrameValidator:
                 case "bool":
                     translated_structure[column_name] = bool
                 case _:
-                    logger.warning(
+                    _logger.warning(
                         f"Dataframe has unknown column type {pandas_type_name}"
                     )
                     raise DataFrameValidatorException(

@@ -32,6 +32,10 @@ from pyzefir.model.exceptions import (
 from pyzefir.model.network_element import NetworkElement
 
 
+class DSRValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class DSR(NetworkElement):
     name: str
@@ -79,7 +83,7 @@ class DSR(NetworkElement):
         self._validate(exception_list)
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise DSRValidatorExceptionGroup(
                 f"While adding DSR {self.name} following errors occurred: ",
                 exception_list,
             )

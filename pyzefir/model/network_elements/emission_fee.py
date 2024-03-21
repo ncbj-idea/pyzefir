@@ -33,6 +33,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class EmissionFeeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass(kw_only=True)
 class EmissionFee(NetworkElement):
     """
@@ -66,7 +70,7 @@ class EmissionFee(NetworkElement):
             )
 
         validate_series(
-            name=f"EmissionFee {self.name}",
+            name="EmissionFee",
             series=self.price,
             length=network.constants.n_years,
             exception_list=exception_list,
@@ -76,7 +80,7 @@ class EmissionFee(NetworkElement):
         )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise EmissionFeeValidatorExceptionGroup(
                 f"While adding EmissionFee {self.name} following errors occurred: ",
                 exception_list,
             )

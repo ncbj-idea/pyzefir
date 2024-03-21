@@ -33,6 +33,10 @@ if TYPE_CHECKING:
     from pyzefir.model.network import Network
 
 
+class DemandProfileValidatorExceptionGroup(NetworkValidatorExceptionGroup):
+    pass
+
+
 @dataclass
 class DemandProfile(NetworkElement):
     """
@@ -65,7 +69,7 @@ class DemandProfile(NetworkElement):
             ):
                 exception_list.append(
                     NetworkValidatorException(
-                        f"Energy type {energy_type} in {self.name} is " "not normalized"
+                        f"Energy type {energy_type} is not normalized"
                     )
                 )
 
@@ -73,8 +77,7 @@ class DemandProfile(NetworkElement):
         if len({len(profile) for profile in self.normalized_profile.values()}) > 1:
             exception_list.append(
                 NetworkValidatorException(
-                    f"Normalized profile in {self.name} has different "
-                    "length for different energy types"
+                    "Normalized profile has different length for different energy types"
                 )
             )
 
@@ -105,7 +108,7 @@ class DemandProfile(NetworkElement):
             )
 
         if exception_list:
-            raise NetworkValidatorExceptionGroup(
+            raise DemandProfileValidatorExceptionGroup(
                 f"While adding DemandProfile {self.name} "
                 "following errors occurred: ",
                 exception_list,
