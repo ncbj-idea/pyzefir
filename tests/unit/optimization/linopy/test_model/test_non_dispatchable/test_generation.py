@@ -55,10 +55,10 @@ from tests.unit.optimization.linopy.test_model.utils import (
                 "global_solar": {"unit_base_cap": 2.0},
             },
             {
-                "pv": {"efficiency": {EE: 1.0}},
-                "solar": {"efficiency": {HEAT: 1.0}},
-                "pp_coal": {"efficiency": {EE: 1.0}},
-                "heat_plant_biomass": {"efficiency": {HEAT: 1.0}},
+                "pv": {"efficiency": {EE: pd.Series([1.0] * 6)}},
+                "solar": {"efficiency": {HEAT: pd.Series([1.0] * 6)}},
+                "pp_coal": {"efficiency": {EE: pd.Series([1.0] * 6)}},
+                "heat_plant_biomass": {"efficiency": {HEAT: pd.Series([1.0] * 6)}},
             },
             {
                 "multi_family_profile": {
@@ -129,10 +129,10 @@ from tests.unit.optimization.linopy.test_model.utils import (
             },
             {"local_pv": {"unit_base_cap": 50}, "global_solar": {"unit_base_cap": 30}},
             {
-                "pv": {"efficiency": {EE: 0.2}},
-                "solar": {"efficiency": {HEAT: 0.5}},
-                "pp_coal": {"efficiency": {EE: 1.0}},
-                "heat_plant_biomass": {"efficiency": {HEAT: 1.0}},
+                "pv": {"efficiency": {EE: pd.Series([0.2] * 6)}},
+                "solar": {"efficiency": {HEAT: pd.Series([0.5] * 6)}},
+                "pp_coal": {"efficiency": {EE: pd.Series([1.0] * 6)}},
+                "heat_plant_biomass": {"efficiency": {HEAT: pd.Series([1.0] * 6)}},
             },
             {
                 "multi_family_profile": {

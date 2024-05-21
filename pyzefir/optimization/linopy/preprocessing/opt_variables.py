@@ -17,9 +17,6 @@
 from linopy import Model
 
 from pyzefir.optimization.linopy.preprocessing.indices import Indices
-from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
-    OptimizationParameters,
-)
 from pyzefir.optimization.linopy.preprocessing.variables.bus_variables import (
     BusVariables,
 )
@@ -54,9 +51,8 @@ class OptimizationVariables:
         model: Model,
         indices: Indices,
         opt_config: OptConfig,
-        parameters: OptimizationParameters | None = None,
     ) -> None:
-        self.bus = BusVariables(model, indices, opt_config, parameters)
+        self.bus = BusVariables(model, indices, opt_config)
         """ bus variables """
         self.frac = FractionVariables(model, indices)
         """ fraction variables """

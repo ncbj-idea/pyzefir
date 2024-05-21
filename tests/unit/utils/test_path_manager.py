@@ -28,6 +28,7 @@ from pyzefir.utils.path_manager import (
     DataSubCategories,
     XlsxPathManager,
     get_datasets_from_categories,
+    get_optional_datasets_from_categories,
 )
 
 
@@ -53,6 +54,7 @@ def test_datacategories_get_main_categories() -> None:
         "demand_types",
         "scenarios",
         "conversion_rate",
+        "generator_type_efficiency",
     ]
     assert set(DataCategories.get_main_categories()) == set(expected)
 
@@ -62,6 +64,7 @@ def test_datacategories_get_dynamic_categories() -> None:
         "demand_types",
         "conversion_rate",
         "demand_chunks",
+        "generator_type_efficiency",
     ]
     assert DataCategories.get_dynamic_categories() == expected
 
@@ -101,6 +104,7 @@ def test_datacategories_get_dynamic_categories() -> None:
                 DataSubCategories.GENERATOR_EMISSION_FEES,
                 DataSubCategories.DSR,
                 DataSubCategories.POWER_RESERVE,
+                DataSubCategories.GENERATOR_BINDING,
             ],
         ),
         (
@@ -134,6 +138,22 @@ def test_get_datasets_from_categories_wrong_categories(data_category: str) -> No
         mock_logger.assert_called_with(
             f"{data_category=} not in datasets_in_categories keys"
         )
+
+
+@pytest.mark.parametrize(
+    "data_category, expected_datasets",
+    (
+        (DataCategories.STORAGE, [DataSubCategories.PARAMETERS]),
+        (DataCategories.STRUCTURE, [DataSubCategories.STORAGES]),
+        ("non-existent", []),
+        (None, []),
+        (123, []),
+    ),
+)
+def test_get_optional_datasets_from_categories(
+    data_category: str, expected_datasets: list[str]
+) -> None:
+    assert get_optional_datasets_from_categories(data_category) == expected_datasets
 
 
 @pytest.mark.parametrize(

@@ -29,6 +29,7 @@ class DsrParameters(ModelParameters):
         self,
         dsr: NetworkElementsDict,
         indices: Indices,
+        scale: float = 1.0,
     ) -> None:
         self.compensation_factor = self.get_prop_from_elements_if_not_none(
             dsr, indices.DSR, "compensation_factor"
@@ -38,8 +39,9 @@ class DsrParameters(ModelParameters):
             dsr, indices.DSR, "balancing_period_len"
         )
         """ balancing period length """
-        self.penalization = self.get_prop_from_elements_if_not_none(
-            dsr, indices.DSR, "penalization"
+        self.penalization = self.scale(
+            self.get_prop_from_elements_if_not_none(dsr, indices.DSR, "penalization"),
+            scale=scale,
         )
         """ penalization parameters for dsr """
         self.relative_shift_limit = self.get_prop_from_elements_if_not_none(

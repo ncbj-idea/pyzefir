@@ -33,7 +33,7 @@ class CapacityFactorParser(AbstractElementParser):
         capacity_factors = []
         for col in self.capacity_factors_df.columns:
             capacity_factor = CapacityFactor(
-                name=col, profile=self.capacity_factors_df[col]
+                name=str(col), profile=self.capacity_factors_df[col]
             )
             capacity_factors.append(capacity_factor)
         return tuple(capacity_factors)

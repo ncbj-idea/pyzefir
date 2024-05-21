@@ -13,16 +13,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 
 import xarray as xr
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
+        _logger.info("Building curtailed energy cost objective...")
         curtailment_cost = self.parameters.tgen.energy_curtailment_cost
         gen_ett = {
             k: {self.indices.ET.inverse[et] for et in v}
@@ -45,6 +48,7 @@ class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
                     self.variables.gen.dump_et.isel(gen=gen_idx, et=et)
                     * curtailment_cost_per_year
                 )
+        _logger.info("Curtailed energy cost objective: Done")
         if result:
             return result.sum()
         return result

@@ -38,6 +38,15 @@ class Exporter(ABC):
     """An interface for exporting data and parsing exportable results."""
 
     @staticmethod
+    def is_results_group_empty(result: ExportableResultsGroup) -> bool:
+        for field_value in result.__dict__.values():
+            if isinstance(field_value, dict) and field_value:
+                return False
+            if isinstance(field_value, pd.DataFrame) and not field_value.empty:
+                return False
+        return True
+
+    @staticmethod
     @abstractmethod
     def export_group_results(root_path: Path, result: ExportableResultsGroup) -> None:
         raise NotImplementedError

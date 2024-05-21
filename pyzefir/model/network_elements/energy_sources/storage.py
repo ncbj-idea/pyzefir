@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -27,6 +28,8 @@ from pyzefir.model.network_elements import EnergySource, StorageType
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class StorageValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -63,6 +66,7 @@ class Storage(EnergySource):
         Raises:
             NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
+        _logger.debug("Validating storage object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_base_energy_source(
             network=network, exception_list=exception_list
@@ -91,10 +95,12 @@ class Storage(EnergySource):
                 )
             )
         if exception_list:
+            _logger.debug("Got error validating storage: %s", exception_list)
             raise StorageValidatorExceptionGroup(
                 f"While adding Storage {self.name} with type {self.energy_source_type} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Storage %s validation: Done", self.name)
 
     def _validate_storage_type(
         self,
@@ -132,5 +138,6 @@ class Storage(EnergySource):
                 )
             )
             is_storage_type_correct = False
+        _logger.debug("Validate storage type: OK")
 
         return is_storage_type_correct

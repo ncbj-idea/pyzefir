@@ -41,6 +41,7 @@ class DataCategories:
     SCENARIO: str = "scenarios"
     DEMAND_CHUNKS: str = "demand_chunks"
     CONVERSION_RATE: str = "conversion_rate"
+    GENERATOR_TYPE_EFFICIENCY: str = "generator_type_efficiency"
 
     @classmethod
     def check_directory_name(cls, value: str) -> None:
@@ -63,6 +64,7 @@ class DataCategories:
             DataCategories.SCENARIO,
             DataCategories.CONVERSION_RATE,
             DataCategories.DEMAND_CHUNKS,
+            DataCategories.GENERATOR_TYPE_EFFICIENCY,
         ]
 
     @staticmethod
@@ -71,6 +73,14 @@ class DataCategories:
             DataCategories.DEMAND,
             DataCategories.CONVERSION_RATE,
             DataCategories.DEMAND_CHUNKS,
+            DataCategories.GENERATOR_TYPE_EFFICIENCY,
+        ]
+
+    @staticmethod
+    def get_optional_categories() -> list[str]:
+        return [
+            DataCategories.STORAGE,
+            DataCategories.GENERATOR_TYPE_EFFICIENCY,
         ]
 
 
@@ -118,6 +128,8 @@ class DataSubCategories:
     DSR: str = "DSR"
     POWER_RESERVE: str = "Power_Reserve"
     POWER_UTILIZATION: str = "Power_Utilization"
+    GENERATOR_BINDING: str = "Generator_Binding"
+    GENERATION_COMPENSATION: str = "Generation_Compensation"
 
     @classmethod
     def check_directory_name(cls, value: str) -> None:
@@ -167,6 +179,7 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.GENERATOR_EMISSION_FEES,
             DataSubCategories.DSR,
             DataSubCategories.POWER_RESERVE,
+            DataSubCategories.GENERATOR_BINDING,
         ],
         DataCategories.SCENARIO: [
             DataSubCategories.ELEMENT_ENERGY_EVOLUTION_LIMITS,
@@ -182,6 +195,7 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.EMISSION_FEES,
             DataSubCategories.GENERATION_FRACTION,
             DataSubCategories.CURTAILMENT_COST,
+            DataSubCategories.GENERATION_COMPENSATION,
         ],
         DataCategories.DEMAND_CHUNKS: [DataSubCategories.DEMAND_CHUNKS],
     }
@@ -191,6 +205,19 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
     except KeyError:
         logger.warning(f"{data_category=} not in datasets_in_categories keys")
         raise
+
+
+def get_optional_datasets_from_categories(data_category: str) -> list[str]:
+    datasets_in_categories = {
+        DataCategories.STORAGE: [
+            DataSubCategories.PARAMETERS,
+        ],
+        DataCategories.STRUCTURE: [
+            DataSubCategories.STORAGES,
+        ],
+    }
+
+    return datasets_in_categories.get(data_category, [])
 
 
 class CsvPathManager:

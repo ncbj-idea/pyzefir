@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [0.4.22] - 2024.05.21
+### Added
+
+- Cycle_len as optional parameter
+- Loggers to structure_creator
+- Validator for input files to structure_creator
+- Generator compensation attribute to GeneratorType
+
+### Fixed
+- Ens bug fix
+- Add type casting within CSV parsing
+
+
 ## [0.4.1] - 2024-03-14
 ### Added
 

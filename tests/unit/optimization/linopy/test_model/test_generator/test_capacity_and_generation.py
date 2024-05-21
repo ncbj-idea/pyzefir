@@ -208,11 +208,19 @@ def test_max_generation(
     )
     assert np.allclose(
         gen_et[biomass_heat_plant.name][HEAT].values,
-        gen_biomass * biomass_heat_plant_type.efficiency[HEAT],
+        gen_biomass
+        * np.tile(
+            biomass_heat_plant_type.efficiency[HEAT][hour_sample].to_numpy(),
+            len(year_sample),
+        ).reshape((len(hour_sample), len(year_sample))),
     )
     assert np.allclose(
         gen_et[coal_power_plant.name][EE].values,
-        gen_coal_pp * coal_power_plant_type.efficiency[EE],
+        gen_coal_pp
+        * np.tile(
+            coal_power_plant_type.efficiency[EE][hour_sample].to_numpy(),
+            len(year_sample),
+        ).reshape((len(hour_sample), len(year_sample))),
     )
 
     for gen in [biomass_heat_plant, coal_power_plant]:

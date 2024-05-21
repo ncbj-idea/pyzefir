@@ -114,7 +114,7 @@ def test_netto_generation(
 
     if not ens:
         assert np.allclose(
-            coal_power_plant_gen * coal_power_plant_eff,
+            coal_power_plant_gen.mul(coal_power_plant_eff[hour_sample], axis=0),
             et_gen[coal_power_plant.name][EE],
         )
         assert np.allclose(
@@ -124,6 +124,6 @@ def test_netto_generation(
             h_dem[hour_sample, :][:, year_sample], et_gen[biomass_heat_plant.name][HEAT]
         )
         assert np.allclose(
-            biomass_heat_plant_gen * biomass_heat_plant_eff,
+            biomass_heat_plant_gen.mul(biomass_heat_plant_eff[hour_sample], axis=0),
             et_gen[biomass_heat_plant.name][HEAT],
         )

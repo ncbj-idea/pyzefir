@@ -15,9 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import logging
 from pathlib import Path
 
 import pandas as pd
+
+_logger = logging.getLogger(__name__)
 
 
 def write_to_excel(
@@ -36,3 +39,5 @@ def write_to_excel(
     ) as writer:
         for sheet_name, sheet_data in data.items():
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
+            _logger.debug("Data written to sheet %s in file %s", sheet_name, filename)
+        _logger.info("File %s has been saved at %s", filename, output_path)

@@ -65,7 +65,12 @@ def default_energy_profile() -> dict[str, pd.Series]:
 default_generator_type = {
     "energy_types": {ELECTRICITY, HEATING},
     "fuel": "coal",
-    "efficiency": {ELECTRICITY: 0.9, HEATING: 0.6},
+    "efficiency": pd.DataFrame(
+        {
+            ELECTRICITY: [0.5] * default_network_constants.n_hours,
+            HEATING: [0.4] * default_network_constants.n_hours,
+        }
+    ),
     "min_capacity": pd.Series(
         [np.nan] + list(get_random_series(default_network_constants.n_years - 1) * 100)
     ),
@@ -89,6 +94,7 @@ default_generator_type = {
     "capex": get_random_series() * 100,
     "opex": get_random_series() * 100,
     "name": "default_generator_type",
+    "generation_compensation": None,
 }
 
 default_storage_type = {
@@ -211,6 +217,7 @@ default_generator_type_params = {
     "capex": pd.Series([_DEFAULT_GENERATOR_CAPEX] * DEFAULT_SERIES_LENGTH),
     "opex": pd.Series([_DEFAULT_GENERATOR_OPEX] * DEFAULT_SERIES_LENGTH),
     "ramp": np.nan,
+    "generation_compensation": None,
 }
 
 
@@ -225,10 +232,12 @@ def get_default_generator_type(
 
     if series_length != DEFAULT_SERIES_LENGTH:
         series_dict = {
-            "efficiency": {
-                ELECTRICITY: _DEFAULT_GENERATOR_EFFICIENCY,
-                HEATING: _DEFAULT_GENERATOR_EFFICIENCY,
-            },
+            "efficiency": pd.DataFrame(
+                {
+                    ELECTRICITY: [_DEFAULT_GENERATOR_EFFICIENCY] * series_length,
+                    HEATING: [_DEFAULT_GENERATOR_EFFICIENCY] * series_length,
+                }
+            ),
             "capex": pd.Series([_DEFAULT_STORAGE_CAPEX] * series_length),
             "opex": pd.Series([_DEFAULT_STORAGE_OPEX] * series_length),
             "conversion_rate": {

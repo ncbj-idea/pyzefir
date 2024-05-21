@@ -102,7 +102,7 @@ class OptimizationParameters:
         )
         """ storage types parameters """
         self.tf: TransmissionFeeParameters = TransmissionFeeParameters(
-            network.transmission_fees, indices
+            network.transmission_fees, indices, scale=opt_config.money_scale
         )
         """ transmission fees parameters """
         self.line: LineParameters = LineParameters(network.lines, indices)
@@ -134,7 +134,7 @@ class OptimizationParameters:
                 network.constants.max_generation_fraction, indices.TAGS.inverse
             ),
             power_reserves=network.constants.power_reserves,
-            numeric_tolerance=network.constants.numeric_tolerance,
+            ens_penalty_cost=network.constants.ens_penalty_cost,
         )
         self.emf: EmissionFeeParameters = EmissionFeeParameters(
             network.emission_fees, indices, scale=opt_config.money_scale
@@ -144,5 +144,7 @@ class OptimizationParameters:
             network.demand_chunks, indices
         )
         """ demand chunks parameters """
-        self.dsr: DsrParameters = DsrParameters(network.dsr, indices)
+        self.dsr: DsrParameters = DsrParameters(
+            network.dsr, indices, scale=opt_config.money_scale
+        )
         """DSR parameters"""

@@ -16,11 +16,14 @@
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from pyzefir.model.exceptions import NetworkValidatorException
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -49,11 +52,9 @@ class NetworkElement(ABC):
 
         """
         if not isinstance(self.name, str):
-            exception_list.append(
-                NetworkValidatorException(
-                    f"Network element name must be of type string, but it is {type(self.name)} instead."
-                )
-            )
+            exception_str = f"Network element name must be of type string, but it is {type(self.name)} instead."
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))
 
     @abstractmethod
     def validate(self, network: Network) -> None:
@@ -90,15 +91,12 @@ class NetworkElement(ABC):
             NetworkValidatorException: If attr is not an instance of given class.
         """
         if not isinstance(getattr(self, attr), attr_type):
-            if raise_error:
-                raise NetworkValidatorException(
-                    f"{self.__class__.__name__} attribute '{attr}' for {self.name} must be an instance of "
-                    f"{attr_type}, but it is an instance of {type(getattr(self, attr))} instead"
-                )
-            exception_list.append(
-                NetworkValidatorException(
-                    f"{self.__class__.__name__} attribute '{attr}' for {self.name} "
-                    "must be an instance of "
-                    f"{attr_type}, but it is an instance of {type(getattr(self, attr))} instead"
-                )
+            exception_str = (
+                f"{self.__class__.__name__} attribute '{attr}' for {self.name} must be an instance of"
+                f" {attr_type}, but it is an instance of {type(getattr(self, attr))} instead"
             )
+            if raise_error:
+                _logger.debug(exception_str)
+                raise NetworkValidatorException(exception_str)
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))

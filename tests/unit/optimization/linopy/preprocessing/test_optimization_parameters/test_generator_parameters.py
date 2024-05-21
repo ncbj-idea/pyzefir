@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 import pytest
 from numpy import all, arange, array, ndarray, ones
-from pandas import Series
+from pandas import DataFrame, Series
+from pandas.testing import assert_frame_equal
 
 from pyzefir.model.network import Network, NetworkElementsDict
 from pyzefir.model.network_elements import Generator, GeneratorType
@@ -126,7 +128,9 @@ def test_get_conversion_rate(
     )
     gen_idx, h_idx = IndexingSet(array(gen_names)), IndexingSet(hour_sample)
 
-    result = GeneratorParameters.get_conversion_rate(gens, gen_ts, gen_idx, h_idx)
+    result = GeneratorParameters.get_frame_data_prop_from_element(
+        gens, gen_ts, gen_idx, h_idx, "conversion_rate"
+    )
 
     assert set(result) == set(expected_result)
     for gen_id in result:
@@ -164,6 +168,11 @@ def test_create(
         gen = complete_network.generators[gen_name]
         gen_type = complete_network.generator_types[gen.energy_source_type]
 
+        assert_frame_equal(
+            DataFrame(result.eff[gen_id]).reset_index(drop=True),
+            gen_type.efficiency.loc[h_sample].reset_index(drop=True),
+        )
+
         assert result.base_cap[gen_id] == gen.unit_base_cap
         assert tresult.lt[type_dict[gen_id]] == gen_type.life_time
         assert tresult.bt[type_dict[gen_id]] == gen_type.build_time
@@ -175,7 +184,6 @@ def test_create(
             gen_type.capacity_factor, None
         )
         assert result.ett[gen_id] == gen_type.energy_types
-        assert result.eff[gen_id] == gen_type.efficiency
         assert result.em_red[gen_id] == gen_type.emission_reduction
         assert vectors_eq_check(
             result.unit_max_capacity[gen_id], gen.unit_max_capacity, y_sample
@@ -231,3 +239,38 @@ def assert_not_none_optional_parameters(
     ]
     for param in optional_gen_params:
         assert any(getattr(gen, param) is not None for gen in gens.values())
+
+
+@pytest.mark.parametrize(
+    ("capacity_binding", "expected_capacity_binding"),
+    [
+        (
+            {"heat_pump_grid_hs": "exam1", "chp_coal_grid_hs": "exam1"},
+            {0: "exam1", 1: "exam1"},
+        ),
+        (
+            {
+                "heat_pump_grid_hs": "exam1",
+                "chp_coal_grid_hs": "exam1",
+                "pp_coal_grid": "exam2",
+            },
+            {0: "exam1", 1: "exam1", 2: "exam2"},
+        ),
+        ({}, {}),
+    ],
+)
+def test_capacity_binding(
+    complete_network: Network,
+    opt_config: OptConfig,
+    capacity_binding: dict[str, str],
+    expected_capacity_binding: dict[int, str],
+) -> None:
+    opt_config.year_sample, opt_config.hour_sample = array([0, 1, 2]), arange(50)
+    for gen_name, binding_marker in capacity_binding.items():
+        complete_network.generators[gen_name].generator_binding = binding_marker
+
+    indices = Indices(complete_network, opt_config)
+    result = OptimizationParameters(
+        complete_network, indices, opt_config
+    ).gen.capacity_binding
+    assert result == expected_capacity_binding

@@ -250,6 +250,16 @@ def generator_emission_fee_mock_df() -> pd.DataFrame:
 
 
 @pytest.fixture
+def generator_binding_mock_df() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {"generator": "GENERATOR_1", "binding_name": "mock_binding_name"},
+            {"generator": "GENERATOR_2", "binding_name": "mock_binding_name"},
+        ]
+    )
+
+
+@pytest.fixture
 def df_dict(
     generators_mock_df: pd.DataFrame,
     storages_mock_df: pd.DataFrame,
@@ -261,6 +271,7 @@ def df_dict(
     technology_stack_bus_mock_df: pd.DataFrame,
     technology_stack_aggregate_mock: pd.DataFrame,
     generator_emission_fee_mock_df: pd.DataFrame,
+    generator_binding_mock_df: pd.DataFrame,
 ) -> dict[str, dict[str, pd.DataFrame]]:
     return {
         DataCategories.INITIAL_STATE: {
@@ -275,6 +286,7 @@ def df_dict(
             DataSubCategories.TECHNOLOGYSTACK_BUSES: technology_stack_bus_mock_df,
             DataSubCategories.TECHNOLOGYSTACK_AGGREGATE: technology_stack_aggregate_mock,
             DataSubCategories.GENERATOR_EMISSION_FEES: generator_emission_fee_mock_df,
+            DataSubCategories.GENERATOR_BINDING: generator_binding_mock_df,
         },
         DataCategories.SCENARIO: {
             DataSubCategories.ELEMENT_ENERGY_EVOLUTION_LIMITS: empty_technology_evolution_mock_df,
@@ -315,4 +327,7 @@ def energy_source_unit_parser(
             DataSubCategories.GENERATOR_EMISSION_FEES
         ],
         n_consumers=df_dict[DataCategories.SCENARIO][DataSubCategories.N_CONSUMERS],
+        df_binding=df_dict[DataCategories.STRUCTURE][
+            DataSubCategories.GENERATOR_BINDING
+        ],
     )

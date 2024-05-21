@@ -29,6 +29,7 @@ from pyzefir.utils.path_manager import (
     CsvPathManager,
     DataCategories,
     get_datasets_from_categories,
+    get_optional_datasets_from_categories,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ class CsvParser:
                 df = self._read_and_validate_csv_file(
                     category=category, dataset_name=dataset_name, csv_path=csv_path
                 )
+                df.columns = df.columns.astype(str)
                 category_dict[dataset_name] = df
         else:
             for dataset_name in get_datasets_from_categories(data_category=category):
@@ -66,6 +68,7 @@ class CsvParser:
                 df = self._read_and_validate_csv_file(
                     category=category, dataset_name=dataset_name, csv_path=csv_path
                 )
+                df.columns = df.columns.astype(str)
                 category_dict[dataset_name] = df
 
         return category_dict
@@ -75,6 +78,13 @@ class CsvParser:
         category: str, dataset_name: str, csv_path: Path
     ) -> pd.DataFrame:
         if not csv_path.is_file():
+            if dataset_name in get_optional_datasets_from_categories(category):
+                columns = get_dataset_config_from_categories(
+                    category, dataset_name
+                ).columns
+                return pd.DataFrame(
+                    {col: pd.Series(dtype=dtype) for col, dtype in columns.items()}
+                )
             logger.error(f"File {dataset_name}.csv not found")
             raise CsvParserException(f"Required file: {csv_path} does not exists ")
         df = pd.read_csv(csv_path, true_values=TRUE_VALUES)

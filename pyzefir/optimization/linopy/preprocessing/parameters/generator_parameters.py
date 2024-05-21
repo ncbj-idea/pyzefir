@@ -16,6 +16,7 @@
 
 from dataclasses import dataclass
 
+import pandas as pd
 from numpy import ndarray
 
 from pyzefir.model.network import NetworkElementsDict
@@ -58,15 +59,15 @@ class GeneratorParameters(ModelParameters):
             generators, generator_types, indices.GEN, "energy_types"
         )
         """ generator energy types """
-        self.eff = self.fetch_energy_source_type_prop(
-            generators, generator_types, indices.GEN, "efficiency"
+        self.eff = self.get_frame_data_prop_from_element(
+            generators, generator_types, indices.GEN, indices.H, "efficiency"
         )
-        """ generator efficiency """
-        self.conv_rate = self.get_conversion_rate(
-            generators, generator_types, indices.GEN, indices.H
+        """ generator efficiency: (et -> Vector[h])- efficiency of energy in a given hour h"""
+        self.conv_rate = self.get_frame_data_prop_from_element(
+            generators, generator_types, indices.GEN, indices.H, "conversion_rate"
         )
         """
-        conversion rate: (et -> Vector[h] - how many units of energy et needs to be provided to produce one unit
+        conversion rate: (et -> Vector[h]) - how many units of energy et needs to be provided to produce one unit
         of energy in a given hour h
         """
         self.em_red = self.fetch_energy_source_type_prop(
@@ -110,22 +111,47 @@ class GeneratorParameters(ModelParameters):
             generators, "tags", indices.GEN, indices.TAGS
         )
         """ generator tags """
+        self.capacity_binding = self.fetch_element_prop(
+            generators, indices.GEN, "generator_binding"
+        )
 
     @staticmethod
-    def get_conversion_rate(
+    def get_frame_data_prop_from_element(
         generators: NetworkElementsDict[Generator],
         generator_types: NetworkElementsDict[GeneratorType],
         gen_idx: IndexingSet,
         h_idx: IndexingSet,
+        prop: str,
     ) -> dict[int, dict[str, ndarray]]:
+        """
+        Returns a dictionary where the keys are the indices of the generators in the
+        generators parameter and the values are dictionaries where the keys are the
+        energy types and the values are numpy arrays containing the values of the
+        specified property for the specified energy type at the specified hour index.
+
+        Args:
+            generators (NetworkElementsDict[Generator]): The generators in the network.
+            generator_types (NetworkElementsDict[GeneratorType]): The generator types in the network.
+            gen_idx (IndexingSet): The set of indices for the generators.
+            h_idx (IndexingSet): The set of indices for the hours.
+            prop (str): The name of the property to retrieve.
+
+        Returns:
+            dict[int, dict[str, ndarray]]: A dictionary where the keys are the indices of the generators in the
+            generators parameter and the values are dictionaries where the keys are
+            the energy types and the values are numpy arrays containing the values of
+            the specified property for the specified energy type at the specified
+            hour index.
+
+        """
         result: dict[int, dict[str, ndarray]] = dict()
         for ii, gen_name in gen_idx.mapping.items():
-            gen = generators[gen_name]
-            gen_type = generator_types[gen.energy_source_type]
-            conv_rate = gen_type.conversion_rate
+            gen_type = generator_types[generators[gen_name].energy_source_type]
+            gen_prop = getattr(gen_type, prop)
+            if isinstance(gen_prop, dict):
+                gen_prop = pd.DataFrame(gen_prop) if gen_prop else None
             result[ii] = dict()
-            if conv_rate:
-                for et in conv_rate:
-                    result[ii][et] = conv_rate[et].iloc[h_idx.ii].values
-
+            if gen_prop is not None:
+                for et in gen_prop:
+                    result[ii][et] = gen_prop[et].iloc[h_idx.ii].values
         return result

@@ -445,3 +445,197 @@ def aggr_ee(
         n_consumers=pd.Series([1] * N_YEARS),
         average_area=None,
     )
+
+
+@pytest.fixture
+def aggr_b(
+    demand_profile: DemandProfile,
+    lbs_b: LocalBalancingStack,
+    lbs2_b: LocalBalancingStack,
+) -> AggregatedConsumer:
+    """
+    Aggregated consumer, which is using only local balancing stack lbs
+    """
+    return AggregatedConsumer(
+        name="aggr_b",
+        demand_profile=demand_profile.name,
+        stack_base_fraction={"lbs_b": 0.3, "lbs2_b": 0.7},
+        yearly_energy_usage={
+            HEAT: pd.Series(np.linspace(1e3, 0.9 * 1e3, N_YEARS)),
+            EE: pd.Series(np.linspace(1e3, 1.2 * 1e3, N_YEARS)),
+        },
+        max_fraction={
+            lbs_b.name: pd.Series([np.nan] * N_YEARS),
+            lbs2_b.name: pd.Series([np.nan] * N_YEARS),
+        },
+        max_fraction_decrease={
+            lbs_b.name: pd.Series([np.nan] * N_YEARS),
+            lbs2_b.name: pd.Series([np.nan] * N_YEARS),
+        },
+        max_fraction_increase={
+            lbs_b.name: pd.Series([np.nan] * N_YEARS),
+            lbs2_b.name: pd.Series([np.nan] * N_YEARS),
+        },
+        min_fraction={
+            lbs_b.name: pd.Series([np.nan] * N_YEARS),
+            lbs2_b.name: pd.Series([np.nan] * N_YEARS),
+        },
+        n_consumers=pd.Series([1000] * N_YEARS),
+        average_area=None,
+    )
+
+
+@pytest.fixture
+def local_ee_bus_b() -> Bus:
+    """
+    Local electric bus (in local balancing stack lbs)
+    """
+    return Bus(name="local_ee_bus_b", energy_type=EE)
+
+
+@pytest.fixture
+def local_ee_bus2_b() -> Bus:
+    """
+    Local electric bus (in local balancing stack lbs)
+    """
+    return Bus(name="local_ee_bus2_b", energy_type=EE)
+
+
+@pytest.fixture
+def local_heat_bus_b() -> Bus:
+    """
+    Local heat bus (in local balancing stack lbs)
+    """
+    return Bus(name="local_heat_bus_b", energy_type=HEAT)
+
+
+@pytest.fixture
+def local_heat_bus2_b() -> Bus:
+    """
+    Local heat bus (in local balancing stack lbs)
+    """
+    return Bus(name="local_heat_bus2_b", energy_type=HEAT)
+
+
+@pytest.fixture
+def grid_connection_b(
+    local_ee_bus_b: Bus, grid_bus: Bus, transmission_fee: TransmissionFee
+) -> Line:
+    """
+    Line connecting the local_ee_bus with grid (grid_bus)
+    """
+    return Line(
+        name=f"{grid_bus.name}->{local_ee_bus_b.name}",
+        energy_type=EE,
+        fr=grid_bus.name,
+        to=local_ee_bus_b.name,
+        transmission_loss=0,
+        max_capacity=np.infty,
+        transmission_fee=transmission_fee.name,
+    )
+
+
+@pytest.fixture
+def grid_connection2_b(
+    local_ee_bus2_b: Bus, grid_bus: Bus, transmission_fee: TransmissionFee
+) -> Line:
+    """
+    Line connecting the local_ee_bus with grid (grid_bus)
+    """
+    return Line(
+        name=f"{grid_bus.name}->{local_ee_bus2_b.name}",
+        energy_type=EE,
+        fr=grid_bus.name,
+        to=local_ee_bus2_b.name,
+        transmission_loss=0,
+        max_capacity=np.infty,
+        transmission_fee=transmission_fee.name,
+    )
+
+
+@pytest.fixture
+def heating_system_connection_b(local_heat_bus_b: Bus, hs_bus: Bus) -> Line:
+    """
+    Line connecting the local_heat_bus with heating system (hs_bus)
+    """
+    return Line(
+        name=f"{hs_bus.name}->{local_heat_bus_b.name}",
+        energy_type=HEAT,
+        fr=hs_bus.name,
+        to=local_heat_bus_b.name,
+        transmission_loss=0,
+        max_capacity=np.infty,
+    )
+
+
+@pytest.fixture
+def heating_system_connection2_b(local_heat_bus2_b: Bus, hs_bus: Bus) -> Line:
+    """
+    Line connecting the local_heat_bus with heating system (hs_bus)
+    """
+    return Line(
+        name=f"{hs_bus.name}->{local_heat_bus2_b.name}",
+        energy_type=HEAT,
+        fr=hs_bus.name,
+        to=local_heat_bus2_b.name,
+        transmission_loss=0,
+        max_capacity=np.infty,
+    )
+
+
+@pytest.fixture
+def local_coal_heat_plant_b(local_heat_bus_b: Bus) -> Generator:
+    """
+    local heat plant coal
+    """
+    return Generator(
+        name="local_coal_heat_plant_b",
+        energy_source_type="local_coal_heat_plant",
+        bus=local_heat_bus_b.name,
+        unit_base_cap=17500,
+        unit_min_capacity=pd.Series([np.nan] * N_YEARS),
+        unit_max_capacity=pd.Series([np.nan] * N_YEARS),
+        unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
+        unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
+    )
+
+
+@pytest.fixture
+def local_coal_heat_plant2_b(local_heat_bus2_b: Bus) -> Generator:
+    """
+    local heat plant coal (v2)
+    """
+    return Generator(
+        name="local_coal_heat_plant2_b",
+        energy_source_type="local_coal_heat_plant2",
+        bus=local_heat_bus2_b.name,
+        unit_base_cap=22500,
+        unit_min_capacity=pd.Series([np.nan] * N_YEARS),
+        unit_max_capacity=pd.Series([np.nan] * N_YEARS),
+        unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
+        unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
+    )
+
+
+@pytest.fixture
+def lbs_b(local_heat_bus_b: Bus, local_ee_bus: Bus) -> LocalBalancingStack:
+    """
+    Local balancing stack connected to the grid and heating system (no local energy sources)
+    """
+    return LocalBalancingStack(
+        name="lbs_b",
+        buses_out={HEAT: "local_heat_bus_b", EE: "local_ee_bus_b"},
+        buses={EE: {"local_ee_bus_b"}, HEAT: {"local_heat_bus_b"}},
+    )
+
+
+@pytest.fixture
+def lbs2_b(local_heat_bus_b: Bus, local_ee_bus: Bus) -> LocalBalancingStack:
+    """
+    Local balancing stack connected to the grid and heating system (no local energy sources)
+    """
+    return LocalBalancingStack(
+        name="lbs2_b",
+        buses_out={HEAT: "local_heat_bus2_b", EE: "local_ee_bus2_b"},
+        buses={EE: {"local_ee_bus2_b"}, HEAT: {"local_heat_bus2_b"}},
+    )

@@ -30,17 +30,17 @@ class DSRParser(AbstractElementParser):
     def create(self) -> tuple[DSR, ...]:
         return tuple(
             DSR(
-                name=row["name"],
-                compensation_factor=row["compensation_factor"],
-                balancing_period_len=row["balancing_period_len"],
-                penalization=row["penalization"],
+                name=str(row["name"]),
+                compensation_factor=float(row["compensation_factor"]),
+                balancing_period_len=int(row["balancing_period_len"]),
+                penalization=float(row["penalization"]),
                 relative_shift_limit=(
-                    row["relative_shift_limit"]
+                    float(row["relative_shift_limit"])
                     if not pd.isnull(row["relative_shift_limit"])
                     else None
                 ),
                 abs_shift_limit=(
-                    row["abs_shift_limit"]
+                    float(row["abs_shift_limit"])
                     if not pd.isnull(row["abs_shift_limit"])
                     else None
                 ),

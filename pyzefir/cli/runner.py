@@ -128,9 +128,10 @@ class CliRunner:
             sol_dump_path=self.config_params.sol_dump_path,
             opt_logs_dump_path=self.config_params.opt_logs_path,
             money_scale=self.config_params.money_scale,
-            ens=self.config_params.ens,
+            ens=network.constants.ens_penalty_cost,
             use_hourly_scale=self.config_params.use_hourly_scale,
             solver_name=self.config_params.solver,
+            solver_settings=self.config_params.solver_settings,
         )
 
     def _run_optimization(self, network: Network, opt_config: OptConfig) -> Results:
@@ -148,12 +149,14 @@ class CliRunner:
             self.config_params.output_path,
         )
         handler.export_results(self.config_params.output_path / "csv", results)
-        self._logger.info(
-            "Saving *.xlsx results to %s...", self.config_params.output_path
-        )
-        handler.exporter = XlsxExporter()
-        handler.export_results(self.config_params.output_path / "xlsx", results)
-        self._logger.info("Xlsx results saved.")
+        self._logger.info("Csv results saved.")
+        if self.config_params.xlsx_results:
+            self._logger.info(
+                "Saving *.xlsx results to %s...", self.config_params.output_path
+            )
+            handler.exporter = XlsxExporter()
+            handler.export_results(self.config_params.output_path / "xlsx", results)
+            self._logger.info("Xlsx results saved.")
 
 
 @click.command()

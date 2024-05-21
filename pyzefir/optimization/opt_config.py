@@ -13,11 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 from numpy import arange, diff, ndarray, zeros
 from numpy.random import choice
+
+_logger = logging.getLogger(__name__)
 
 
 class OptConfigError(Exception):
@@ -43,9 +47,10 @@ class OptConfig:
         sol_dump_path: Path | None = None,
         opt_logs_dump_path: Path | None = None,
         money_scale: float = 1.0,
-        ens: bool = True,
+        ens: float = np.nan,
         use_hourly_scale: bool = True,
         solver_name: str | None = None,
+        solver_settings: dict[str, dict[str, Any]] | None = None,
     ):
         self.hours: ndarray = hours if isinstance(hours, ndarray) else arange(hours)
         """ sequence of all hours in a year """
@@ -77,6 +82,10 @@ class OptConfig:
         """ ratio of the total number of hours to the total number of hours in given sample"""
         self.solver_name: str | None = solver_name
         """ name of the solver to be used """
+        self.solver_settings: dict[str, dict[str, Any]] = (
+            solver_settings if solver_settings else {}
+        )
+        """ settings for the solvers """
         self.validate()
 
     def validate(self) -> None:
@@ -101,10 +110,10 @@ class OptConfig:
             exception_list.append(
                 OptConfigError("discount_rate shape is different than years shape")
             )
-        if not isinstance(self.ens, bool):
+        if not isinstance(self.ens, float):
             exception_list.append(
                 OptConfigError(
-                    f"ens flag must be of type bool, "
+                    f"ens flag must be of type float, "
                     f"but it is {type(self.ens).__name__} instead"
                 )
             )
@@ -113,13 +122,17 @@ class OptConfig:
                 OptConfigError("money scale must be greater or equal 1")
             )
 
-        if not (diff(self.year_sample) == 1).all() or self.year_sample[0] != 0:
+        if not np.all(diff(self.year_sample) == 1) or self.year_sample[0] != 0:
             exception_list.append(
                 OptConfigError("year sample must be consecutive starting from 0")
             )
 
         if exception_list:
+            _logger.exception(
+                "Got error in optimization configuration: %s", exception_list
+            )
             raise OptConfigErrorGroup("Errors in configuration: ", exception_list)
+        _logger.info("Optimalization configuration validation: OK")
 
     @staticmethod
     def get_sample(

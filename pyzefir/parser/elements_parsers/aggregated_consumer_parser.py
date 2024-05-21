@@ -62,6 +62,7 @@ class AggregatedConsumerParser(AbstractElementParser):
                 n_consumers,
                 self._years,
             ),
+            result_type="reduce",
         )
         return tuple(aggregated_consumers)
 
@@ -151,9 +152,9 @@ class AggregatedConsumerParser(AbstractElementParser):
         n_years: int,
     ) -> AggregatedConsumer:
         return AggregatedConsumer(
-            name=df_row["name"],
-            demand_profile=sanitize_dataset_name(df_row["demand_type"]),
-            stack_base_fraction=stack_base_fractions.get(df_row["name"]),
+            name=str(df_row["name"]),
+            demand_profile=str(sanitize_dataset_name(df_row["demand_type"])),
+            stack_base_fraction=stack_base_fractions[df_row["name"]],
             yearly_energy_usage=yearly_energy_usage[df_row["name"]],
             n_consumers=n_consumers.get(
                 df_row["name"], pd.Series([df_row["n_consumers_base"]] * n_years)

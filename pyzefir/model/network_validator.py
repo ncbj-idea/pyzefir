@@ -13,8 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-import math
+import logging
 from abc import ABC, abstractmethod
 from typing import Type
 
@@ -27,6 +26,8 @@ from pyzefir.model.exceptions import (
 )
 from pyzefir.model.network import Network, NetworkElementsDict
 from pyzefir.model.network_elements import AggregatedConsumer, Bus, Generator, Storage
+
+_logger = logging.getLogger(__name__)
 
 
 class BasicValidator(ABC):
@@ -43,6 +44,7 @@ class NetworkValidator:
         self.network = network
 
     def validate(self) -> None:
+        _logger.info("Validating network structure...")
         self._validate(
             RelativeEmissionLimitsValidation,
             BaseTotalEmissionValidation,
@@ -50,16 +52,41 @@ class NetworkValidator:
             NetworkElementsValidation,
             NetworkGenerationFraction,
             PowerReserveValidation,
+            DsrBusesOutValidation,
         )
+        _logger.info("Network structure validation: Done.")
 
     def _validate(self, *validators: Type[BasicValidator]) -> None:
         exception_list: list[NetworkValidatorException] = []
         for validator in validators:
             validator.validate(self.network, exception_list)
         if exception_list:
+            _logger.debug("Got error validating the network: %s", exception_list)
             raise NetworkValidatorExceptionGroup(
                 "Following errors found during network validation: ", exception_list
             )
+
+
+class DsrBusesOutValidation(BasicValidator):
+    @staticmethod
+    def validate(
+        network: Network, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        buses_out = [
+            bus
+            for lbs in network.local_balancing_stacks.values()
+            for bus in lbs.buses_out.values()
+        ]
+        exception_list.extend(
+            [
+                NetworkValidatorException(
+                    f"DSR {bus.dsr_type} could be added to 'out' buses only, "
+                    f"but bus {bus.name} is not an 'out' bus."
+                )
+                for bus in network.buses.values()
+                if bus.dsr_type and bus.name not in buses_out
+            ]
+        )
 
 
 class PowerReserveValidation(BasicValidator):
@@ -87,6 +114,7 @@ class PowerReserveValidation(BasicValidator):
             PowerReserveValidation._validate_energy_type_matching(
                 network, generators_with_tags, exception_list
             )
+        _logger.debug("Power reserves are OK.")
 
     @staticmethod
     def _validate_power_reserves_type(
@@ -105,11 +133,9 @@ class PowerReserveValidation(BasicValidator):
                 for k, internal_dict in power_reserves.items()
             )
         ):
-            exception_list.append(
-                NetworkValidatorException(
-                    "Power reserve must be type of dict[str, dict[str, float]]."
-                )
-            )
+            exception_str = "Power reserve must be type of dict[str, dict[str, float]]."
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))
             return False
         return True
 
@@ -129,13 +155,13 @@ class PowerReserveValidation(BasicValidator):
                             gen.energy_source_type
                         ].energy_types
                     ):
-                        exception_list.append(
-                            NetworkValidatorException(
-                                f"Generator: {gen.name} included in the tag: {tag} "
-                                f"assigned to a given power reserve does not obtain "
-                                f"the type of energy: {ee_type} that is assigned to the given power reserve."
-                            )
+                        exception_str = (
+                            f"Generator: {gen.name} included in the tag: {tag} "
+                            f"assigned to a given power reserve does not obtain "
+                            f"the type of energy: {ee_type} that is assigned to the given power reserve."
                         )
+                        _logger.debug(exception_str)
+                        exception_list.append(NetworkValidatorException(exception_str))
 
     @staticmethod
     def _validate_power_reserves_tags(
@@ -156,12 +182,12 @@ class PowerReserveValidation(BasicValidator):
             ]
         )
         if diff := sorted(power_reserve_tags.symmetric_difference(gen_tags)):
-            exception_list.append(
-                NetworkValidatorException(
-                    f"All tags assigned to a given power reserve must be defined and contain only generators, "
-                    f"but tags {diff} do not assign to generators, were missed or extra added."
-                )
+            exception_str = (
+                f"All tags assigned to a given power reserve must be defined and contain only generators,"
+                f" but tags {diff} do not assign to generators, were missed or extra added."
             )
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))
 
 
 class RelativeEmissionLimitsValidation(BasicValidator):
@@ -175,6 +201,7 @@ class RelativeEmissionLimitsValidation(BasicValidator):
             RelativeEmissionLimitsValidation._validate_relative_emission_limits(
                 network, exception_list
             )
+        _logger.debug("Relative emission limits are OK.")
 
     @staticmethod
     def _validate_relative_emission_limits(
@@ -240,11 +267,11 @@ class RelativeEmissionLimitsValidation(BasicValidator):
                 ]
             )
         ):
-            exception_list.append(
-                NetworkValidatorException(
-                    "Relative emission limits must be type of dict[str, pd.Series]."
-                )
+            exception_str = (
+                "Relative emission limits must be type of dict[str, pd.Series]."
             )
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))
             return False
         return True
 
@@ -269,11 +296,12 @@ class BaseTotalEmissionValidation(BasicValidator):
                 ]
             )
         ):
-            exception_list.append(
-                NetworkValidatorException(
-                    "Base total emission should be type of dict[str, float | int].",
-                )
+            exception_str = (
+                "Base total emission should be type of dict[str, float | int]."
             )
+            _logger.debug(exception_str)
+            exception_list.append(NetworkValidatorException(exception_str))
+        _logger.debug("Base total emission is OK.")
 
 
 class NetworkElementsValidation(BasicValidator):
@@ -290,6 +318,7 @@ class NetworkElementsValidation(BasicValidator):
                     element.validate(network)
                 except Exception as e:
                     exception_list.append(e)
+        _logger.debug("Network elements are OK.")
 
 
 class BaseCapacityValidator(BasicValidator):
@@ -318,11 +347,9 @@ class BaseCapacityValidator(BasicValidator):
                         break
                 matching_stacks.add(matched_stack)
             if len(matching_stacks) > 1:
-                exception_list.append(
-                    NetworkValidatorException(
-                        f"Each generator ({unit.name}) must be used exactly in one or zero stacks."
-                    )
-                )
+                exception_str = f"Each generator ({unit.name}) must be used exactly in one or zero stacks."
+                _logger.debug(exception_str)
+                exception_list.append(NetworkValidatorException(exception_str))
             else:
                 unit_stack_mapping[unit.name] = (
                     matching_stacks.pop() if matching_stacks else None
@@ -362,7 +389,6 @@ class BaseCapacityValidator(BasicValidator):
         aggr: AggregatedConsumer,
         base_fraction: float,
         base_cap: float,
-        num_tol: float,
         exception_list: list[NetworkValidatorException],
     ) -> None:
         if min_power is None or max_power is None:
@@ -376,22 +402,18 @@ class BaseCapacityValidator(BasicValidator):
             n_consumer = aggr.n_consumers[0]
             if not (
                 (
-                    base_fraction * n_consumer * min_power <= base_cap + num_tol
-                    or math.isclose(
-                        base_fraction * n_consumer * min_power, base_cap + num_tol
-                    )
+                    base_fraction * n_consumer * min_power <= base_cap
+                    or np.isclose(base_fraction * n_consumer * min_power, base_cap)
                 )
                 and (
-                    base_cap <= base_fraction * n_consumer * max_power + num_tol
-                    or math.isclose(
-                        base_cap, base_fraction * n_consumer * max_power + num_tol
-                    )
+                    base_cap <= base_fraction * n_consumer * max_power
+                    or np.isclose(base_cap, base_fraction * n_consumer * max_power)
                 )
             ):
                 exception_list.append(
                     NetworkValidatorException(
                         f"In energy source {unit_name}, if base capacity has been defined, "
-                        f"the compound inequality must be true with numerical tolerance: {num_tol:.2E}: "
+                        f"the compound inequality must be true with numerical tolerance: "
                         f"base_fraction * n_consumers * min_device_nom_power <= base_capacity <= "
                         f"base_fraction * n_consumers * max_device_nom_power, but it is "
                         f"{base_fraction} * {n_consumer} * {min_power} "
@@ -407,7 +429,6 @@ class BaseCapacityValidator(BasicValidator):
         unit_dict: NetworkElementsDict[Generator] | NetworkElementsDict[Storage],
         aggregated_consumers: NetworkElementsDict[AggregatedConsumer],
         stack_aggr_map: dict[str, str],
-        num_tol: float,
         exception_list: list[NetworkValidatorException],
     ) -> None:
         for unit_name, stack in unit_stack_mapping.items():
@@ -431,7 +452,6 @@ class BaseCapacityValidator(BasicValidator):
                     aggr=aggr,
                     base_fraction=base_fraction,
                     base_cap=base_cap,
-                    num_tol=num_tol,
                     exception_list=exception_list,
                 )
             else:
@@ -452,11 +472,9 @@ class BaseCapacityValidator(BasicValidator):
         for aggr in aggregated_consumers.values():
             for stack in aggr.available_stacks:
                 if stack in stack_aggr_map:
-                    exception_list.append(
-                        NetworkValidatorException(
-                            f"Stack {stack} is connected to more than one aggregated consumer"
-                        )
-                    )
+                    exception_str = f"Stack {stack} is connected to more than one aggregated consumer"
+                    _logger.debug(exception_str)
+                    exception_list.append(NetworkValidatorException(exception_str))
                 stack_aggr_map[stack] = aggr.name
         return stack_aggr_map
 
@@ -476,7 +494,6 @@ class BaseCapacityValidator(BasicValidator):
             unit_dict=network.generators,
             aggregated_consumers=network.aggregated_consumers,
             stack_aggr_map=stack_aggr_map,
-            num_tol=network.constants.numeric_tolerance,
             exception_list=exception_list,
         )
         BaseCapacityValidator._check_base_cap(
@@ -484,7 +501,6 @@ class BaseCapacityValidator(BasicValidator):
             unit_dict=network.storages,
             aggregated_consumers=network.aggregated_consumers,
             stack_aggr_map=stack_aggr_map,
-            num_tol=network.constants.numeric_tolerance,
             exception_list=exception_list,
         )
 
@@ -549,11 +565,9 @@ class NetworkGenerationFraction(BasicValidator):
                     n_stor_subtag,
                 ) = NetworkGenerationFraction._get_n_tag_elemets(tag, subtag, network)
                 if n_gen_tag + n_stor_tag <= n_gen_subtag + n_stor_subtag:
-                    exception_list.append(
-                        NetworkValidatorException(
-                            f"Subtag <{subtag}> is not a proper subset of the tag set <{tag}>"
-                        )
-                    )
+                    exception_str = f"Subtag <{subtag}> is not a proper subset of the tag set <{tag}>"
+                    _logger.debug(exception_str)
+                    exception_list.append(NetworkValidatorException(exception_str))
 
     @staticmethod
     def _gen_et_validation(
@@ -579,12 +593,12 @@ class NetworkGenerationFraction(BasicValidator):
         for gen_et in gens_et:
             if energy_type not in gen_et["energy_type"]:
                 unit_name = gen_et["name"]
-                exception_list.append(
-                    NetworkValidatorException(
-                        f"Energy type for generators of the tag: {tag} "
-                        f"for <{unit_name}> do not match energy type in Generation Fraction"
-                    )
+                exception_str = (
+                    f"Energy type for generators of the tag: {tag} "
+                    f"for <{unit_name}> do not match energy type in Generation Fraction"
                 )
+                _logger.debug(exception_str)
+                exception_list.append(NetworkValidatorException(exception_str))
 
     @staticmethod
     def _stor_et_validation(
@@ -608,12 +622,12 @@ class NetworkGenerationFraction(BasicValidator):
         for stor_et in stors_et:
             if energy_type not in stor_et["energy_type"]:
                 unit_name = stor_et["name"]
-                exception_list.append(
-                    NetworkValidatorException(
-                        f"Energy type for storages of the tag: {tag} "
-                        f"for <{unit_name}> do not match energy type in Generation Fraction"
-                    )
+                exception_str = (
+                    f"Energy type for storages of the tag: {tag} "
+                    f"for <{unit_name}> do not match energy type in Generation Fraction"
                 )
+                _logger.debug(exception_str)
+                exception_list.append(NetworkValidatorException(exception_str))
 
     @staticmethod
     def _validate_tag_energy_types(
@@ -654,3 +668,4 @@ class NetworkGenerationFraction(BasicValidator):
             NetworkGenerationFraction._validate_tag_energy_types(
                 min_max_gen_fr, network, exception_list
             )
+        _logger.debug("Network generation fractions are OK.")

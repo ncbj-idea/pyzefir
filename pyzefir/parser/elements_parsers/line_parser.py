@@ -34,15 +34,15 @@ class LineParser(AbstractElementParser):
     @staticmethod
     def _create_line(df_row: pd.Series) -> Line:
         return Line(
-            name=df_row["name"],
-            energy_type=df_row["energy_type"],
-            fr=df_row["bus_from"],
-            to=df_row["bus_to"],
-            transmission_loss=df_row["transmission_loss"],
-            max_capacity=df_row["max_capacity"],
+            name=str(df_row["name"]),
+            energy_type=str(df_row["energy_type"]),
+            fr=str(df_row["bus_from"]),
+            to=str(df_row["bus_to"]),
+            transmission_loss=float(df_row["transmission_loss"]),
+            max_capacity=float(df_row["max_capacity"]),
             transmission_fee=(
                 None
                 if pd.isnull(df_row["transmission_fee"])
-                else df_row["transmission_fee"]
+                else str(df_row["transmission_fee"])
             ),
         )

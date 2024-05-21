@@ -46,7 +46,10 @@ class FuelParser(AbstractElementParser):
 
         return tuple(
             fuel_df.apply(
-                FuelParser._create_fuel, axis=1, args=(fuel_prices, fuel_availability)
+                FuelParser._create_fuel,
+                axis=1,
+                args=(fuel_prices, fuel_availability),
+                result_type="reduce",
             )
         )
 
@@ -65,7 +68,7 @@ class FuelParser(AbstractElementParser):
                 else None
             ),
             cost=fuel_prices[df_row.name],
-            energy_per_unit=df_row["energy_per_unit"],
+            energy_per_unit=float(df_row["energy_per_unit"]),
         )
 
     @staticmethod

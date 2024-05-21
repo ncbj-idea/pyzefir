@@ -55,6 +55,7 @@ class StructureData(BaseData):
     TechnologyStack_Buses: list[pd.DataFrame] = field(default_factory=list)
     TechnologyStack__Aggregate: list[pd.DataFrame] = field(default_factory=list)
     Power_Reserve: list[pd.DataFrame] = field(default_factory=list)
+    Generator_Binding: list[pd.DataFrame] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.DSR = [

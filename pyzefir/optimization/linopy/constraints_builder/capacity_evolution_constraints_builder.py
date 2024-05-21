@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
 
@@ -46,25 +47,35 @@ from pyzefir.optimization.linopy.preprocessing.variables.storage_variables impor
 )
 from pyzefir.utils.functions import get_dict_vals
 
+_logger = logging.getLogger(__name__)
+
 
 class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Capacity evolution constraints builder is working...")
         self.capacity_evolution_constraints()
         self.supplementary_evolution_constraints()
         self.base_capacity_constraints()
         self.generator_n_min_max_power_constraints()
+        _logger.info("Capacity evolution constraints builder is finished!")
 
     def generator_n_min_max_power_constraints(self) -> None:
+        _logger.debug("Building power constraints...")
         self._build_n_min_max_power_constraints(
             self.indices.GEN, self.parameters.gen, self.variables.gen
         )
+        _logger.debug("Building generator power constraints: Done")
         self._build_n_min_max_power_constraints(
             self.indices.STOR, self.parameters.stor, self.variables.stor
         )
+        _logger.debug("Building storage power constraints: Done")
+        _logger.debug("Build power constraints: Done")
 
     def capacity_evolution_constraints(self) -> None:
+        _logger.debug("Building capacity evolution constraints...")
         self._build_capacity_evolution_constraints_gen_stor()
         self._build_local_capacity_evolution_constraints_gen_stor()
+        _logger.debug("Build capacity evolution constraints: Done")
 
     def _build_capacity_evolution_constraints_gen_stor(self) -> None:
         self._build_capacity_evolution_constraints(
@@ -75,6 +86,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.gen,
             unit_aggr_map=self.indices.aggr_gen_map,
         )
+        _logger.debug("Build generation capacity evolution constraints: Done")
         self._build_capacity_evolution_constraints(
             unit_ii=self.indices.STOR,
             unit_par=self.parameters.stor,
@@ -83,6 +95,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.stor,
             unit_aggr_map=self.indices.aggr_stor_map,
         )
+        _logger.debug("Build storage capacity evolution constraints: Done")
 
     def _build_local_capacity_evolution_constraints_gen_stor(self) -> None:
         self._build_local_capacity_evolution_constraints(
@@ -94,6 +107,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_aggr_tmap=self.indices.aggr_tgen_map,
             unit_type="GEN",
         )
+        _logger.debug("Build local generation capacity evolution constraints: Done")
         self._build_local_capacity_evolution_constraints(
             unit_par=self.parameters.stor,
             unit_tpar=self.parameters.tstor,
@@ -103,10 +117,13 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_aggr_tmap=self.indices.aggr_tstor_map,
             unit_type="STOR",
         )
+        _logger.debug("Build local storage capacity evolution constraints: Done")
 
     def supplementary_evolution_constraints(self) -> None:
+        _logger.debug("Building supplementary evolution constraints...")
         self._build_reduced_capacity_upper_bound_constraints_gen_stor()
         self._build_local_supplementary_capacity_upper_bound_constraints_gen_stor()
+        _logger.debug("Build supplementary evolution constraints: Done")
 
     def _build_reduced_capacity_upper_bound_constraints_gen_stor(self) -> None:
         self._build_reduced_capacity_upper_bound_constraints(
@@ -116,6 +133,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.gen,
             unit_aggr_map=self.indices.aggr_gen_map,
         )
+        _logger.debug("Build generation reduced capacity upper bound constraints: Done")
         self._build_reduced_capacity_upper_bound_constraints(
             unit_ii=self.indices.STOR,
             unit_tpar=self.parameters.tstor,
@@ -123,6 +141,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.stor,
             unit_aggr_map=self.indices.aggr_stor_map,
         )
+        _logger.debug("Build storage reduced capacity upper bound constraints: Done")
 
     def _build_local_supplementary_capacity_upper_bound_constraints_gen_stor(
         self,
@@ -137,6 +156,10 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.gen,
             unit_tvar=self.variables.tgen,
             unit_aggr_tmap=self.indices.aggr_tgen_map,
+            unit_aggr_map=self.indices.aggr_gen_map,
+        )
+        _logger.debug(
+            "Build generation local supplementary capacity upper bound constraints: Done"
         )
         self._build_local_supplementary_capacity_upper_bound_constraints(
             unit_tpar=self.parameters.tstor,
@@ -144,6 +167,10 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
             unit_var=self.variables.stor,
             unit_tvar=self.variables.tstor,
             unit_aggr_tmap=self.indices.aggr_tstor_map,
+            unit_aggr_map=self.indices.aggr_stor_map,
+        )
+        _logger.debug(
+            "Build storage local supplementary capacity upper bound constraints: Done"
         )
 
     def base_capacity_constraints(self) -> None:
@@ -158,6 +185,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                 self.variables.stor.cap.isel(stor=idx, year=0) == val,
                 name=f"STOR_{idx}_Y0_CAP_CONSTRAINT",
             )
+        _logger.debug("Build base capacity constraints: Done")
 
     def _build_capacity_evolution_constraints(
         self,
@@ -216,7 +244,9 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         tcap_plus, tcap_minus = unit_tvar.tcap_plus, unit_tvar.tcap_minus
         for aggr_idx in unit_aggr_map.keys():
             for t_idx in unit_aggr_tmap[aggr_idx]:
-                u_idxs = self._get_unit_idx_from_type(unit_tidx, t_idx)
+                u_idxs = self._get_unit_idx_from_type(
+                    unit_tidx, t_idx, unit_aggr_map[aggr_idx]
+                )
                 base_cap: np.ndarray = np.sum(
                     [unit_par.base_cap[u_idx] for u_idx in u_idxs],
                 )
@@ -284,6 +314,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_var: GeneratorVariables | StorageVariables,
         unit_tvar: GeneratorTypeVariables | StorageTypeVariables,
         unit_aggr_tmap: dict[int, set],
+        unit_aggr_map: dict[int, set],
     ) -> None:
         cap = unit_var.cap
         tcap, tcap_plus, tcap_minus = (
@@ -297,7 +328,9 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                     unit_tpar.lt[type_idx],
                     unit_tpar.bt[type_idx],
                 )
-                u_idxs = self._get_unit_idx_from_type(unit_tidx, type_idx)
+                u_idxs = self._get_unit_idx_from_type(
+                    unit_tidx, type_idx, unit_aggr_map[aggr_idx]
+                )
 
                 for y in self.indices.Y.ord:
                     zero_cap_minus_sum = tcap_minus.sel(
@@ -325,7 +358,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
 
                     self.model.add_constraints(
                         tcap.sel(index=[(aggr_idx, type_idx, y)])
-                        == cap.isel(**{cap.dims[0]: list(u_idxs), "year": y}).sum(),
+                        == cap.isel(**{cap.dims[0]: u_idxs, "year": y}).sum(),
                         name=f"cap_{aggr_idx}_{cap.dims[0]}_t_idx_{type_idx}_Y_{y}_CAP_LOCAL_SUM_CONSTRAINT",
                     )
 
@@ -379,8 +412,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                 )
                 self.model.add_constraints(
                     min_aggregated_power
-                    <= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y})
-                    + self.parameters.scenario_parameters.numeric_tolerance,
+                    <= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y}),
                     name=f"{aggr_idx}_{u_name}_{y}_DEVICE_MIN_POWER_CONSTRAINT",
                 )
             if u_idx in unit_par.max_device_nom_power:
@@ -393,16 +425,19 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
                 )
                 self.model.add_constraints(
                     max_aggregated_power
-                    + self.parameters.scenario_parameters.numeric_tolerance
                     >= unit_var.cap.isel(**{unit_var.cap.dims[0]: u_idx, "year": y}),
                     name=f"{aggr_idx}_{u_name}_{y}_DEVICE_MAX_POWER_CONSTRAIN",
                 )
 
     @staticmethod
-    def _get_unit_idx_from_type(unit_t_idx: dict[int, int], type_idx: int) -> set[int]:
-        return {
-            u_idx for u_idx, u_type_idx in unit_t_idx.items() if u_type_idx == type_idx
-        }
+    def _get_unit_idx_from_type(
+        unit_t_idx: dict[int, int], type_idx: int, unit_in_aggr: set[int]
+    ) -> list[int]:
+        return [
+            u_idx
+            for u_idx, u_type_idx in unit_t_idx.items()
+            if u_type_idx == type_idx and u_idx in unit_in_aggr
+        ]
 
     @staticmethod
     def _s_range(y: int, lt: int, bt: int) -> range:

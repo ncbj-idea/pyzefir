@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
 import xarray as xr
@@ -42,9 +43,12 @@ from pyzefir.optimization.linopy.preprocessing.variables.storage_variables impor
 )
 from pyzefir.utils.functions import invert_dict_of_sets
 
+_logger = logging.getLogger(__name__)
+
 
 class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Scenario constraints builder is working...")
         self.max_fuel_consumption_constraints()
         self.max_fraction_constraints()
         self.min_fraction_constraints()
@@ -56,6 +60,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         self._min_generation_fraction_constraint()
         self._max_generation_fraction_constraint()
         self.power_reserve_constraint()
+        _logger.info("Scenario constraints builder is finished!")
 
     def max_fuel_consumption_constraints(self) -> None:
         for fuel_idx in self.indices.FUEL.mapping.keys():
@@ -82,14 +87,19 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                         total_fuel_consumption <= max_fuel_availability[year_idx],
                         name=f"MAX_FUEL_{fuel_idx}_AVAILABILITY_CONSTRAINT_{year_idx}",
                     )
+        _logger.debug("Build max fuel consumption constraints: Done")
 
     def energy_source_type_capacity_constraints(self) -> None:
+        _logger.debug("Building energy source type capacity constraints...")
         self._generator_type_capacity_constraints()
         self._storage_type_capacity_constraints()
+        _logger.debug("Build energy source type capacity constraints: Done")
 
     def energy_source_capacity_constraints(self) -> None:
+        _logger.debug("Building energy source capacity constraints...")
         self._storage_capacity_constraints()
         self._generator_capacity_constraints()
+        _logger.debug("Build energy source capacity constraints: Done")
 
     def _generator_type_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source_type(
@@ -99,6 +109,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
             variables=self.variables.gen,
             element_name="GEN",
         )
+        _logger.debug("Build generator type capacity constraints: Done")
 
     def _storage_type_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source_type(
@@ -108,6 +119,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
             variables=self.variables.stor,
             element_name="STOR",
         )
+        _logger.debug("Build storage type capacity constraints: Done")
 
     def _generator_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source(
@@ -116,6 +128,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
             variables=self.variables.gen,
             element_name="GEN",
         )
+        _logger.debug("Build generator capacity constraints: Done")
 
     def _storage_capacity_constraints(self) -> None:
         self._add_cap_constraints_per_energy_source(
@@ -124,6 +137,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
             variables=self.variables.stor,
             element_name="STOR",
         )
+        _logger.debug("Build storage capacity constraints: Done")
 
     def _add_cap_constraints_per_energy_source(
         self,
@@ -276,6 +290,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                     variable_year_frac >= lbs_min_fraction,
                     name=f"{aggr_idx}_{lbs_idx}_FRAC_MIN_CONSTRAINT",
                 )
+        _logger.debug("Build min fraction constraints: Done")
 
     def max_fraction_constraints(self) -> None:
         max_fraction = self.parameters.aggr.max_fraction
@@ -297,6 +312,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                     variable_year_frac <= lbs_max_fraction,
                     name=f"{aggr_idx}_{lbs_idx}_FRAC_MAX_CONSTRAINT",
                 )
+        _logger.debug("Build max fraction constraints: Done")
 
     def max_fraction_increase_constraints(self) -> None:
         max_fraction_increase = self.parameters.aggr.max_fraction_increase
@@ -321,6 +337,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                     <= lbs_max_fraction_increase,
                     name=f"{aggr_idx}_{lbs_idx}_FRAC_MAX_INCREASE_CONSTRAINT",
                 )
+        _logger.debug("Build max fraction increase constraints: Done")
 
     def max_fraction_decrease_constraints(self) -> None:
         max_fraction_decrease = self.parameters.aggr.max_fraction_decrease
@@ -345,6 +362,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                     <= lbs_max_fraction_decrease,
                     name=f"{aggr_idx}_{lbs_idx}_FRAC_MAX_DECREASE_CONSTRAINT",
                 )
+        _logger.debug("Build max fraction decrease constraints: Done")
 
     def emission_constraints(self) -> None:
         for et in self.parameters.scenario_parameters.rel_em_limit.keys():
@@ -381,6 +399,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                             ],
                             name=f"{et}_{y_idx}_EMISSIONS_CONSTRAINT",
                         )
+        _logger.debug("Build emission constraints: Done")
 
     @staticmethod
     def _unit_of_given_tag(unit_tags: dict[int, set[int]], tag_idx: int) -> set[int]:
@@ -434,6 +453,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                         * min_gen_frac,
                         name=f"{tag}_MIN_GENERATION_FRACTION_CONSTRAINT",
                     )
+        _logger.debug("Build min generation fraction constraints: Done")
 
     def _max_generation_fraction_constraint(self) -> None:
         max_gen_frac_params = (
@@ -455,6 +475,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                         * max_gen_frac,
                         name=f"{tag}_MAX_GENERATION_FRACTION_CONSTRAINT",
                     )
+        _logger.debug("Build max generation fraction constraints: Done")
 
     def power_reserve_constraint(self) -> None:
         power_reserves = self.parameters.scenario_parameters.power_reserves
@@ -471,3 +492,4 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                         >= reserve,
                         name=f"ENERGY_TYPE_{et}_TAG_{tag}_POWER_RESERVE_CONSTRAINT",
                     )
+        _logger.debug("Build power reserve constraints: Done")

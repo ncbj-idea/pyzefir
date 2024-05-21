@@ -19,9 +19,6 @@ import xarray as xr
 from linopy import Model
 
 from pyzefir.optimization.linopy.preprocessing.indices import Indices
-from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
-    OptimizationParameters,
-)
 from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
 from pyzefir.optimization.opt_config import OptConfig
 
@@ -34,14 +31,13 @@ class BusVariables(VariableGroup):
         model: Model,
         indices: Indices,
         opt_config: OptConfig,
-        parameters: OptimizationParameters | None,
     ) -> None:
         self.bus_ens = model.add_variables(
             lower=0,
             upper=xr.DataArray(
                 np.full(
                     (len(indices.BUS), len(indices.H), len(indices.Y)),
-                    np.inf if opt_config.ens else 0,
+                    np.inf if not np.isnan(opt_config.ens) else 0,
                 ),
                 dims=["bus", "hour", "year"],
                 coords=[indices.BUS.ii, indices.H.ii, indices.Y.ii],
@@ -49,21 +45,15 @@ class BusVariables(VariableGroup):
             ),
             name="BUS_ENS",
         )
-        n_dsr = len(parameters.bus.dsr_type) if parameters is not None else 0
-        bus_dsr_index = (
-            [indices.BUS.mapping[key] for key in parameters.bus.dsr_type.keys()]
-            if parameters
-            else []
-        )
         """ bus variables"""
         self.shift_minus = model.add_variables(
             lower=xr.DataArray(
                 np.full(
-                    (n_dsr, len(indices.H), len(indices.Y)),
+                    (len(indices.BUS), len(indices.H), len(indices.Y)),
                     0,
                 ),
                 dims=["bus", "hour", "year"],
-                coords=[bus_dsr_index, indices.H.ii, indices.Y.ii],
+                coords=[indices.BUS.ii, indices.H.ii, indices.Y.ii],
                 name="SHIFT_MINUS",
             ),
         )
@@ -71,11 +61,11 @@ class BusVariables(VariableGroup):
         self.shift_plus = model.add_variables(
             lower=xr.DataArray(
                 np.full(
-                    (n_dsr, len(indices.H), len(indices.Y)),
+                    (len(indices.BUS), len(indices.H), len(indices.Y)),
                     0,
                 ),
                 dims=["bus", "hour", "year"],
-                coords=[bus_dsr_index, indices.H.ii, indices.Y.ii],
+                coords=[indices.BUS.ii, indices.H.ii, indices.Y.ii],
                 name="SHIFT_PLUS",
             ),
         )

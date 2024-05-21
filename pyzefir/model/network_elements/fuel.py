@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -30,6 +31,8 @@ from pyzefir.model.utils import validate_dict_type, validate_series
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class FuelValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -91,6 +94,7 @@ class Fuel(NetworkElement):
             value_parameter_name="Emission per unit",
             exception_list=exception_list,
         )
+        _logger.debug("Validate attributes: OK")
 
     def _validate_emission(
         self,
@@ -104,6 +108,7 @@ class Fuel(NetworkElement):
                         f"Emission type {emission_type} not found in network"
                     )
                 )
+        _logger.debug("Validate emission: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -117,6 +122,7 @@ class Fuel(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If Fuel is invalid.
         """
+        _logger.debug("Validating fuel element object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_name_type(exception_list)
         self._validate_attributes(network, exception_list)
@@ -125,7 +131,9 @@ class Fuel(NetworkElement):
             self._validate_emission(network, exception_list)
 
         if exception_list:
+            _logger.exception("Got error validating fuel: %s", exception_list)
             raise FuelValidatorExceptionGroup(
                 f"While adding Fuel {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Fuel element %s validation: Done", self.name)

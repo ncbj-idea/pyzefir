@@ -45,20 +45,33 @@ def network(
     grid_bus: Bus,
     hs_bus: Bus,
     local_ee_bus: Bus,
+    local_ee_bus_b: Bus,
     local_ee_bus2: Bus,
+    local_ee_bus2_b: Bus,
     local_heat_bus: Bus,
+    local_heat_bus_b: Bus,
     local_heat_bus2: Bus,
+    local_heat_bus2_b: Bus,
     heating_system_connection: Line,
+    heating_system_connection_b: Line,
     heating_system_connection2: Line,
+    heating_system_connection2_b: Line,
     transmission_fee: TransmissionFee,
     grid_connection: Line,
+    grid_connection_b: Line,
     grid_connection2: Line,
+    grid_connection2_b: Line,
     coal_power_plant: Generator,
     local_coal_heat_plant: Generator,
+    local_coal_heat_plant_b: Generator,
     local_coal_heat_plant2: Generator,
+    local_coal_heat_plant2_b: Generator,
     lbs: LocalBalancingStack,
+    lbs_b: LocalBalancingStack,
     lbs2: LocalBalancingStack,
+    lbs2_b: LocalBalancingStack,
     aggr: AggregatedConsumer,
+    aggr_b: AggregatedConsumer,
 ) -> Network:
     """
     Network used all tests in this module contains
@@ -81,23 +94,37 @@ def network(
     result.add_demand_profile(demand_profile)
 
     result.add_bus(local_ee_bus)
+    result.add_bus(local_ee_bus_b)
     result.add_bus(local_ee_bus2)
+    result.add_bus(local_ee_bus2_b)
+    result.add_bus(local_heat_bus)
+    result.add_bus(local_heat_bus_b)
+    result.add_bus(local_heat_bus2)
+    result.add_bus(local_heat_bus2_b)
+    result.add_bus(hs_bus)
     result.add_bus(grid_bus)
+
     result.add_transmission_fee(transmission_fee)
     result.add_line(grid_connection)
+    result.add_line(grid_connection_b)
     result.add_line(grid_connection2)
-    result.add_generator(coal_power_plant)
-
-    result.add_bus(local_heat_bus)
-    result.add_bus(local_heat_bus2)
-    result.add_bus(hs_bus)
+    result.add_line(grid_connection2_b)
     result.add_line(heating_system_connection)
+    result.add_line(heating_system_connection_b)
     result.add_line(heating_system_connection2)
+    result.add_line(heating_system_connection2_b)
+
+    result.add_generator(coal_power_plant)
     result.add_generator(local_coal_heat_plant)
+    result.add_generator(local_coal_heat_plant_b)
     result.add_generator(local_coal_heat_plant2)
+    result.add_generator(local_coal_heat_plant2_b)
 
     result.add_local_balancing_stack(lbs)
+    result.add_local_balancing_stack(lbs_b)
     result.add_local_balancing_stack(lbs2)
+    result.add_local_balancing_stack(lbs2_b)
     result.add_aggregated_consumer(aggr)
+    result.add_aggregated_consumer(aggr_b)
 
     return result

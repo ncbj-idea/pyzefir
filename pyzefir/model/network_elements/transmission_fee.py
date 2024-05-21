@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -30,6 +31,8 @@ from pyzefir.model.utils import validate_series
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class TransmissionFeeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -58,6 +61,7 @@ class TransmissionFee(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If any of the validations fails.
         """
+        _logger.debug("Validating transmission fee element object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         validate_series(
@@ -69,7 +73,11 @@ class TransmissionFee(NetworkElement):
         )
 
         if exception_list:
+            _logger.exception(
+                "Got error validating transmission fee: %s", exception_list
+            )
             raise TransmissionFeeValidatorExceptionGroup(
                 f"While adding TransmissionFee {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Transmission fee %s validation: Done", self.name)

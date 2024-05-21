@@ -13,14 +13,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class DsrPenaltyObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
+        _logger.info("Building DSR penalty objective...")
         if self.parameters.bus.dsr_type:
             shift_minus = self.variables.bus.shift_minus
             penalization = self.parameters.dsr.penalization
@@ -28,5 +32,7 @@ class DsrPenaltyObjectiveBuilder(ObjectiveBuilder):
             result: LinearExpression = 0.0
             for bus_idx, dsr_idx in bus_parameters.dsr_type.items():
                 result += shift_minus.isel(bus=bus_idx).sum() * penalization[dsr_idx]
+            _logger.info("DSR penalty objective: Done")
             return result.sum()
+        _logger.warning("No specified DSR type, returning default expression.")
         return 0.0

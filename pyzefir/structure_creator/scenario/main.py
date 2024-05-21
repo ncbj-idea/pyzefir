@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +30,8 @@ from pyzefir.structure_creator.scenario.utils import (
     get_lbs_name,
     interpolate_missing_df_values,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def create_interpolated_attribute_dataframe(
@@ -216,6 +219,15 @@ def create_emission_fees_df(
     return result
 
 
+def create_generation_compensation_df(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.rename(
+        columns={
+            ScenarioSheetsColumnName.TECHNOLOGY_TYPE: ScenarioSheetsColumnName.YEAR_IDX
+        }
+    ).T.reset_index()
+    return df.set_axis(df.iloc[0], axis=1).drop(df.index[0])
+
+
 def create_scenario_data_dict(
     scenario_data: ScenarioData,
     n_years: int,
@@ -278,6 +290,9 @@ def create_scenario_data_dict(
             index_name=ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
             n_years=n_years,
         ),
+        ScenarioSheetName.GENERATION_COMPENSATION: create_generation_compensation_df(
+            scenario_data.generation_compensation
+        ),
     }
 
 
@@ -288,11 +303,13 @@ def create_scenario(
     n_years: int,
     n_hours: int,
 ) -> None:
+    _logger.debug("Creating scenario data objects ...")
     scenario_data_dict = create_scenario_data_dict(
         scenario_data=scenario_data,
         n_years=n_years,
         n_hours=n_hours,
     )
+    _logger.debug("Saving %s.xlsx ...", scenario_name)
     write_to_excel(
         data=scenario_data_dict,
         output_path=output_path,

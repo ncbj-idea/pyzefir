@@ -32,9 +32,9 @@ class EmissionFeeParser(AbstractElementParser):
     def create(self) -> tuple[EmissionFee, ...]:
         return tuple(
             EmissionFee(
-                name=name,
+                name=str(name),
                 price=self.emission_fee_df[name].astype(float),
-                emission_type=self.emission_type_df[name],
+                emission_type=str(self.emission_type_df[name]),
             )
             for name in self.emission_fee_df.columns
         )

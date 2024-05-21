@@ -49,10 +49,19 @@ from tests.unit.optimization.linopy.test_model.utils import (
                     "conversion_rate": {
                         EE: pd.Series([10, 5, 1.25] + [0] * (N_HOURS - 3)),
                     },
-                    "efficiency": {HEAT: 0.8, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.8, 0.8, 0.8]),
+                        EE: pd.Series([0.0, 0.0, 0.0]),
+                    },
                     "build_time": 0,
                 },
-                "pp_coal": {"efficiency": {HEAT: 0.0, EE: 0.5}, "build_time": 1},
+                "pp_coal": {
+                    "efficiency": {
+                        HEAT: pd.Series([0.0, 0.0, 0.0]),
+                        EE: pd.Series([0.5, 0.5, 0.5]),
+                    },
+                    "build_time": 1,
+                },
             },
             {
                 "multi_family_profile": {
@@ -86,10 +95,19 @@ from tests.unit.optimization.linopy.test_model.utils import (
                     "conversion_rate": {
                         EE: pd.Series([10, 5, 1.25] + [0] * (N_HOURS - 3)),
                     },
-                    "efficiency": {HEAT: 0.8, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.8, 0.8, 0.8]),
+                        EE: pd.Series([0.0, 0.0, 0.0]),
+                    },
                     "build_time": 0,
                 },
-                "pp_coal": {"efficiency": {HEAT: 0.0, EE: 0.5}, "build_time": 1},
+                "pp_coal": {
+                    "efficiency": {
+                        HEAT: pd.Series([0.0, 0.0, 0.0]),
+                        EE: pd.Series([0.5, 0.5, 0.5]),
+                    },
+                    "build_time": 1,
+                },
             },
             {
                 "multi_family_profile": {

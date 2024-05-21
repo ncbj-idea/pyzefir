@@ -109,8 +109,8 @@ def get_dataset_config_from_categories(
                     "storage_type": str,
                     "load_efficiency": float,
                     "gen_efficiency": float,
-                    "cycle_length": int,
-                    "power_to_capacity": int,
+                    "cycle_length": float,
+                    "power_to_capacity": float,
                     "energy_type": str,
                     "energy_loss": float,
                     "build_time": int,
@@ -236,8 +236,17 @@ def get_dataset_config_from_categories(
                     "power_reserve_value": float,
                 },
             ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.GENERATOR_BINDING,
+                columns={"generator": str, "binding_name": str},
+            ),
         ],
         DataCategories.SCENARIO: [
+            DatasetConfig(
+                dataset_name=DataSubCategories.GENERATION_COMPENSATION,
+                columns={"year_idx": int},
+                default_type={float},
+            ),
             DatasetConfig(
                 dataset_name=DataSubCategories.ENERGY_SOURCE_EVOLUTION_LIMITS,
                 columns={
@@ -282,7 +291,7 @@ def get_dataset_config_from_categories(
             DatasetConfig(
                 dataset_name=DataSubCategories.FUEL_AVAILABILITY,
                 columns={"year_idx": int},
-                default_type={float, int},
+                default_type={float},
             ),
             DatasetConfig(
                 dataset_name=DataSubCategories.RELATIVE_EMISSION_LIMITS,
@@ -361,9 +370,16 @@ def get_dataset_config_from_categories(
                     "period_start": int,
                     "period_end": int,
                 },
-                default_type={int},
+                default_type={float},
             ),
         ],
+        DataCategories.GENERATOR_TYPE_EFFICIENCY: DatasetConfig(
+            dataset_name=dataset_name,
+            columns={
+                "hour_idx": int,
+            },
+            default_type={float},
+        ),
     }
 
     if (selected_category := dataset_validation_structure.get(data_category)) is None:

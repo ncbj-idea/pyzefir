@@ -32,7 +32,8 @@ class ExportableGeneratorsResults(ExportableResultsGroup):
     capacity: pd.DataFrame
     generation_per_energy_type: dict[str, pd.DataFrame]
     dump_energy_per_energy_type: dict[str, pd.DataFrame]
-    capex: pd.DataFrame
+    global_capex: pd.DataFrame
+    local_capex: dict[str, pd.DataFrame]
 
 
 @dataclass
@@ -41,7 +42,8 @@ class ExportableStorageResults(ExportableResultsGroup):
     load: dict[str, pd.DataFrame]
     state_of_charge: dict[str, pd.DataFrame]
     capacity: pd.DataFrame
-    capex: pd.DataFrame
+    global_capex: pd.DataFrame
+    local_capex: dict[str, pd.DataFrame]
 
 
 @dataclass

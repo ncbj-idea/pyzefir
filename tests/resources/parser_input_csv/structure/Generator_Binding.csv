@@ -1,0 +1,5 @@
+generator,binding_name
+SMALL_PV_LKT2,pv_static_binding
+SMALL_PV_LKT3,pv_static_binding
+HEAT_PLANT_COAL_HS2,hp_binding
+HEAT_PLANT_GAS_HS2,hp_binding

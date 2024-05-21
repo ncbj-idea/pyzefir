@@ -32,6 +32,7 @@ class ScenarioSheetName(StrEnum):
     EMISSION_FEES = "Emission Fees"
     GENERATION_FRACTION = "Generation Fraction"
     CURTAILMENT_COST = "Curtailment Cost"
+    GENERATION_COMPENSATION = "Generation Compensation"
 
 
 @unique

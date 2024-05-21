@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -28,6 +29,8 @@ from pyzefir.model.exceptions import (
 )
 from pyzefir.model.network_element import NetworkElement
 from pyzefir.model.utils import validate_dict_type
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -80,6 +83,7 @@ class DemandProfile(NetworkElement):
                     "Normalized profile has different length for different energy types"
                 )
             )
+        _logger.debug("Validate normalized profile: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -92,6 +96,7 @@ class DemandProfile(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If any of the validation fails
         """
+        _logger.debug("Validating demand profile object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_name_type(exception_list)
         if validate_dict_type(
@@ -108,8 +113,10 @@ class DemandProfile(NetworkElement):
             )
 
         if exception_list:
+            _logger.debug("Got error validating demand profile: %s", exception_list)
             raise DemandProfileValidatorExceptionGroup(
                 f"While adding DemandProfile {self.name} "
                 "following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Demand profile %s validation: Done", self.name)

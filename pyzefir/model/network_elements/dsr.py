@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from pyzefir.model.utils import check_interval
@@ -30,6 +31,8 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_element import NetworkElement
+
+_logger = logging.getLogger(__name__)
 
 
 class DSRValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -78,15 +81,18 @@ class DSR(NetworkElement):
             NetworkValidatorExceptionGroup: If any of the validation fails
 
         """
+        _logger.debug("Validating DSR object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         self._validate(exception_list)
 
         if exception_list:
+            _logger.debug("Got error validating DSR: %s", exception_list)
             raise DSRValidatorExceptionGroup(
                 f"While adding DSR {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("DSR %s validation: Done", self.name)
 
     def _validate(self, exception_list: list[NetworkValidatorException]) -> None:
         for field in fields(self):

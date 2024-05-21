@@ -40,9 +40,7 @@ class LineStructureCreator:
                 bus_from=lambda x: x["bus_name_x"],
                 bus_to=lambda x: x["bus_name_y"],
                 transmission_loss=lambda x: (
-                    x["transmission_loss"]
-                    if "transmission_loss" in x.columns
-                    else np.nan
+                    x["transmission_loss"] if "transmission_loss" in x.columns else 0.0
                 ),
                 max_capacity=np.nan,
                 transmission_fee=lambda x: (
@@ -65,6 +63,7 @@ class LineStructureCreator:
     def create_lines(
         df_data: pd.DataFrame,
         global_subsystem_config: pd.DataFrame,
+        lbs_connection_df: pd.DataFrame,
         aggr_name: str,
     ) -> pd.DataFrame:
         dfs: list[pd.DataFrame] = []
@@ -88,9 +87,32 @@ class LineStructureCreator:
             result_df = LineStructureCreator._create_lines_dataframe(
                 global_bus, filtered_df, et
             )
+            if not lbs_connection_df.empty:
+                lbs_to_global_tech_df = lbs_connection_df.set_index("lbs").eq(1)
+                lbs_subsystems_lines_df = (
+                    LineStructureCreator._create_lbs_to_subsystems_lines_dataframe(
+                        lbs_to_global_tech_df[subsystem], global_bus, filtered_df, et
+                    )
+                )
+                dfs.append(lbs_subsystems_lines_df)
             dfs.append(result_df)
         df = pd.concat(dfs)
         return df
+
+    @staticmethod
+    def _create_lbs_to_subsystems_lines_dataframe(
+        connection_df: pd.Series,
+        global_bus: pd.DataFrame,
+        filtered_df: pd.DataFrame,
+        energy_type: str,
+    ) -> pd.DataFrame:
+        filtered_df = filtered_df[
+            filtered_df["lbs_type"].isin(connection_df.index[connection_df])
+        ]
+        result_df = LineStructureCreator._create_lines_dataframe(
+            filtered_df, global_bus, energy_type=energy_type
+        )
+        return result_df
 
     @staticmethod
     def create_local_lbs_lines(
@@ -102,27 +124,36 @@ class LineStructureCreator:
         ):
             return pd.DataFrame()
         df = df_data.copy()
-        local_lines_df = df[["bus_from_id", "bus_to_id", "line_energy_type"]].dropna()
-        local_lines_configs: list[tuple] = [
-            (
-                local_lines_df.at[idx, "bus_from_id"],
-                local_lines_df.at[idx, "bus_to_id"],
-                local_lines_df.at[idx, "line_energy_type"],
-            )
-            for idx in local_lines_df.index
-        ]
+        local_lines_df = (
+            df[["bus_from_id", "bus_to_id", "line_energy_type"]]
+            .dropna()
+            .drop_duplicates()
+        )
         dfs: list[pd.DataFrame] = []
-        for bus_fr, bus_to, et in local_lines_configs:
-            bus_fr_df_filtered = df[
-                (df["bus_id"] == bus_fr) & (df["energy_type"] == et)
-            ].drop_duplicates(subset="bus_name")
-            bus_to_df_filtered = df[
-                (df["bus_id"] == bus_to) & (df["energy_type"] == et)
-            ].drop_duplicates(subset="bus_name")
-            result_df = LineStructureCreator._create_lines_dataframe(
-                bus_fr_df_filtered, bus_to_df_filtered, et
-            )
-            dfs.append(result_df)
+        for _, group_df in df.groupby("lbs"):
+            for bus_fr, bus_to, et in local_lines_df.itertuples(index=False):
+                bus_fr_df_filtered = (
+                    group_df[
+                        (group_df["bus_id"] == bus_fr) & (group_df["energy_type"] == et)
+                    ]
+                    .dropna(subset=["bus_from_id", "bus_to_id", "line_energy_type"])
+                    .drop_duplicates(subset=["bus_name"])
+                    .rename(
+                        columns={
+                            "local_transmission_loss": "transmission_loss",
+                            "local_transmission_fee": "transmission_fee",
+                        }
+                    )
+                )
+                bus_to_df_filtered = group_df[
+                    (group_df["bus_id"] == bus_to) & (group_df["energy_type"] == et)
+                ].drop_duplicates(subset="bus_name")
+                if bus_fr_df_filtered.empty or bus_to_df_filtered.empty:
+                    continue
+                result_df = LineStructureCreator._create_lines_dataframe(
+                    bus_fr_df_filtered, bus_to_df_filtered, et
+                )
+                dfs.append(result_df)
         df = pd.concat(dfs)
         return df
 
@@ -147,26 +178,31 @@ class GeneratorStructureCreator:
         aggr_name: str | None = None,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         df = df_data.copy()
+        tags_df = GeneratorStructureCreator._create_tag_df(df)
         if aggr_name is not None:
             capa_df = GeneratorStructureCreator._handle_capacity(df, aggr_name)
         else:
             capa_df = pd.DataFrame()
-        df = df[["gen_name", "technology_type", "technology_class", "tag"]]
+        df = df[["gen_name", "technology_type", "technology_class"]]
         df = df.rename(columns={"gen_name": "name"})
         df = pd.concat([df, capa_df], axis=1)
 
         df_generator = df[df["technology_class"] == "GENERATOR"].drop(
             columns=["technology_class"]
         )
-        tags_df = GeneratorStructureCreator._create_tag_df(df_generator)
-        df_generator = pd.concat([df_generator, tags_df], axis=1).drop(columns=["tag"])
+        if "GENERATOR" in tags_df.index:
+            df_tags_generator = tags_df.loc["GENERATOR", tags_df.loc["GENERATOR"].any()]
+            df_generator = pd.concat([df_generator, df_tags_generator], axis=1)
         df_generator = df_generator.rename(
             columns={"technology_type": "generator_type"}
         )
 
         df_storage = df[df["technology_class"] == "STORAGE"].drop(
-            columns=["technology_class", "tag"]
+            columns=["technology_class"]
         )
+        if "STORAGE" in tags_df.index:
+            df_tags_storage = tags_df.loc["STORAGE", tags_df.loc["STORAGE"].any()]
+            df_storage = pd.concat([df_storage, df_tags_storage], axis=1)
         df_storage = df_storage.rename(columns={"technology_type": "storage_type"})
         df_generator = df_generator.drop_duplicates(subset="name")
         df_storage = df_storage.drop_duplicates(subset="name")
@@ -216,10 +252,16 @@ class GeneratorStructureCreator:
 
     @staticmethod
     def _create_tag_df(df: pd.DataFrame) -> pd.DataFrame:
-        dummies = pd.get_dummies(df["tag"])
-        dummies[dummies == 1] = "YES"
-        dummies[dummies == 0] = np.nan
-        return dummies
+        tags_df = pd.concat([df["technology_class"], df.filter(regex="^TAG_")], axis=1)
+        tags_df = tags_df.rename(columns=lambda x: x.replace("TAG_", ""))
+        tags_df = tags_df.set_index(["technology_class", df.index])
+        return tags_df
+
+    @staticmethod
+    def create_generator_binding_df(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.loc[:, ["gen_name", "binding_name"]].dropna().drop_duplicates()
+        df = df.rename(columns={"gen_name": "generator"})
+        return df
 
 
 class BusStructureCreator:
@@ -293,7 +335,7 @@ class InitStateCreator:
             value_name="base_fraction",
         )
         df = df.dropna(subset=["base_fraction"])
-        df["technology_stack"] = df["aggregate_id"] + "_" + df["technology_stack"]
+        df["technology_stack"] = df["aggregate_id"] + "__" + df["technology_stack"]
         df = df.rename(columns={"aggregate_id": "aggregate"})
         df = df[["technology_stack", "aggregate", "base_fraction"]]
         return df

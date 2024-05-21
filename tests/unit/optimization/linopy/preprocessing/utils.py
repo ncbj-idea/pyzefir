@@ -29,13 +29,14 @@ from pyzefir.model.network_elements import (
     StorageType,
 )
 from tests.unit.optimization.linopy.conftest import N_YEARS
+from tests.unit.optimization.linopy.constants import N_HOURS
 from tests.unit.optimization.linopy.names import CO2, HEAT, PM10
 
 
 def create_generator_type(  # noqa: C901
     name: str,
     energy_types: set[str],
-    efficiency: dict[str, float],
+    efficiency: pd.DataFrame,
     life_time: int = 3,
     build_time: int = 0,
     capex: Series | None = None,
@@ -49,6 +50,7 @@ def create_generator_type(  # noqa: C901
     delta_cap_min: Series | None = None,
     delta_cap_max: Series | None = None,
     power_utilization: pd.Series | float = 1.0,
+    generation_compensation: pd.Series | None = None,
 ) -> GeneratorType:
     cap_min = pd.Series([np.nan] * N_YEARS) if cap_min is None else cap_min
     cap_max = pd.Series([np.nan] * N_YEARS) if cap_max is None else cap_max
@@ -71,7 +73,11 @@ def create_generator_type(  # noqa: C901
             capex if capex is not None else Series(linspace(5 * 1e3, 5 * 1e2, N_YEARS))
         ),
         opex=opex if opex is not None else Series(linspace(1e3, 700, N_YEARS)),
-        efficiency=efficiency or {HEAT: 0.92},
+        efficiency=(
+            efficiency
+            if not efficiency.empty
+            else pd.DataFrame({HEAT: [0.92] * N_HOURS})
+        ),
         emission_reduction=emission_reduction or {CO2: 0.0, PM10: 0.0},
         conversion_rate=conversion_rate if conversion_rate is not None else dict(),
         capacity_factor=capacity_factor,
@@ -81,6 +87,7 @@ def create_generator_type(  # noqa: C901
         min_capacity_increase=delta_cap_min,
         max_capacity_increase=delta_cap_max,
         power_utilization=power_utilization,
+        generation_compensation=generation_compensation,
     )
 
 
@@ -164,6 +171,7 @@ def generator_factory(
     delta_cap_max: Series | None = None,
     delta_cap_min: Series | None = None,
     n_years: int = N_YEARS,
+    generator_binding: str | None = None,
 ) -> Generator:
     return Generator(
         name=name,
@@ -178,6 +186,7 @@ def generator_factory(
         unit_min_capacity_increase=_get_or_else(
             delta_cap_min, Series([np.nan] * n_years)
         ),
+        generator_binding=generator_binding,
     )
 
 

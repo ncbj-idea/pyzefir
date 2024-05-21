@@ -39,6 +39,7 @@ class EnergySourceUnitParser(AbstractElementParser):
         n_years: int,
         df_generator_emission_fee: pd.DataFrame,
         n_consumers: pd.DataFrame,
+        df_binding: pd.DataFrame,
     ) -> None:
         self.df_technology_bus = df_technology_bus.copy(deep=True)
         self.df_generators = df_generators.copy(deep=True)
@@ -57,6 +58,7 @@ class EnergySourceUnitParser(AbstractElementParser):
             .apply(list)
             .to_dict()
         )
+        self.df_binding = df_binding.copy(deep=True).set_index("generator").squeeze()
 
     def _get_set_of_buses_from_dataframe(self, name: str) -> set[str]:
         df_technology_bus = self.df_technology_bus.loc[
@@ -71,15 +73,18 @@ class EnergySourceUnitParser(AbstractElementParser):
         return df_technology_bus["bus"].iloc[0]
 
     def _create_generator(self, df_row: pd.Series) -> Generator:
-        name = df_row["name"]
+        name = str(df_row["name"])
         technology_evolution_df = self.df_element_energy_evolution[
             self.df_element_energy_evolution["technology_name"] == name
         ].set_index("year_idx")
         return Generator(
             name=name,
+            generator_binding=(
+                str(self.df_binding[name]) if name in self.df_binding else None
+            ),
             bus=self._get_set_of_buses_from_dataframe(name),
-            energy_source_type=df_row["generator_type"],
-            unit_base_cap=self.df_base_cap.loc[name]["unit_base_capacity"],
+            energy_source_type=str(df_row["generator_type"]),
+            unit_base_cap=float(self.df_base_cap.loc[name]["unit_base_capacity"]),
             unit_min_capacity=technology_evolution_df["min_capacity"].reindex(
                 range(self.n_years)
             ),
@@ -87,10 +92,10 @@ class EnergySourceUnitParser(AbstractElementParser):
                 range(self.n_years)
             ),
             unit_min_capacity_increase=technology_evolution_df[
-                "max_capacity_increase"
+                "min_capacity_increase"
             ].reindex(range(self.n_years)),
             unit_max_capacity_increase=technology_evolution_df[
-                "min_capacity_increase"
+                "max_capacity_increase"
             ].reindex(range(self.n_years)),
             min_device_nom_power=get_float_or_none(df_row["min_device_nom_power"]),
             max_device_nom_power=get_float_or_none(df_row["max_device_nom_power"]),
@@ -103,15 +108,15 @@ class EnergySourceUnitParser(AbstractElementParser):
         )
 
     def _create_storage(self, df_row: pd.Series) -> Storage:
-        name = df_row["name"]
+        name = str(df_row["name"])
         technology_evolution_df = self.df_element_energy_evolution[
             self.df_element_energy_evolution["technology_name"] == name
         ].set_index("year_idx")
         return Storage(
             name=name,
             bus=self._get_bus_from_dataframe(name),
-            energy_source_type=df_row["storage_type"],
-            unit_base_cap=self.df_base_cap.loc[name]["unit_base_capacity"],
+            energy_source_type=str(df_row["storage_type"]),
+            unit_base_cap=float(self.df_base_cap.loc[name]["unit_base_capacity"]),
             unit_min_capacity=technology_evolution_df["min_capacity"].reindex(
                 range(self.n_years)
             ),
@@ -119,10 +124,10 @@ class EnergySourceUnitParser(AbstractElementParser):
                 range(self.n_years)
             ),
             unit_min_capacity_increase=technology_evolution_df[
-                "max_capacity_increase"
+                "min_capacity_increase"
             ].reindex(range(self.n_years)),
             unit_max_capacity_increase=technology_evolution_df[
-                "min_capacity_increase"
+                "max_capacity_increase"
             ].reindex(range(self.n_years)),
             min_device_nom_power=get_float_or_none(df_row["min_device_nom_power"]),
             max_device_nom_power=get_float_or_none(df_row["max_device_nom_power"]),
@@ -130,8 +135,14 @@ class EnergySourceUnitParser(AbstractElementParser):
         )
 
     def create(self) -> tuple[tuple[Generator, ...], tuple[Storage, ...]]:
-        generators = tuple(self.df_generators.apply(self._create_generator, axis=1))
-        storages = tuple(self.df_storages.apply(self._create_storage, axis=1))
+        generators = tuple(
+            self.df_generators.apply(
+                self._create_generator, axis=1, result_type="reduce"
+            )
+        )
+        storages = tuple(
+            self.df_storages.apply(self._create_storage, axis=1, result_type="reduce")
+        )
 
         return generators, storages
 

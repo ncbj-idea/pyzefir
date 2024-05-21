@@ -45,6 +45,8 @@ class EnergySourceTypeParser(AbstractElementParser):
         n_years: int,
         n_hours: int,
         curtailment_cost: pd.DataFrame,
+        generators_series_efficiency: dict[str, pd.DataFrame],
+        generation_compensation: pd.DataFrame,
     ) -> None:
         self.generators_energy_type = generators_energy_type.copy(deep=True).set_index(
             "generator_type"
@@ -69,6 +71,8 @@ class EnergySourceTypeParser(AbstractElementParser):
         self.n_years = n_years
         self.n_hours = n_hours
         self.curtailment_cost = curtailment_cost.copy(deep=True)
+        self.generators_series_efficiency = deepcopy(generators_series_efficiency)
+        self.generation_compensation = deepcopy(generation_compensation)
 
     def _prepare_energy_source_parameters(self) -> dict[str, pd.DataFrame]:
         """
@@ -114,16 +118,7 @@ class EnergySourceTypeParser(AbstractElementParser):
         fuel_row = self.generators_fuel_type[
             self.generators_fuel_type["generator_type"] == name
         ]
-        fuel = fuel_row["fuel_name"]
-        capacity_factor = fuel_row["capacity_factor_name"]
-        efficiency = (
-            efficiency_df.loc[name].dropna().to_dict()
-            if name in efficiency_df.index
-            else None
-        )
-        ramp = df_row["ramp"] if "ramp" in df_row else np.nan
         energy_types = self.generators_energy_type.loc[name]
-        power_utilization = self._get_power_utilization(name, df_row)
         if isinstance(energy_types, pd.DataFrame):
             energy_types = energy_types.squeeze()
 
@@ -142,16 +137,27 @@ class EnergySourceTypeParser(AbstractElementParser):
             max_capacity_increase=energy_source_df["max_capacity_increase"].reindex(
                 range(self.n_years)
             ),
-            efficiency=efficiency,
+            efficiency=self._get_generator_efficiency(name, efficiency_df),
             energy_types=energy_types,
             emission_reduction=self.generators_emission_reduction.loc[name].to_dict(),
-            fuel=None if pd.isna(fuel).all() else fuel.iloc[0],
-            capacity_factor=(
-                None if pd.isna(capacity_factor).all() else capacity_factor.iloc[0]
+            fuel=(
+                None
+                if pd.isna(fuel_row["fuel_name"]).all()
+                else str(fuel_row["fuel_name"].iloc[0])
             ),
-            power_utilization=power_utilization,
-            ramp=ramp,
+            capacity_factor=(
+                None
+                if pd.isna(fuel_row["capacity_factor_name"]).all()
+                else str(fuel_row["capacity_factor_name"].iloc[0])
+            ),
+            power_utilization=self._get_power_utilization(name, df_row),
+            ramp=df_row["ramp"] if "ramp" in df_row else np.nan,
             tags=create_tags_list(df_row[5:]),
+            generation_compensation=(
+                self.generation_compensation[name]
+                if name in self.generation_compensation.columns
+                else None
+            ),
         )
         if conv_rate := conv_dict.get(name):
             gen_type.conversion_rate = conv_rate
@@ -194,7 +200,11 @@ class EnergySourceTypeParser(AbstractElementParser):
             ),
             load_efficiency=float(self.storage_type_df.loc[name]["load_efficiency"]),
             energy_type=self.storage_type_df.loc[name]["energy_type"],
-            cycle_length=int(self.storage_type_df.loc[name]["cycle_length"]),
+            cycle_length=(
+                int(self.storage_type_df.loc[name]["cycle_length"])
+                if not np.isnan(self.storage_type_df.loc[name]["cycle_length"])
+                else None
+            ),
             power_to_capacity=float(
                 self.storage_type_df.loc[name]["power_to_capacity"]
             ),
@@ -217,12 +227,16 @@ class EnergySourceTypeParser(AbstractElementParser):
                 self._create_generator_type,
                 axis=1,
                 args=(energy_source_type_df, efficiency_df, conv_dict),
+                result_type="reduce",
             )
         )
 
         storage_types = tuple(
             self.storage_type_df.apply(
-                self._create_storage_type, axis=1, args=(energy_source_type_df,)
+                self._create_storage_type,
+                axis=1,
+                args=(energy_source_type_df,),
+                result_type="reduce",
             )
         )
 
@@ -252,3 +266,23 @@ class EnergySourceTypeParser(AbstractElementParser):
                 index=np.arange(self.n_hours),
             )
         return power_utilization
+
+    def _get_generator_efficiency(
+        self, name: str, efficiency_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        if name in self.generators_series_efficiency:
+            efficiency = self.generators_series_efficiency[name].set_index("hour_idx")
+        else:
+            efficiency = (
+                efficiency_df.loc[name]
+                .dropna()
+                .to_frame()
+                .T.reset_index(drop=True)
+                .reindex(
+                    pd.RangeIndex(start=0, stop=self.n_hours, name="hour_idx"),
+                    method="ffill",
+                )
+                if name in efficiency_df.index
+                else None
+            )
+        return efficiency

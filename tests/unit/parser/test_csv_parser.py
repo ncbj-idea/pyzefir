@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
+import tempfile
 from dataclasses import fields
 from pathlib import Path
 
@@ -50,3 +53,28 @@ def test_csv_parser_load_dataframe_lack_of_df() -> None:
     parser = CsvParser(path_manager=path_manager)
     with pytest.raises(CsvParserException):
         parser.load_dfs()
+
+
+def test_csv_parser_convert_df_columns_to_string(csv_root_path: Path) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir = os.path.join(temp_dir, "files")
+        shutil.copytree(csv_root_path, temp_dir)
+        dc_path = os.path.join(temp_dir, "demand_chunks", "dc.csv")
+        df = pd.DataFrame(
+            {
+                "period_start": [0, 101],
+                "period_end": [100, 8760],
+                0: [20, 20000],
+                1: [20, 20000],
+                2: [20, 20000],
+                3: [20, 20000],
+            }
+        )
+        df.to_csv(dc_path, index=False)
+        path_manager = CsvPathManager(Path(temp_dir), "scenario_1")
+        parser = CsvParser(path_manager=path_manager).load_dfs()
+        for inner_dict in parser.values():
+            for df_value in inner_dict.values():
+                assert all(
+                    isinstance(column_name, str) for column_name in df_value.columns
+                )

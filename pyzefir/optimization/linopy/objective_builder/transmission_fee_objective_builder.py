@@ -13,22 +13,26 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class TransmissionFeeObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
+        _logger.info("Building transmission fee objective...")
         if len(self.parameters.line.tf) == 0:
             return 0.0
 
         res = 0.0
         for line_idx, tf_idx in self.parameters.line.tf.items():
             res += self.line_flow_cost(line_idx, tf_idx).sum()
-
+        _logger.info("Transmission fee objective: Done")
         return res * self.parameters.scenario_parameters.hourly_scale
 
     def line_flow_cost(self, line_idx: int, tf_idx: int) -> LinearExpression:

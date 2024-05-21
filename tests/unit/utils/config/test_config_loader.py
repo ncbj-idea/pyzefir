@@ -313,3 +313,23 @@ def test_invalid_directory_path_sol_dump_path(
     )
     with pytest.raises(ConfigException, match=msg):
         ConfigLoader(tmp_path / "config.ini").load()
+
+
+@pytest.mark.parametrize(
+    "value, expected_value",
+    (
+        ("", ""),
+        ("-5", -5),
+        ("abc", "abc"),
+        ("+10", 10),
+        ("1e-5", 1e-5),
+        ("1e10", int(1e10)),  # 1e10 gives float, but we interpret it as int
+        ("1.23", 1.23),
+        ("1,23", "1,23"),
+        ("True", True),
+        ("false", False),
+    ),
+)
+def test_try_parse_config_option(value: str, expected_value: str | float) -> None:
+    parsed_value = ConfigLoader.try_parse_config_option(value)
+    assert parsed_value == expected_value and type(parsed_value) is type(expected_value)

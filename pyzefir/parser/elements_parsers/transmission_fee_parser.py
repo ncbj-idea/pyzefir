@@ -28,6 +28,6 @@ class TransmissionFeeParser(AbstractElementParser):
         self.transmission_fee_df.set_index("hour_idx", inplace=True)
 
         return tuple(
-            TransmissionFee(name=name, fee=self.transmission_fee_df[name])
+            TransmissionFee(name=str(name), fee=self.transmission_fee_df[name])
             for name in self.transmission_fee_df.columns
         )

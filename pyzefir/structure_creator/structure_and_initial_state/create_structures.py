@@ -15,8 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from pyzefir.structure_creator.data_loader.input_data import InputStructureData
@@ -38,20 +40,25 @@ from pyzefir.structure_creator.structure_and_initial_state.structure_element_cre
     StaticStructureCreator,
 )
 
+_logger = logging.getLogger(__name__)
+
 
 class StructureCreator:
     @staticmethod
     def create_structure_and_initial(
         input_structure: InputStructureData, output_path: Path
     ) -> None:
+        _logger.debug("Creating StructureData and InitialStateData objects ...")
         structure, init = StructureCreator._create_structure_data(
             input_structure=input_structure
         )
+        _logger.debug("Saving structure.xlsx ...")
         write_to_excel(
             data=structure.convert_to_dict_of_dfs(),
             output_path=output_path,
             filename="structure.xlsx",
         )
+        _logger.debug("Saving initial_state.xlsx ...")
         write_to_excel(
             data=init.convert_to_dict_of_dfs(),
             output_path=output_path,
@@ -62,6 +69,7 @@ class StructureCreator:
     def _create_structure_data(
         input_structure: InputStructureData,
     ) -> tuple[StructureData, InitialStateData]:
+        _logger.debug("Creating initial combined local and global dataframes  ...")
         local_lbs_config_df, global_subsystem_config_df = (
             StructureCreator._preprocess_input_data(
                 lbs_type=input_structure.lbs_type, subsystem=input_structure.subsystem
@@ -69,6 +77,9 @@ class StructureCreator:
         )
         structure_data = StructureData()
         initial_state_data = InitialStateData()
+        _logger.debug(
+            "Creating static structure (independent of individual elements)  ..."
+        )
         StructureStaticCreator._create_static_structure_df(
             structure_data=structure_data,
             initial_state_data=initial_state_data,
@@ -80,15 +91,20 @@ class StructureCreator:
             global_et=global_subsystem_config_df["energy_type"],
             lbs_to_aggr_df=input_structure.configuration["LBS TO AGGREGATE"],
         )
+        _logger.debug("Creating local structure data  ...")
         StructureLocalCreator._create_local_structure_data(
             structure_data=structure_data,
             initial_state_data=initial_state_data,
             lbs_to_aggr_df=input_structure.configuration["LBS TO AGGREGATE"],
             local_lbs_config_df=local_lbs_config_df,
             subsystem_to_lbs_df=input_structure.configuration["SUBSYSTEMS TO LBS"],
+            lbs_to_subsystem_df=input_structure.configuration.get(
+                "LBS TO SUBSYSTEMS", pd.DataFrame()
+            ),
             global_subsystem_config_df=global_subsystem_config_df,
             aggregate_df=input_structure.aggregates,
         )
+        _logger.debug("Creating global structure data  ...")
         StructureGlobalCreator._create_global_structure_data(
             structure_data=structure_data,
             initial_state_data=initial_state_data,
@@ -112,8 +128,13 @@ class StructureGlobalCreator:
         initial_state_data: InitialStateData,
         global_subsystem_config_df: pd.DataFrame,
     ) -> None:
-        global_gen_df, _ = GeneratorStructureCreator.create_generator_storage_df(
-            global_subsystem_config_df,
+        _logger.debug(
+            "Creating structure and initial state dataframes based on global techs ..."
+        )
+        global_gen_df, global_stor_df = (
+            GeneratorStructureCreator.create_generator_storage_df(
+                global_subsystem_config_df,
+            )
         )
         global_gen_emission_fees = (
             GeneratorStructureCreator.create_generator_emission_fee_df(
@@ -129,11 +150,17 @@ class StructureGlobalCreator:
         init_technology_df = InitStateCreator.create_global_technology_df(
             global_subsystem_config_df,
         )
-
+        global_generator_binding_df = (
+            GeneratorStructureCreator.create_generator_binding_df(
+                global_subsystem_config_df
+            )
+        )
+        structure_data.Storages.append(global_stor_df)
         structure_data.Generators.append(global_gen_df)
         structure_data.Generator__Emission_Fees.append(global_gen_emission_fees)
         structure_data.Buses.append(global_bus_df)
         structure_data.Technology__Bus.append(global_technology_bus)
+        structure_data.Generator_Binding.append(global_generator_binding_df)
 
         initial_state_data.Technology.append(init_technology_df)
 
@@ -146,6 +173,7 @@ class StructureLocalCreator:
         lbs_to_aggr_df: pd.DataFrame,
         local_lbs_config_df: pd.DataFrame,
         subsystem_to_lbs_df: pd.DataFrame,
+        lbs_to_subsystem_df: pd.DataFrame,
         global_subsystem_config_df: pd.DataFrame,
         aggregate_df: pd.DataFrame,
     ) -> None:
@@ -159,6 +187,10 @@ class StructureLocalCreator:
             aggregate_df, lbs_to_aggr_df
         )
         for aggr_name, available_lbs in aggr_config.items():
+            _logger.debug(
+                "Creating structure and initial state dataframes for aggregate %s ...",
+                aggr_name,
+            )
             filtered_local_lbs_config_df = StructureLocalCreator._adjust_lbs_config(
                 local_lbs_config_df,
                 available_lbs,
@@ -202,10 +234,18 @@ class StructureLocalCreator:
                 filtered_local_lbs_config_df,
             )
             lines_df = LineStructureCreator.create_lines(
-                filtered_local_lbs_config_df, global_subsystem_config_df, aggr_name
+                filtered_local_lbs_config_df,
+                global_subsystem_config_df,
+                lbs_to_subsystem_df,
+                aggr_name,
             )
             init_technology_df = InitStateCreator.create_local_technology_df(
                 filtered_local_lbs_config_df, base_fraction_df, aggr_name
+            )
+            generator_binding_df = (
+                GeneratorStructureCreator.create_generator_binding_df(
+                    filtered_local_lbs_config_df
+                )
             )
             structure_data.Buses.append(local_bus_df)
             structure_data.Generators.append(local_gen_df)
@@ -221,6 +261,7 @@ class StructureLocalCreator:
             )
             structure_data.Lines.append(local_lbs_lines_df)
             structure_data.Lines.append(lines_df)
+            structure_data.Generator_Binding.append(generator_binding_df)
 
             initial_state_data.Technology.append(init_technology_df)
 
@@ -257,8 +298,13 @@ class StructureLocalCreator:
                 + filtered_df["bus_id"]
             )
         )
+        filtered_df = filtered_df.assign(
+            binding_name=(
+                aggr_name + "__" + filtered_df["lbs"] + "__" + filtered_df["binding_id"]
+            ).where(~filtered_df["binding_id"].isnull(), other=np.nan)
+        )
         filtered_df["lbs_type"] = filtered_df.loc[:, "lbs"]
-        filtered_df.loc[:, "lbs"] = aggr_name + "_" + filtered_df["lbs"]
+        filtered_df.loc[:, "lbs"] = aggr_name + "__" + filtered_df["lbs"]
 
         return filtered_df
 

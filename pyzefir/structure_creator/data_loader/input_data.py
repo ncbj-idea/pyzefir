@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,12 @@ from pyzefir.structure_creator.data_loader.constants_enums import (
     SubDirectory,
     XlsxFileName,
 )
+
+_logger = logging.getLogger(__name__)
+
+
+class ScenarioDataError(Exception):
+    pass
 
 
 @dataclass
@@ -40,20 +47,54 @@ class ScenarioData:
     yearly_demand: dict[str, pd.DataFrame]
     fractions: dict[str, dict[str, pd.DataFrame]]
     generation_fraction: pd.DataFrame
+    generation_compensation: pd.DataFrame
+
+    @staticmethod
+    def validate_input_files(input_path: Path) -> None:
+        _logger.debug("Start validate if all required scenario input files exist")
+        required_files = [
+            XlsxFileName.cost_parameters,
+            XlsxFileName.fuel_parameters,
+            XlsxFileName.n_consumers,
+            XlsxFileName.relative_emission_limits,
+            XlsxFileName.technology_cap_limits,
+            XlsxFileName.technology_type_cap_limits,
+            XlsxFileName.yearly_demand,
+            XlsxFileName.generation_fraction,
+            XlsxFileName.generation_compensation,
+        ]
+
+        fractions_directory = input_path / SubDirectory.fractions
+        for element_path in fractions_directory.iterdir():
+            if not element_path.is_file() and not element_path.suffix == ".xlsx":
+                raise ScenarioDataError(
+                    f"Given file {element_path} is not a required fraction xlsx file"
+                )
+
+        for file_name in required_files:
+            file_path = input_path / file_name
+            if not file_path.is_file():
+                raise ScenarioDataError(
+                    f"Given file {element_path} is not a required scenario xlsx file"
+                )
+        _logger.debug("All of required scenario input files exist")
 
     @staticmethod
     def _load_fractions(input_path: Path) -> dict[str, dict[str, pd.DataFrame]]:
+        _logger.debug("Starting loading fractions data input files ...")
         result = dict()
         fractions_directory = input_path / SubDirectory.fractions
         for element_path in fractions_directory.iterdir():
             if element_path.is_file() and element_path.suffix == ".xlsx":
                 result[element_path.stem] = pd.read_excel(element_path, sheet_name=None)
-
+        _logger.debug("Fractions data input files loaded.")
         return result
 
     @staticmethod
     def load_scenario_data(input_path: Path) -> ScenarioData:
-        return ScenarioData(
+        ScenarioData.validate_input_files(input_path)
+        _logger.debug("Starting loading scenario input files ...")
+        data = ScenarioData(
             cost_parameters=pd.read_excel(
                 input_path / XlsxFileName.cost_parameters, sheet_name=None
             ),
@@ -77,7 +118,12 @@ class ScenarioData:
             generation_fraction=pd.read_excel(
                 input_path / XlsxFileName.generation_fraction
             ),
+            generation_compensation=pd.read_excel(
+                input_path / XlsxFileName.generation_compensation
+            ),
         )
+        _logger.debug("Scenario input files loaded.")
+        return data
 
 
 @dataclass
@@ -94,6 +140,32 @@ class InputStructureData:
     n_years: int
 
     @staticmethod
+    def validate_input_files(input_path: Path) -> None:
+        _logger.debug("Start validate if all required structure input files exist")
+        required_files = [
+            XlsxFileName.subsystems,
+            XlsxFileName.aggregates,
+            XlsxFileName.configuration,
+            XlsxFileName.emissions,
+            XlsxFileName.transmission_fees,
+        ]
+
+        lbs_path = input_path / SubDirectory.lbs
+        for element_path in lbs_path.iterdir():
+            if not element_path.is_file() and not element_path.suffix == ".xlsx":
+                raise ScenarioDataError(
+                    f"Given file {element_path} is not a required lbs xlsx file"
+                )
+
+        for file_name in required_files:
+            file_path = input_path / file_name
+            if not file_path.is_file():
+                raise ScenarioDataError(
+                    f"Given file {element_path} is not a required structure xlsx file"
+                )
+        _logger.debug("All of required structure input files exist")
+
+    @staticmethod
     def _load_lbs_files(lbs_path: Path) -> dict[str, dict[str, pd.DataFrame]]:
         return {
             element_path.stem: pd.read_excel(element_path, sheet_name=None)
@@ -105,7 +177,9 @@ class InputStructureData:
     def load_structure_data(
         input_path: Path, n_hours: int, n_years: int
     ) -> InputStructureData:
-        return InputStructureData(
+        InputStructureData.validate_input_files(input_path)
+        _logger.debug("Starting loading structure input files ...")
+        data = InputStructureData(
             lbs_type=InputStructureData._load_lbs_files(input_path / SubDirectory.lbs),
             subsystem=pd.read_excel(
                 input_path / XlsxFileName.subsystems, sheet_name=None
@@ -121,6 +195,8 @@ class InputStructureData:
             n_hours=n_hours,
             n_years=n_years,
         )
+        _logger.debug("Structure input files loaded.")
+        return data
 
 
 @dataclass
@@ -134,7 +210,8 @@ class InputData:
     def load_input_data(
         input_path: Path, scenario_name: str, n_hours: int, n_years: int
     ) -> InputData:
-        return InputData(
+        _logger.debug("Starting creating InputData class instance ...")
+        input_data = InputData(
             scenario_data=ScenarioData.load_scenario_data(
                 input_path / SubDirectory.scenarios / scenario_name
             ),
@@ -142,3 +219,5 @@ class InputData:
                 input_path, n_hours, n_years
             ),
         )
+        _logger.debug("Input Data created.")
+        return input_data

@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,10 +23,14 @@ from pyzefir.model.exceptions import NetworkValidatorException
 from pyzefir.model.network import Network
 from pyzefir.model.network_elements import GeneratorType
 from pyzefir.model.network_elements.bus import Bus
+from pyzefir.model.network_elements.energy_source_types.generator_type import (
+    SumNotEqualToOneWarning,
+)
 from pyzefir.model.network_elements.energy_sources.generator import Generator
 from pyzefir.model.network_elements.fuel import Fuel
 from tests.unit.defaults import (
     DEFAULT_HOURS,
+    DEFAULT_YEARS,
     ELECTRICITY,
     HEATING,
     default_generator_type,
@@ -190,7 +195,9 @@ def test_capacity_factor_validators(
                 **default_generator_type
                 | {
                     "name": "gen_type_L",
-                    "efficiency": {"DUMMY_ELECTRICITY": 0.9, "DUMMY_HEATING": 0.6},
+                    "efficiency": pd.DataFrame(
+                        {"DUMMY_ELECTRICITY": [0.9], "DUMMY_HEATING": [0.6]}
+                    ),
                 }
             ),
             [
@@ -357,4 +364,68 @@ def test_power_utilization(
     gen_type = GeneratorType(**default_generator_type | params)
     actual_exception_list: list[NetworkValidatorException] = []
     gen_type._validate_power_utilization(network, actual_exception_list)
+    assert_same_exception_list(actual_exception_list, exception_list)
+
+
+def test_efficiency_warning(network: Network) -> None:
+    actual_exception_list: list[NetworkValidatorException] = []
+    gen_type = GeneratorType(**default_generator_type)
+    df = gen_type.efficiency
+    df.loc[[10, 20], ["ELECTRICITY", "HEATING"]] = (0.6, 0.9)
+
+    with pytest.warns(SumNotEqualToOneWarning) as warn:
+        gen_type._validate_efficiency(actual_exception_list, network)
+
+    assert (
+        str(warn.list[0].message)
+        == "Generator type default_generator_type efficiency contains hours: [10, 20] which sum for each energy "
+        "type is above 1"
+    )
+    assert not actual_exception_list
+
+
+@pytest.mark.parametrize(
+    "compensation, exception_list",
+    [
+        pytest.param(
+            pd.Series(
+                [1, -0.3, 0, -5.9],
+                index=np.arange(default_network_constants.n_years),
+            ),
+            [],
+            id="happy_path",
+        ),
+        pytest.param(
+            "compensation",
+            [
+                NetworkValidatorException(
+                    "Generation compensation of generator type default "
+                    "must be type of pandas Series or None."
+                )
+            ],
+            id="wrong_data_type",
+        ),
+        pytest.param(
+            pd.Series(
+                ["t", -0.3, 0, -5.9],
+                index=np.arange(default_network_constants.n_years),
+            ),
+            [
+                NetworkValidatorException(
+                    "Generation compensation of generator type default must "
+                    "contain float or int values only."
+                ),
+            ],
+            id="wrong_values_type_in_series",
+        ),
+    ],
+)
+def test_generation_compensation(
+    compensation: Any,
+    exception_list: list[NetworkValidatorException],
+) -> None:
+    actual_exception_list: list[NetworkValidatorException] = []
+    gen_type = get_default_generator_type(series_length=DEFAULT_YEARS)
+    gen_type.generation_compensation = compensation
+    gen_type._validate_generation_compensation(actual_exception_list)
     assert_same_exception_list(actual_exception_list, exception_list)

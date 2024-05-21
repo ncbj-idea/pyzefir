@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import configparser
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from itertools import repeat
 from pathlib import Path
 from typing import Any, overload
 
@@ -58,8 +59,6 @@ class ConfigParams:
     """network configuration"""
     money_scale: float = 1.0
     """ numeric scale parameter """
-    ens: bool = True
-    """ use ens associated with buses if not balanced """
     use_hourly_scale: bool = True
     """ use ratio of the total number of hours to the total number of hours in given sample """
     n_years: int | None
@@ -73,6 +72,10 @@ class ConfigParams:
     """ whether to format exceptions or not handle them at all """
     log_level: int
     """ logging level """
+    solver_settings: dict[str, dict[str, Any]] = field(default_factory=dict)
+    """ additional settings that can be passed to the solver """
+    xlsx_results: bool = False
+    """ dump results into additional xlsx files (outside the default CSV files)"""
 
     def __post_init__(self) -> None:
         """Validate parameters."""
@@ -196,7 +199,8 @@ def load_vector_from_csv(path: Path, param_name: str) -> np.ndarray:
 
 
 class ConfigLoader:
-    _req, _opt = "required", "optional"
+    _req, _opt, _any = "required", "optional", {"any"}
+    _configurable_solvers = {"gurobi", "cplex", "highs", "glpk"}
     _mandatory_sections = {
         "input": {"input_path": _req, "scenario": _req, "input_format": _req},
         "output": {
@@ -204,6 +208,7 @@ class ConfigLoader:
             "sol_dump_path": _opt,
             "opt_logs_path": _opt,
             "csv_dump_path": _opt,
+            "xlsx_results": _opt,
         },
     }
     _optional_sections = {
@@ -211,17 +216,18 @@ class ConfigLoader:
         "optimization": {
             "binary_fraction": _opt,
             "money_scale": _opt,
-            "ens": _opt,
             "use_hourly_scale": _opt,
             "solver": _opt,
-            "numeric_tolerance": _opt,
+            "ens_penalty_cost": _opt,
         },
         "create": {"n_years": _opt, "n_hours": _opt, "input_path": _opt},
         "debug": {
             "format_network_exceptions": _opt,
             "log_level": _opt,
         },
+        **{solver: val for solver, val in zip(_configurable_solvers, repeat(_any))},
     }
+
     _sections = _mandatory_sections | _optional_sections
 
     _default_csv_dump_path_name = "model-csv-input"
@@ -231,6 +237,7 @@ class ConfigLoader:
     def __init__(self, config_ini_path: Path) -> None:
         validate_config_path(config_ini_path)
         self.config = configparser.ConfigParser()
+        self.config.optionxform = str  # type: ignore
         self.config.read(config_ini_path)
         self._validate_config_file_structure()
 
@@ -251,6 +258,9 @@ class ConfigLoader:
                     f" input format must be xlsx but given :{input_format_value}"
                 )
 
+        self._validate_section_structure()
+
+    def _validate_section_structure(self) -> None:
         for section in self.config.sections():
             given_keys, allowed_keys = (
                 set(self.config[section]),
@@ -268,11 +278,27 @@ class ConfigLoader:
                     f"incorrect *.ini file: required parameters in section {section} are: {required_keys}, but given: "
                     f"{given_keys}"
                 )
-            if not given_keys.issubset(allowed_keys):
+            if not allowed_keys == self._any and not given_keys.issubset(allowed_keys):
                 raise ConfigException(
                     f"incorrect *.ini file: allowed parameters in section {section} are: {allowed_keys}, but given: "
                     f"{given_keys}"
                 )
+
+    @staticmethod
+    def try_parse_config_option(string: str) -> float | int | bool | str:
+        if string.lower() == "true":
+            return True
+        if string.lower() == "false":
+            return False
+        try:
+            number = float(string)
+            if number.is_integer():
+                return int(number)
+            return number
+        except ValueError:
+            pass
+
+        return string
 
     def load(self) -> ConfigParams:
         """Create ConfigParams obj from given *.ini file."""
@@ -296,7 +322,6 @@ class ConfigLoader:
                 "optimization", "money_scale", fallback=1.0
             ),
             network_config=self._load_network_config(),
-            ens=self.config.getboolean("optimization", "ens", fallback=True),
             use_hourly_scale=self.config.getboolean(
                 "optimization", "use_hourly_scale", fallback=True
             ),
@@ -327,6 +352,17 @@ class ConfigLoader:
                 "debug", "format_network_exceptions", fallback=True
             ),
             log_level=self._get_log_level(),
+            solver_settings={
+                section: {
+                    key: self.try_parse_config_option(value)
+                    for key, value in self.config.items(section)
+                }
+                for section in self._configurable_solvers
+                if section in self.config.sections()
+            },
+            xlsx_results=self.config.getboolean(
+                "output", "xlsx_results", fallback=False
+            ),
         )
 
     def _get_log_level(self) -> int:
@@ -351,6 +387,9 @@ class ConfigLoader:
             )
         ) is not None:
             network_config["numeric_tolerance"] = numeric_tolerance
+        network_config["ens_penalty_cost"] = optimization_section.getfloat(
+            "ens_penalty_cost", fallback=np.nan
+        )
         return network_config
 
     def _load_parameter_from_csv(self, parameter: str) -> np.ndarray | None:

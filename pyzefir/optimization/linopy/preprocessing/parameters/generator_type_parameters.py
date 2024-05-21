@@ -91,3 +91,13 @@ class GeneratorTypeParameters(ModelParameters):
             generator_types, indices.TGEN, "power_utilization", sample=indices.H.ii
         )
         """ power utilization factor """
+        self.generation_compensation = self.scale(
+            self.fetch_element_prop(
+                generator_types,
+                indices.TGEN,
+                "generation_compensation",
+                sample=indices.Y.ii,
+            ),
+            scale,
+        )
+        """ generation compensation parameter """

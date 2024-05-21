@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import logging
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -30,8 +32,15 @@ from pyzefir.model.network_elements import EnergySourceType
 from pyzefir.model.utils import validate_series
 from pyzefir.utils.functions import is_flow_int
 
+_logger = logging.getLogger(__name__)
+
+
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+
+class SumNotEqualToOneWarning(Warning):
+    pass
 
 
 class GeneratorTypeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -45,7 +54,7 @@ class GeneratorType(EnergySourceType):
     defined for a given type of generators
     """
 
-    efficiency: dict[str, float]
+    efficiency: pd.DataFrame
     """
     Efficiency defined for every energy type that is produced by the generator
     """
@@ -79,6 +88,9 @@ class GeneratorType(EnergySourceType):
     in relation to the installed capacity subsequent hours"""
     energy_curtailment_cost: dict[str, pd.Series] = field(default_factory=dict)
     """ energy curtailment for generator """
+    generation_compensation: pd.Series | None = None
+    """generation compensation parameters used to decrease objective
+    pd.DataFrame with hours (rows) and years (columns)"""
 
     def validate(self, network: Network) -> None:
         """
@@ -101,6 +113,7 @@ class GeneratorType(EnergySourceType):
         Raises:
             NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
+        _logger.debug("Validating generator type object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_energy_source_type_base(network, exception_list)
         if self.capacity_factor is not None and self.fuel is not None:
@@ -110,6 +123,7 @@ class GeneratorType(EnergySourceType):
                     "factor or fuel at the same time"
                 )
             )
+
         for name, gen_type in network.generator_types.items():
             curtailment_cost = gen_type.energy_curtailment_cost
             if len(curtailment_cost):
@@ -122,10 +136,13 @@ class GeneratorType(EnergySourceType):
         self._validate_emission_reduction(exception_list, network)
         self._validate_conversion_rate(exception_list, network)
         self._validate_power_utilization(network, exception_list)
+        self._validate_generation_compensation(exception_list)
+
         if not isinstance(self.ramp, float | int):
             exception_list.append(
                 NetworkValidatorException("Ramp value must be float or empty.")
             )
+
         elif not np.isnan(self.ramp) and not 0 < self.ramp < 1:
             exception_list.append(
                 NetworkValidatorException(
@@ -133,12 +150,15 @@ class GeneratorType(EnergySourceType):
                     f"greater than 0 and less than 1, but it is {self.ramp}"
                 )
             )
+
         if exception_list:
+            _logger.debug("Got error validating network: %s", exception_list)
             raise GeneratorTypeValidatorExceptionGroup(
                 f"While adding GeneratorType {self.name} following "
                 f"errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Generator type %s validation: Done", self.name)
 
     @property
     def inbound_energy_type(self) -> set[str]:
@@ -148,6 +168,38 @@ class GeneratorType(EnergySourceType):
             set[str]: Set of energy types.
         """
         return set(self.conversion_rate) if self.conversion_rate else set()
+
+    def _validate_generation_compensation(
+        self, exception_list: list[NetworkValidatorException]
+    ) -> None:
+        """
+        Validation procedure checking:
+        - Validates generation compensation type
+        - Validates generation compensation data type
+
+        Args:
+            exception_list (NetworkValidatorException) - list of raised exceptions.
+
+        Returns:
+            None
+        """
+        if not isinstance(self.generation_compensation, pd.Series | None):
+            exception_list.append(
+                NetworkValidatorException(
+                    f"Generation compensation of generator type {self.name} "
+                    "must be type of pandas Series or None."
+                )
+            )
+        elif (
+            self.generation_compensation is not None
+            and not pd.api.types.is_numeric_dtype(self.generation_compensation)
+        ):
+            exception_list.append(
+                NetworkValidatorException(
+                    f"Generation compensation of generator type {self.name} "
+                    f"must contain float or int values only."
+                )
+            )
 
     def _validate_fuels(
         self, exception_list: list[NetworkValidatorException], network: Network
@@ -177,6 +229,7 @@ class GeneratorType(EnergySourceType):
                     f"Fuel {self.fuel} has not been added to the network"
                 )
             )
+        _logger.debug("Validate fuels: OK")
 
     def _validate_capacity_factor(
         self, exception_list: list[NetworkValidatorException], network: Network
@@ -213,6 +266,7 @@ class GeneratorType(EnergySourceType):
                     f"'{self.capacity_factor}' has not been added to the network"
                 )
             )
+        _logger.debug("Validate capacity factor: OK")
 
     def _validate_conversion_rate(
         self,
@@ -243,6 +297,7 @@ class GeneratorType(EnergySourceType):
                     f"in network energy types: {sorted(network.energy_types)}"
                 )
             )
+        _logger.debug("Validate conversion rate: OK")
 
     def _validate_efficiency(
         self, exception_list: list[NetworkValidatorException], network: Network
@@ -251,6 +306,7 @@ class GeneratorType(EnergySourceType):
         Validation procedure checking:
         - Validates if efficiency of generator type is not None
         - Validates whether efficiency energy types exist in network.energy_types
+        - Validates if sum per each year is >= 1.0
 
         Args:
             exception_list (NetworkValidatorException) - list of raised exceptions.
@@ -264,13 +320,30 @@ class GeneratorType(EnergySourceType):
                 NetworkValidatorException("Efficiency cannot be None.")
             )
             return
-        if not set(self.efficiency.keys()).issubset(network.energy_types):
+        if not set(self.efficiency.columns.to_list()).issubset(network.energy_types):
             exception_list.append(
                 NetworkValidatorException(
                     f"Efficiency energy types do not exist "
                     f"in network energy types: {sorted(network.energy_types)}"
                 )
             )
+        is_sum_greater_than_or_1 = self.efficiency.sum(axis=1) - 1e-6 > 1
+        hours_not_satisfying_condition = self.efficiency.index[
+            is_sum_greater_than_or_1
+        ].tolist()
+        if hours_not_satisfying_condition:
+            _logger.warning(
+                "Generator type %s efficiency contains hours: %s which sum for each energy type is above 1",
+                self.name,
+                hours_not_satisfying_condition,
+            )
+            warnings.warn(
+                f"Generator type {self.name} efficiency contains hours: {hours_not_satisfying_condition} "
+                "which sum for each energy type is above 1",
+                SumNotEqualToOneWarning,
+            )
+
+        _logger.debug("Validate efficiency: OK")
 
     def _validate_emission_reduction(
         self, exception_list: list[NetworkValidatorException], network: Network
@@ -301,6 +374,7 @@ class GeneratorType(EnergySourceType):
                     f"in network emission types: {sorted(network.emission_types)}"
                 )
             )
+        _logger.debug("Validate emission reduction: OK")
 
     @staticmethod
     def _validate_curtailment_idx(
@@ -380,3 +454,4 @@ class GeneratorType(EnergySourceType):
                         f"or equal 0, but for hours: {incorrect_hours} it is not"
                     )
                 )
+        _logger.debug("Validate power utilization: OK")

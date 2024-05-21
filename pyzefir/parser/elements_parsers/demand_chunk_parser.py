@@ -34,9 +34,9 @@ class DemandChunkParser(AbstractElementParser):
             DataSubCategories.DEMAND_CHUNKS
         ].iterrows():
             demand_chunk = DemandChunk(
-                name=demand_chunk_config["name"],
-                tag=demand_chunk_config["tag"],
-                energy_type=demand_chunk_config["energy_type"],
+                name=str(demand_chunk_config["name"]),
+                tag=str(demand_chunk_config["tag"]),
+                energy_type=str(demand_chunk_config["energy_type"]),
                 periods=self.demand_chunk_dict[demand_chunk_config["name"]][
                     ["period_start", "period_end"]
                 ].to_numpy(),

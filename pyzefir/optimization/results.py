@@ -21,6 +21,7 @@ from typing import Final
 import numpy as np
 import pandas as pd
 import xarray as xr
+from bidict import bidict
 from linopy import Variable
 
 from pyzefir.optimization.exportable_results import (
@@ -122,6 +123,10 @@ class ResultsGroup(abc.ABC):
         column_name: str,
         index_name: str = YEAR_LABEL,
     ) -> pd.DataFrame:
+        # if data dictionary is empty, then we cannot use pd.concat
+        if not data:
+            return pd.DataFrame()
+
         for key in data:
             if len(data[key].shape) != 2 or data[key].shape[1] != 1:
                 raise ValueError(
@@ -191,10 +196,10 @@ class ResultsGroup(abc.ABC):
         res = 0.0
         for y_idx in y_idxs.ord:
             res += (
-                cap_plus.sel(index=(u_idx, s_idx)).to_numpy()
-                * am_indicator[s_idx, y_idx]
-                * capex[s_idx]
-                * disc_rate[y_idx]
+                cap_plus.sel(index=(u_idx, y_idx)).to_numpy()
+                * am_indicator[y_idx, s_idx]
+                * capex[y_idx]
+                * disc_rate[s_idx]
                 / lt
             )
 
@@ -218,77 +223,104 @@ class ResultsGroup(abc.ABC):
         res = 0.0
         for y_idx in y_idxs.ord:
             res += (
-                tcap_plus.sel(index=(aggr_idx, ut_idx, s_idx)).to_numpy()
-                * am_indicator[s_idx, y_idx]
-                * capex[s_idx]
-                * disc_rate[y_idx]
+                tcap_plus.sel(index=(aggr_idx, ut_idx, y_idx)).to_numpy()
+                * am_indicator[y_idx, s_idx]
+                * capex[y_idx]
+                * disc_rate[s_idx]
                 / lt
             )
         return res
 
     @staticmethod
-    def calculate_capex(
-        indices: Indices,
-        unit_index: IndexingSet,
-        unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
-        unit_type_map: dict[int, int],
-        bus_unit_mapping: dict[int, set[int]],
-        aggr_unit_map: dict[int, set[int]],
+    def calculate_global_capex(
         discount_rate: np.ndarray,
-        cap_plus: Variable,
-        tcap_plus: Variable,
+        bus_unit_mapping: dict[int, set[int]],
+        unit_index: IndexingSet,
+        aggr_unit_map: dict[int, set[int]],
+        indices: Indices,
+        unit_type_map: dict[int, int],
+        unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
         money_scale: float,
+        cap_plus: Variable,
     ) -> dict[str, pd.DataFrame]:
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
-        non_lbs_unit_idxs = get_dict_vals(bus_unit_mapping).difference(
-            get_dict_vals(aggr_unit_map)
-        )
+        non_lbs_unit_idxs: dict[int, int] = {
+            unit_idx: unit_type_map[unit_idx]
+            for unit_idx in get_dict_vals(bus_unit_mapping).difference(
+                get_dict_vals(aggr_unit_map)
+            )
+        }
         year_idxs = indices.Y
-
         result = {}
-        for u_idx in unit_index.ord:
-            ut_idx = unit_type_map[u_idx]
+        for u_idx, ut_idx in non_lbs_unit_idxs.items():
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
             year_results = dict()
             for year_idx in year_idxs.ord:
                 unit_capex = 0.0
-                if u_idx in non_lbs_unit_idxs:
-                    unit_capex += (
-                        money_scale
-                        * ResultsGroup.global_capex_per_unit_per_year(
-                            capex=capex,
-                            cap_plus=cap_plus.solution,
-                            disc_rate=disc_rate,
-                            lt=lt,
-                            s_idx=year_idx,
-                            u_idx=u_idx,
-                            y_idxs=year_idxs,
-                        )
-                    )
-                else:
-                    aggr_idxs = {k for k, v in aggr_unit_map.items() if u_idx in v}
-                    for aggr_idx in aggr_idxs:
-                        unit_capex += (
-                            money_scale
-                            * ResultsGroup.local_capex_per_unit_per_year(
-                                capex=capex,
-                                tcap_plus=tcap_plus.solution,
-                                disc_rate=disc_rate,
-                                lt=lt,
-                                s_idx=year_idx,
-                                ut_idx=ut_idx,
-                                aggr_idx=aggr_idx,
-                                y_idxs=year_idxs,
-                            )
-                        )
-
+                unit_capex += money_scale * ResultsGroup.global_capex_per_unit_per_year(
+                    capex=capex,
+                    cap_plus=cap_plus.solution,
+                    disc_rate=disc_rate,
+                    lt=lt,
+                    s_idx=year_idx,
+                    u_idx=u_idx,
+                    y_idxs=year_idxs,
+                )
                 year_results[indices.Y.mapping[year_idx]] = unit_capex
-
             result[unit_index.mapping[u_idx]] = pd.DataFrame.from_dict(
                 year_results, orient="index"
             )
+        return result
 
+    @staticmethod
+    def calculate_local_capex(
+        discount_rate: np.ndarray,
+        tcap_plus: Variable,
+        indices: Indices,
+        unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
+        money_scale: float,
+        unit_type_map: dict[int, int],
+        aggr_unit_map: dict[int, set[int]],
+        gen_mapping: bidict,
+    ) -> dict[str, pd.DataFrame]:
+        disc_rate = ExpressionHandler.discount_rate(discount_rate)
+        year_idxs = indices.Y
+        aggr_ut_idxs = {
+            aggr_idx: {unit_type_map[ut_idx] for ut_idx in set_of_u_idxs}
+            for aggr_idx, set_of_u_idxs in aggr_unit_map.items()
+        }
+        result = {}
+        for aggr_idx, ut_idxs in aggr_ut_idxs.items():
+            aggr_name = indices.AGGR.mapping.get(aggr_idx)
+            aggr_result = {}
+            for ut_idx in ut_idxs:
+                capex = unit_type_param.capex[ut_idx]
+                lt = unit_type_param.lt[ut_idx]
+                year_results = dict()
+                for year_idx in year_idxs.ord:
+                    unit_capex = 0.0
+                    unit_capex += (
+                        money_scale
+                        * ResultsGroup.local_capex_per_unit_per_year(
+                            capex=capex,
+                            tcap_plus=tcap_plus.solution,
+                            disc_rate=disc_rate,
+                            lt=lt,
+                            s_idx=year_idx,
+                            ut_idx=ut_idx,
+                            aggr_idx=aggr_idx,
+                            y_idxs=year_idxs,
+                        )
+                    )
+                    year_results[indices.Y.mapping[year_idx]] = unit_capex
+                aggr_result[gen_mapping[ut_idx]] = pd.DataFrame.from_dict(
+                    year_results, orient="index"
+                )
+            if aggr_result:
+                df = pd.concat(aggr_result, axis=1)
+                df.columns = df.columns.droplevel(1)
+                result[aggr_name] = df
         return result
 
 
@@ -329,8 +361,10 @@ class GeneratorsResults(ResultsGroup):
     """ capacity decrease (non-exportable) """
     cap_base_minus: dict[str, pd.DataFrame] = field(init=False)
     """ base capacity decrease (non-exportable) """
-    capex: dict[str, pd.DataFrame] = field(init=False)
-    """ capex (exportable) """
+    global_capex: dict[str, pd.DataFrame] = field(init=False)
+    """ capex of global technologies (exportable) """
+    local_capex: dict[str, pd.DataFrame] = field(init=False)
+    """ capex of local (in lbs) technologies (exportable) """
 
     def __post_init__(
         self,
@@ -408,7 +442,7 @@ class GeneratorsResults(ResultsGroup):
             index_map=indices.aggr_tgen_map,
             column_index=indices.Y,
         )
-        self.capex = self.calculate_capex(
+        self.global_capex = self.calculate_global_capex(
             indices=indices,
             unit_index=indices.GEN,
             unit_type_param=tparameters,
@@ -417,8 +451,17 @@ class GeneratorsResults(ResultsGroup):
             aggr_unit_map=indices.aggr_gen_map,
             discount_rate=scenario_parameters.discount_rate,
             cap_plus=variable_group.cap_plus,
+            money_scale=scenario_parameters.money_scale,
+        )
+        self.local_capex = self.calculate_local_capex(
+            indices=indices,
+            unit_type_param=tparameters,
+            unit_type_map=parameters.tgen,
+            aggr_unit_map=indices.aggr_gen_map,
+            discount_rate=scenario_parameters.discount_rate,
             tcap_plus=tvariable_group.tcap_plus,
             money_scale=scenario_parameters.money_scale,
+            gen_mapping=indices.TGEN.mapping,
         )
 
     @staticmethod
@@ -621,9 +664,10 @@ class GeneratorsResults(ResultsGroup):
             dump_energy_per_energy_type=self.dict_of_dicts_of_arrays_to_pandas(
                 self.dump_et
             ),
-            capex=self.dict_of_1d_array_to_pandas(
-                self.capex, column_name=GENERATOR_LABEL
+            global_capex=self.dict_of_1d_array_to_pandas(
+                self.global_capex, column_name=GENERATOR_LABEL
             ),
+            local_capex=self.local_capex,
         )
 
 
@@ -662,8 +706,10 @@ class StoragesResults(ResultsGroup):
     """ capacity decrease (non-exportable) """
     cap_base_minus: dict[str, pd.DataFrame] = field(init=False)
     """ base capacity decrease (non-exportable) """
-    capex: dict[str, pd.DataFrame] = field(init=False)
-    """ capex (exportable) """
+    global_capex: dict[str, pd.DataFrame] = field(init=False)
+    """ capex of global technologies (exportable) """
+    local_capex: dict[str, pd.DataFrame] = field(init=False)
+    """ capex of local (in lbs) technologies (exportable) """
 
     def __post_init__(
         self,
@@ -725,7 +771,7 @@ class StoragesResults(ResultsGroup):
         self.tcap_minus = tvariable_group.tcap_minus.solution.to_dataframe()
         self.cap_base_minus = variable_group.cap_base_minus.solution.to_dataframe()
         self.tcap_base_minus = tvariable_group.tcap_base_minus.solution.to_dataframe()
-        self.capex = self.calculate_capex(
+        self.global_capex = self.calculate_global_capex(
             indices=indices,
             unit_index=indices.STOR,
             unit_type_param=tparameters,
@@ -734,8 +780,17 @@ class StoragesResults(ResultsGroup):
             aggr_unit_map=indices.aggr_stor_map,
             discount_rate=scenario_parameters.discount_rate,
             cap_plus=variable_group.cap_plus,
+            money_scale=scenario_parameters.money_scale,
+        )
+        self.local_capex = self.calculate_local_capex(
+            indices=indices,
+            unit_type_param=tparameters,
+            unit_type_map=parameters.tstor,
+            aggr_unit_map=indices.aggr_stor_map,
+            discount_rate=scenario_parameters.discount_rate,
             tcap_plus=tvariable_group.tcap_plus,
             money_scale=scenario_parameters.money_scale,
+            gen_mapping=indices.TSTOR.mapping,
         )
 
     def to_exportable(self) -> ExportableStorageResults:
@@ -746,9 +801,10 @@ class StoragesResults(ResultsGroup):
             capacity=self.dict_of_1d_array_to_pandas(
                 self.cap, column_name=STORAGE_LABEL
             ),
-            capex=self.dict_of_1d_array_to_pandas(
-                self.capex, column_name=GENERATOR_LABEL
+            global_capex=self.dict_of_1d_array_to_pandas(
+                self.global_capex, column_name=GENERATOR_LABEL
             ),
+            local_capex=self.local_capex,
         )
 
 

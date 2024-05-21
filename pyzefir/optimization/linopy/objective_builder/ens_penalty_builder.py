@@ -13,97 +13,113 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
-import pandas as pd
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
-from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
-    OptimizationParameters,
-)
+
+_logger = logging.getLogger(__name__)
 
 
 class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
-        penalty_cost = self._get_fuel_penalty_cost(self.parameters)
-        if np.isinf(penalty_cost):
-            penalty_cost = 1e16
-        return (self.variables.bus.bus_ens * penalty_cost).sum()
+        if self._ens_penalty_defined():
+            return self.build_ens_penalty_expression()
+        else:
+            return 0.0
 
     @staticmethod
-    def _nan_free(elem: float) -> float:
-        return 0.0 if np.isnan(elem) else elem
+    def _get_max_or_zero(data: dict[str | int, np.ndarray | float]) -> float:
+        result = np.array(list(data.values()))
+        return result.max(initial=0.0)
 
-    def _get_fuel_penalty_cost(self, parameters: OptimizationParameters) -> float:
-        """estimate penalty cost based on fuels. If impossible or the result is not big, use a big number"""
-        ens_penalty = 1e2
-        res_fuel = ens_penalty
-        fuel = parameters.fuel
-        res_em_fee = self._get_res_emission_fee()
-        effs = min(
-            value
-            for el in parameters.gen.eff.values()
-            for value in el.values()
-            if value > 0
-        )
-        if len(fuel.availability.keys()):
-            res_fuel_arr = np.asarray(
-                [
-                    fuel.unit_cost[ke] / fuel.energy_per_unit[ke] / effs
-                    for ke in fuel.availability.keys()
-                ]
-            )
-            res_fuel = (
-                max(res_fuel_arr.max(axis=0) * res_fuel_arr.shape[0]) * ens_penalty
-            ) + res_em_fee
-        res_fuel = (
-            self._nan_free(res_fuel) * self.parameters.scenario_parameters.hourly_scale
-        )
-        res_capex = self._nan_free(
-            max([el.max() for el in [*parameters.tgen.capex.values()]])
-        )
-        res_opex = self._nan_free(
-            max([el.max() for el in [*parameters.tgen.opex.values()]])
-        )
-        res_transmission_fee = (
-            self._nan_free(
-                max([fee_array.max() for fee_array in self.parameters.tf.fee.values()])
-            )
-            * self.parameters.scenario_parameters.hourly_scale
-            if len(self.parameters.tf.fee.values()) != 0
-            else 0.0
-        )
-        return max(
+    @property
+    def _h_scale(self) -> float:
+        """alias for hourly scale"""
+        return self.parameters.scenario_parameters.hourly_scale
+
+    def _ens_penalty_defined(self) -> bool:
+        """true if the value of ens_penalty_cost is not np.nan (if it was specified by the user)"""
+        return not np.isnan(self.parameters.scenario_parameters.ens_penalty_cost)
+
+    def build_ens_penalty_expression(self) -> LinearExpression | float:
+        _logger.info("Building ens penalty cost objective...")
+        penalty_cost = self._get_ens_penalty()
+        _logger.info("Ens penalty set to {}".format(penalty_cost))
+        _logger.info("Ens penalty cost objective: Done")
+        return (self.variables.bus.bus_ens * penalty_cost).sum()
+
+    def _get_ens_penalty(self) -> float:
+        ens_penalty_multiplier = self.parameters.scenario_parameters.ens_penalty_cost
+        return (
             max(
-                res_fuel * ens_penalty,
-                res_capex,
-                res_opex * ens_penalty,
-                res_transmission_fee * ens_penalty,
-            ),
-            ens_penalty,
+                self._get_max_var_cost(),
+                self._get_max_dsr_cost(),
+                self._get_max_opex_cost(),
+                self._get_max_capex_cost(),
+                self._get_max_transmission_fee_cost(),
+            )
+            * ens_penalty_multiplier
         )
 
-    def _get_max_em_fee(self) -> dict[str, float]:
-        df_emission_type = pd.DataFrame.from_dict(
-            self.parameters.emf.emission_type, orient="index", columns=["emission_type"]
-        )
-        df_price = pd.DataFrame.from_dict(self.parameters.emf.price, orient="index")
-        concated_df = pd.concat([df_emission_type, df_price], axis=1)
-        return {
-            emission: concated_df[concated_df["emission_type"] == emission]
-            .max()
-            .iloc[1:]
-            .sum()
-            for emission in concated_df["emission_type"].unique()
-        }
+    def _get_max_var_cost(self) -> float:
+        """get max varying cost (fuel cost + env cost) per one energy unit produced"""
+        result = 0.0
+        for fuel_idx in self.indices.FUEL.mapping:
+            result += self._fuel_max_emission_cost_per_energy_unit(
+                fuel_idx
+            ) + self._fuel_cost_per_energy_unit(fuel_idx)
+        return result
 
-    def _get_res_emission_fee(self) -> float:
-        res_em_fee = {fuel_idx: 0.0 for fuel_idx in self.parameters.fuel.availability}
-        max_em_fee = self._get_max_em_fee()
-        for emission_type, val in max_em_fee.items():
-            for fuel_idx in res_em_fee:
-                res_em_fee[fuel_idx] += (
-                    val * self.parameters.fuel.u_emission[fuel_idx][emission_type]
+    def _fuel_cost_per_energy_unit(self, fuel_idx: int) -> float:
+        """get fuel cost per one unit of energy (energy in fuel)"""
+        fuel_energy_per_unit = self.parameters.fuel.energy_per_unit[fuel_idx]
+        fuel_cost_per_unit = self.parameters.fuel.unit_cost[fuel_idx]
+        return (
+            fuel_cost_per_unit.max(initial=0.0) / fuel_energy_per_unit
+        ) * self._h_scale
+
+    def _fuel_max_emission_cost_per_energy_unit(self, fuel_idx: int) -> float:
+        """max amount of emission fees that needs to be paid from one unit of end energy (energy in fuel)"""
+        result = 0.0
+        energy_per_unit = self.parameters.fuel.energy_per_unit[fuel_idx]
+        for emission_type_idx, emission_per_unit in self.parameters.fuel.u_emission[
+            fuel_idx
+        ].items():
+            max_emission_cost = np.array(
+                [
+                    self.parameters.emf.price[emf_idx].max(initial=0.0)
+                    for emf_idx, em_type_idx in self.parameters.emf.emission_type.items()
+                    if em_type_idx == emission_type_idx
+                ]
+            ).max(initial=0.0)
+            if emission_per_unit > 0:
+                result += (
+                    (energy_per_unit / emission_per_unit)
+                    * max_emission_cost
+                    * self._h_scale
                 )
-        return max(res_em_fee.values())
+
+        return result
+
+    def _get_max_capex_cost(self) -> float:
+        """max capex cost taken from all generators and storage types"""
+        return self._get_max_or_zero(
+            self.parameters.tgen.capex | self.parameters.tstor.capex
+        )
+
+    def _get_max_opex_cost(self) -> float:
+        """max opex cost taken from all generators and storage types"""
+        return self._get_max_or_zero(
+            self.parameters.tgen.opex | self.parameters.tstor.opex
+        )
+
+    def _get_max_dsr_cost(self) -> float:
+        """max dsr cost taken from all generators and storage types (scaled by hourly_scale)"""
+        return self._get_max_or_zero(self.parameters.dsr.penalization) * self._h_scale
+
+    def _get_max_transmission_fee_cost(self) -> float:
+        """max transmission fee value (scaled by hourly_scale)"""
+        return self._get_max_or_zero(self.parameters.tf.fee) * self._h_scale

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from dataclasses import InitVar, dataclass, field
 from typing import TYPE_CHECKING
@@ -28,6 +29,8 @@ from pyzefir.model.network_elements import EnergySource, GeneratorType
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class GeneratorValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -49,6 +52,13 @@ class Generator(EnergySource):
     Bus name to which the Generator is attached. One generator may be attached to multiple buses.
     """
     buses: set[str] = field(init=False)
+    """
+    Collection of all buses attached to the generator.
+    """
+    generator_binding: str | None = None
+    """
+    Identifier of the generator binding.
+    """
 
     def _validate_buses_energy_types(
         self, exception_list: list[NetworkValidatorException], network: Network
@@ -135,6 +145,7 @@ class Generator(EnergySource):
                     f"{sorted(list(diff))} which are not in connected buses energy types"
                 )
             )
+        _logger.debug("Validate buses: OK")
 
     def _validate_generator_type(
         self,
@@ -174,6 +185,7 @@ class Generator(EnergySource):
                     f" energy types: {sorted(network.energy_types)}"
                 )
             )
+        _logger.debug("Validate generator type: OK")
 
     def _validate_emission_fee(
         self, network: Network, exception_list: list[NetworkValidatorException]
@@ -216,6 +228,7 @@ class Generator(EnergySource):
                     )
                 )
                 emission_fee_types.add(emission_type)
+        _logger.debug("Validate emission fee: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -235,6 +248,7 @@ class Generator(EnergySource):
         Raises:
             NetworkValidatorExceptionGroup: If Generator is invalid.
         """
+        _logger.debug("Validating generator object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_base_energy_source(
             network=network, exception_list=exception_list
@@ -253,10 +267,12 @@ class Generator(EnergySource):
             )
         self._validate_emission_fee(network=network, exception_list=exception_list)
         if exception_list:
+            _logger.debug("Got error validating generator: %s", exception_list)
             raise GeneratorValidatorExceptionGroup(
                 f"While adding Generator {self.name} with type {self.energy_source_type} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Generator %s validation: Done", self.name)
 
     def __post_init__(self, bus: str | set[str]) -> None:
         if bus is None:

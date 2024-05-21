@@ -33,6 +33,7 @@ from pyzefir.model.network_elements import (
     EmissionFee,
     Fuel,
     Generator,
+    GeneratorType,
     Line,
     LocalBalancingStack,
     Storage,
@@ -711,3 +712,34 @@ def test_add_energy_loss() -> None:
     )
     assert network.storage_types["TestStorType"].energy_loss == 0.1
     assert len(network.storage_types) == 1
+
+
+def test_add_generation_compensation() -> None:
+    generation_compensation = pd.Series([1.2 * y for y in range(24)])
+    network = Network(
+        energy_types=[HEATING],
+        network_constants=default_network_constants,
+        emission_types=[CO2_EMISSION],
+    )
+    network.add_generator_type(
+        gen_type=GeneratorType(
+            name="TestGenType",
+            energy_types={HEATING},
+            build_time=0,
+            life_time=5,
+            capex=pd.Series([10] * 4),
+            opex=pd.Series([0] * 4),
+            power_utilization=pd.Series([1] * 24),
+            min_capacity=pd.Series([np.nan] * 4),
+            max_capacity=pd.Series([np.nan] * 4),
+            min_capacity_increase=pd.Series([np.nan] * 4),
+            max_capacity_increase=pd.Series([np.nan] * 4),
+            efficiency=pd.DataFrame({"HEATING": [0.85] * 24}),
+            emission_reduction={"CO2": 0.2},
+            generation_compensation=generation_compensation,
+        )
+    )
+    network_generation_compensation = network.generator_types[
+        "TestGenType"
+    ].generation_compensation
+    assert np.all(network_generation_compensation == generation_compensation)

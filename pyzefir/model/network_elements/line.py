@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,8 @@ from pyzefir.model.utils import check_interval
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class LineValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -77,6 +80,7 @@ class Line(NetworkElement):
                     f"Network energy types: {sorted([e for e in network.energy_types])}"
                 )
             )
+        _logger.debug("Validate energy type: OK")
 
     def _validate_line_connections(
         self,
@@ -136,6 +140,7 @@ class Line(NetworkElement):
                     f"{network.buses[self.to].energy_type}"
                 )
             )
+        _logger.debug("Validate line connections: OK")
 
     def _validate_transmission_loss(
         self,
@@ -158,6 +163,7 @@ class Line(NetworkElement):
                     f"the interval: 0 <= {self.transmission_loss} <= 1"
                 )
             )
+        _logger.debug("Validate transmission loss: OK")
 
     def _validate_max_capacity(
         self,
@@ -169,6 +175,7 @@ class Line(NetworkElement):
                     f"Max capacity must be of type float, but is {type(self.max_capacity)} instead"
                 )
             )
+        _logger.debug("Validate max capacity: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -187,6 +194,8 @@ class Line(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If Line is invalid.
         """
+        _logger.debug("Validating line object: %s...", self.name)
+
         exception_list: list[NetworkValidatorException] = []
 
         self._validate_name_type(exception_list)
@@ -207,7 +216,9 @@ class Line(NetworkElement):
             )
 
         if exception_list:
+            _logger.exception("Got error validating line: %s", exception_list)
             raise LineValidatorExceptionGroup(
                 f"While adding Line {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Line %s validation: Done", self.name)

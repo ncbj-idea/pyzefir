@@ -13,15 +13,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class OpexObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression:
+        _logger.info("Building opex objective...")
         return self.generator_opex() + self.storage_opex()
 
     def generator_opex(self) -> LinearExpression:
@@ -34,6 +38,7 @@ class OpexObjectiveBuilder(ObjectiveBuilder):
             coords=[self.indices.GEN.ii, self.indices.Y.ii],
             name="opex",
         )
+        _logger.info("Building generator opex expression: Done")
         return (opex * self.variables.gen.cap).sum()
 
     def storage_opex(self) -> LinearExpression | float:
@@ -47,5 +52,7 @@ class OpexObjectiveBuilder(ObjectiveBuilder):
                 coords=[self.indices.STOR.ii, self.indices.Y.ii],
                 name="opex",
             )
+            _logger.info("Building generator opex expression: Done")
             return (opex * self.variables.stor.cap).sum()
+        _logger.warning("Size of storage not set, returning default expression.")
         return 0

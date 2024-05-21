@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -31,6 +32,8 @@ from pyzefir.model.utils import validate_series
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(name=__name__)
 
 
 class EmissionFeeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -60,6 +63,7 @@ class EmissionFee(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If any of the validations fails.
         """
+        _logger.debug("Validating emission fee element object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         if self.emission_type not in network.emission_types:
@@ -80,7 +84,9 @@ class EmissionFee(NetworkElement):
         )
 
         if exception_list:
+            _logger.debug("Got error validating emission fee: %s", exception_list)
             raise EmissionFeeValidatorExceptionGroup(
                 f"While adding EmissionFee {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Emission fee element %s validation: Done", self.name)

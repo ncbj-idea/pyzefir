@@ -41,6 +41,8 @@ class CsvExporter(Exporter):
         Returns:
             None
         """
+        if Exporter.is_results_group_empty(result):
+            return
         for field_name, field_value in result.__dict__.items():
             output_path = root_path / field_name
             output_path.mkdir(parents=True, exist_ok=True)
@@ -88,6 +90,8 @@ class XlsxExporter(Exporter):
         Returns:
             None
         """
+        if Exporter.is_results_group_empty(result):
+            return
         root_path.mkdir(parents=True, exist_ok=True)
         for field_name, field_value in result.__dict__.items():
             with pd.ExcelWriter(

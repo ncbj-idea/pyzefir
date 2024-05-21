@@ -29,7 +29,7 @@ from matplotlib.patches import Wedge
 from pyzefir.graph.constants import NodeType, default_color, node_config
 from pyzefir.model.network import Network
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class NetworkGraph(nx.DiGraph):
@@ -40,6 +40,7 @@ class NetworkGraph(nx.DiGraph):
     def add_buses_to_graph(self) -> None:
         for bus in self._network.buses.values():
             self.add_node(bus.name, energy_type=bus.energy_type, node_type=NodeType.BUS)
+        _logger.debug("Add buses to graph: Done")
 
     def add_generators_to_graph(self) -> None:
         for gen in self._network.generators.values():
@@ -57,6 +58,7 @@ class NetworkGraph(nx.DiGraph):
                 self.add_edge(
                     gen.name, bus, energy_type=self._network.buses[bus].energy_type
                 )
+        _logger.debug("Add generators to graph: Done")
 
     def add_storages_to_graph(self) -> None:
         for storage in self._network.storages.values():
@@ -70,12 +72,14 @@ class NetworkGraph(nx.DiGraph):
             self.add_edge(
                 storage.name, storage.bus, energy_type=storage_bus_energy_type
             )
+        _logger.debug("Add storages to graph: Done")
 
     def add_lines_to_graph(self) -> None:
         for line in self._network.lines.values():
             self.add_edge(
                 line.fr, line.to, line_id=line.name, energy_type=line.energy_type
             )
+        _logger.debug("Add lines to graph: Done")
 
     def add_local_balancing_stacks_to_graph(self) -> None:
         for lb_stack in self._network.local_balancing_stacks.values():
@@ -88,6 +92,7 @@ class NetworkGraph(nx.DiGraph):
                 self.add_edge(
                     bus, lb_stack.name, energy_type=self._network.buses[bus].energy_type
                 )
+        _logger.debug("Add local balancing stacks to graph: Done")
 
     def add_aggregated_consumer(self) -> None:
         for aggregate in self._network.aggregated_consumers.values():
@@ -96,6 +101,7 @@ class NetworkGraph(nx.DiGraph):
             )
             for stack, fraction in aggregate.stack_base_fraction.items():
                 self.add_edge(stack, aggregate.name, line_id=fraction, energy_type=None)
+        _logger.debug("Add aggregated consumer to graph: Done")
 
     def build_graph(self) -> NetworkGraph:
         self.add_buses_to_graph()
@@ -106,7 +112,8 @@ class NetworkGraph(nx.DiGraph):
         self.add_aggregated_consumer()
 
         if not nx.is_weakly_connected(self):
-            logger.warning("Not all elements of the graph are connected!")
+            _logger.warning("Not all elements of the graph are connected!")
+        _logger.info("Graph building is complete.")
 
         return self
 
@@ -129,8 +136,13 @@ class NetworkGraphArtist:
 
     def get_color_for_energy_type(self, color_type: str) -> str:
         if color_type not in self._energy_types:
+            _logger.warning(
+                "%s not recognized. Setting color to %s.", color_type, default_color
+            )
             return default_color
-        return self._color_map.colors[self._energy_types.index(color_type)]
+        color = self._color_map.colors[self._energy_types.index(color_type)]
+        _logger.debug("Setting color to %s.", color)
+        return color
 
     def prepare_graph_legend(self) -> list[Artist]:
         # add legend for each energy type in the network
@@ -173,7 +185,7 @@ class NetworkGraphArtist:
                     markersize=15,
                 )
             )
-
+        _logger.debug("Preparing graph legend: Done")
         return legend_elements
 
     def draw_graph_nodes(self) -> None:
@@ -215,6 +227,7 @@ class NetworkGraphArtist:
             labels={node: node for node in self._network_graph.nodes},
             ax=self._ax,
         )
+        _logger.debug("Draw graph nodes: Done")
 
     def draw_graph_edges(self) -> None:
         energy_edges = nx.get_edge_attributes(self._network_graph, "energy_type")
@@ -242,6 +255,7 @@ class NetworkGraphArtist:
             },
             ax=self._ax,
         )
+        _logger.debug("Draw graph edges: Done")
 
     def draw_multicolored_nodes(
         self, node_positions: list[tuple[int, int]], node_colors: list[list[str]]
@@ -263,6 +277,7 @@ class NetworkGraphArtist:
                     edgecolor="black",
                 )
                 self._ax.add_patch(wedge)
+        _logger.debug("Draw multicolored nodes: Done")
 
     def draw_generator_nodes(self) -> None:
         """
@@ -279,12 +294,15 @@ class NetworkGraphArtist:
         ]
         node_positions = [self._pos[gen] for gen in generator_nodes]
         self.draw_multicolored_nodes(node_positions, node_colors)
+        _logger.debug("Draw generator nodes: Done")
 
     def draw_graph(self, show: bool = False, filename: str | None = None) -> None:
         self.draw_graph_nodes()
         self.draw_graph_edges()
         self.draw_generator_nodes()
         if filename:
+            _logger.info("Saving graph to %s", filename)
             plt.savefig(filename)
         if show:
+            _logger.info("Graph complete!")
             plt.show()

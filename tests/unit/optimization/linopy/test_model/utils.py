@@ -45,7 +45,7 @@ def create_default_opf_config(
         hour_sample=hour_sample,
         discount_rate=discount_rate,
         use_hourly_scale=use_hourly_scale,
-        ens=use_ens,
+        ens=1.0 if use_ens else 0.0,
     )
 
 

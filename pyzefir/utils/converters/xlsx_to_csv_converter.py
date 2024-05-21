@@ -32,6 +32,7 @@ from pyzefir.utils.path_manager import (
     DataCategories,
     XlsxPathManager,
     get_datasets_from_categories,
+    get_optional_datasets_from_categories,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,8 @@ class ExcelToCsvConverter(AbstractConverter):
                 else self.path_manager.get_input_file_path(category)
             )
             if not os.path.isfile(str(xlsx_path)):
+                if category in DataCategories.get_optional_categories():
+                    continue
                 logger.error(f"Cannot find file in dir {xlsx_path}")
                 raise ExcelToCsvConverterException(
                     f"File cannot be found in given path: {xlsx_path}"
@@ -138,7 +141,10 @@ class ExcelToCsvConverter(AbstractConverter):
     def _validate_xlsx_structure(xlsx_sheets_names: list[str], category: str) -> None:
         valid_sheets_names: list[str] = get_datasets_from_categories(category)
         missing_spreadsheets = set(valid_sheets_names).difference(xlsx_sheets_names)
-        if missing_spreadsheets:
+        optional_spreadsheets = set(get_optional_datasets_from_categories(category))
+        if missing_spreadsheets and not missing_spreadsheets.issubset(
+            optional_spreadsheets
+        ):
             logger.error("Required spreadsheets not in xlsx file")
             raise ExcelToCsvConverterException(
                 f"Not all required spreadsheets {missing_spreadsheets} found in xlsx file spreadsheets"

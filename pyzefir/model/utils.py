@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 from dataclasses import dataclass
 from types import UnionType
 
@@ -21,6 +21,8 @@ import numpy as np
 import pandas as pd
 
 from pyzefir.model.exceptions import NetworkValidatorException
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -33,7 +35,7 @@ class NetworkConstants:
     min_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
     max_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
     binary_fraction: bool = False
-    numeric_tolerance: float = 1e-6
+    ens_penalty_cost: float = 100
 
 
 def _check_if_series_has_numeric_values(series: pd.Series) -> bool:
@@ -160,7 +162,8 @@ def validate_dict_type(
             )
         )
         is_validation_ok = False
-
+    if not is_validation_ok:
+        _logger.exception("There is a problem validating dict type: %s", exception_list)
     return is_validation_ok
 
 

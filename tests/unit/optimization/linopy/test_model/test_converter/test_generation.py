@@ -49,9 +49,17 @@ from tests.unit.optimization.linopy.test_model.utils import (
                     "conversion_rate": {
                         EE: pd.Series(np.ones(N_HOURS)),
                     },
-                    "efficiency": {HEAT: 1.0, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([1.0] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                 },
-                "pp_coal": {"efficiency": {HEAT: 0.0, EE: 1.0}},
+                "pp_coal": {
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
+                },
             },
             {
                 "multi_family_profile": {
@@ -85,9 +93,17 @@ from tests.unit.optimization.linopy.test_model.utils import (
                     "conversion_rate": {
                         EE: pd.Series([10, 10, 10, 5, 3.3333] + [0] * (N_HOURS - 5)),
                     },
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                 },
-                "pp_coal": {"efficiency": {HEAT: 0.0, EE: 0.8}},
+                "pp_coal": {
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.8] * N_HOURS),
+                    },
+                },
             },
             {
                 "multi_family_profile": {
@@ -123,9 +139,17 @@ from tests.unit.optimization.linopy.test_model.utils import (
                     "conversion_rate": {
                         EE: pd.Series(np.ones(N_HOURS) * 100000000),
                     },
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                 },
-                "pp_coal": {"efficiency": {HEAT: 0.0, EE: 0.8}},
+                "pp_coal": {
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.8] * N_HOURS),
+                    },
+                },
             },
             {
                 "multi_family_profile": {

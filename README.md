@@ -41,6 +41,14 @@ Install virtual environment and all dependencies
 ```bash
 make install
 ```
+If you are developing pyZefir it is recommended to use editable mode.
+```bash
+make install EDITABLE=yes
+```
+which  allows you to install a package in such a way that any changes made to
+the source code are immediately reflected in the installed package without the
+need to reinstall it.
+
 Run linters check (black, pylama)
 ```bash
 make lint
@@ -104,13 +112,9 @@ structure-creator -i pyzefir\resources\structure_creator_resources -o pyzefir\re
 ```markdown
 .
 └── structure_creator_resources/
-    ├── cap_range/
-    │   ├── cap_base.xlsx
-    │   ├── cap_max.xlsx
-    │   └── cap_min.xlsx
     ├── lbs/
-    │   ├── boiler_coal_new_lkt.json
-    │   ├── boiler_gas_lkt.json
+    │   ├── boiler_coal_new_lkt.xlsx
+    │   ├── boiler_gas_lkt.xlsx
     │   └── ...
     ├── scenarios/
     │   └── base_scenario/
@@ -120,18 +124,17 @@ structure-creator -i pyzefir\resources\structure_creator_resources -o pyzefir\re
     │       │   └── ...
     │       ├── cost_parameters.xlsx
     │       ├── fuel_parameters.xlsx
+    │       ├── generation_fraction.xlsx
     │       ├── n_consumers.xlsx
     │       ├── relative_emission_limits.xlsx
     │       ├── technology_cap_limits.xlsx
     │       ├── technology_type_cap_limits.xlsx
     │       └── yearly_demand.xlsx
-    ├── subsystems/
-    │   ├── heating_subsystem.json
-    │   └── kse_subsystem.json
-    ├── aggr_types.json
+    ├── aggregates.xlsx
     ├── configuration.xlsx
-    ├── emission_fees.json
-    └── global_techs.json
+    ├── emissions.xlsx
+    ├── subsystems.xlsx
+    └── transmission_fees.xlsx
 ```
 
 ## Simulation run
@@ -156,3 +159,92 @@ Options:
 pyzefir -c pyzefir/config_basic.ini
 ```
 
+### How pyzefir resources directory must look like:
+```markdown
+
+XLSX input
+.
+└── /pyzefir resources/
+    ├── /scenarios/
+    │   ├── scenario_1.xlsx
+    │   ├── scenario_2.xlsx
+    │   └── ...
+    ├── capacity_factors.xlsx
+    ├── conversion_rate.xlsx
+    ├── demand_chunks.xlsx
+    ├── fuels.xlsx
+    ├── generator_types.xlsx
+    ├── initial_state.xlsx
+    ├── storage_types.xlsx
+    └── structure.xlsx
+
+CSV input
+
+.
+└── /pyzefir resources/
+    ├── /capacity_factors/
+    │   └── Profiles.csv
+    ├── /conversion_rate/
+    │   ├── HEAT_PUMP.csv
+    │   ├── BOILER_COAL.csv
+    │   └── ...
+    ├── /demand_chunks/
+    │   ├── Demand_Chunks.csv
+    │   ├── chunk_period_1.csv
+    │   ├── chunk_period_2.csv
+    │   └── ...
+    ├── /demand_types/
+    │   ├── family.csv
+    │   ├── multifamily.csv
+    │   └── ...
+    ├── /fuels/
+    │   ├── Emission_Per_Unit.csv
+    │   └── Energy_Per_Unit.csv
+    ├── /generator_types/
+    │   ├── Efficiency.csv
+    │   ├── Emission_Reduction.csv
+    │   ├── Generator_Type_Energy_Carrier.csv
+    │   ├── Generator_Type_Energy_Type.csv
+    │   ├── Generator_Types.csv
+    │   └── Power_Utilization.csv
+    ├── /initial_state/
+    │   ├── Technology.csv
+    │   └── TechnologyStack.csv
+    ├── /storage_types/
+    │   └── Parameters.csv
+    ├── /structure/
+    │   ├── Aggregates.csv
+    │   ├── Buses.csv
+    │   ├── DSR.csv
+    │   ├── Emission_Fees_Emission_Types.csv
+    │   ├── Emission_Types.csv
+    │   ├── Energy_Types.csv
+    │   ├── Generator_Binding.csv
+    │   ├── Generator_Emission_Fees.csv
+    │   ├── Generators.csv
+    │   ├── Lines.csv
+    │   ├── Power_Reserve.csv
+    │   ├── Storages.csv
+    │   ├── Technology_Bus.csv
+    │   ├── TechnologyStack_Aggregate.csv
+    │   ├── TechnologyStack_Buses_out.csv
+    │   ├── TechnologyStack_Buses.csv
+    │   └── Transmission_Fees.csv
+    └── /scenario/
+        ├── /scenario_name/
+        │   ├── Constants.csv
+        │   ├── Cost_Parameters.csv
+        │   ├── Curtailment_Cost.csv
+        │   ├── Element_Energy_Evolution_Limits.csv
+        │   ├── Emission_Fees.csv
+        │   ├── Energy_Source_Evolution_Limits.csv
+        │   ├── Fractions.csv
+        │   ├── Fuel_Availability.csv
+        │   ├── Fuel_Prices.csv
+        │   ├── Generation_Fraction.csv
+        │   ├── N_Consumers.csv
+        │   ├── Relative_Emission_Limits.csv
+        │   └── Yearly_Demand.csv
+        └── /another_scenario_name/
+            └── ....
+```

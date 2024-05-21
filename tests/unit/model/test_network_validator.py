@@ -30,6 +30,7 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_validator import (
     BaseCapacityValidator,
     BaseTotalEmissionValidation,
+    DsrBusesOutValidation,
     NetworkElementsValidation,
     NetworkGenerationFraction,
     NetworkValidator,
@@ -324,7 +325,7 @@ def test_unit_not_connected_to_single_stack(network: Network) -> None:
             [
                 NetworkValidatorException(
                     "In energy source BOILER_COAL_LKT2, if base capacity has been defined, "
-                    "the compound inequality must be true with numerical tolerance: 1.00E-06: base_fraction "
+                    "the compound inequality must be true with numerical tolerance: base_fraction "
                     "* n_consumers * min_device_nom_power <= base_capacity <= base_fraction * n_consumers "
                     "* max_device_nom_power, but it is "
                     "0.7 * 50000 * 10.0 (350000.0) <= 0 <= 0.7 * 50000 * 30.0 (1050000.0) instead"
@@ -656,3 +657,33 @@ def test_power_reserves_type(
         network.constants.power_reserves, actual_exception_list
     )
     assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@pytest.mark.parametrize(
+    "bus, exception_list",
+    (
+        pytest.param(
+            "LKT1_H2",
+            [],
+            id="happy path",
+        ),
+        pytest.param(
+            "KSE",
+            [
+                NetworkValidatorException(
+                    "DSR 'test_dsr' could be added to 'out' buses only, "
+                    "but bus 'KSE' is not 'out' bus."
+                )
+            ],
+            id="Specified dsr for bus that is not 'out'",
+        ),
+    ),
+)
+def test_dsr_buses_out_validation(
+    bus: str,
+    exception_list: list[NetworkValidatorException],
+    network: Network,
+) -> None:
+    network.buses[bus].dsr_type = "test_dsr"
+    actual_exception_list: list[NetworkValidatorException] = []
+    DsrBusesOutValidation.validate(network, actual_exception_list)

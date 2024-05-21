@@ -40,7 +40,11 @@ from tests.unit.optimization.linopy.test_model.utils import (
     [
         pytest.param(
             {"hour_sample": np.arange(5), "year_sample": np.arange(2)},
-            {"chp_coal": {"efficiency": {HEAT: 0.5, EE: 0.5}}},
+            {
+                "chp_coal": {
+                    "efficiency": {HEAT: pd.Series([0.5] * 5), EE: pd.Series([0.5] * 5)}
+                }
+            },
             {
                 "multi_family_profile": {
                     "normalized_profile": {
@@ -68,7 +72,11 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         pytest.param(
             {"hour_sample": np.arange(5), "year_sample": np.arange(2)},
-            {"chp_coal": {"efficiency": {HEAT: 0.2, EE: 0.7}}},
+            {
+                "chp_coal": {
+                    "efficiency": {HEAT: pd.Series([0.2] * 5), EE: pd.Series([0.7] * 5)}
+                }
+            },
             {
                 "multi_family_profile": {
                     "normalized_profile": {
@@ -96,7 +104,11 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         pytest.param(
             {"hour_sample": np.arange(5), "year_sample": np.arange(2)},
-            {"chp_coal": {"efficiency": {HEAT: 0.5, EE: 0.5}}},
+            {
+                "chp_coal": {
+                    "efficiency": {HEAT: pd.Series([0.5] * 5), EE: pd.Series([0.5] * 5)}
+                }
+            },
             {
                 "multi_family_profile": {
                     "normalized_profile": {
@@ -124,7 +136,11 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         pytest.param(
             {"hour_sample": np.arange(5), "year_sample": np.arange(2)},
-            {"chp_coal": {"efficiency": {HEAT: 0.2, EE: 0.7}}},
+            {
+                "chp_coal": {
+                    "efficiency": {HEAT: pd.Series([0.2] * 5), EE: pd.Series([0.7] * 5)}
+                }
+            },
             {
                 "multi_family_profile": {
                     "normalized_profile": {
@@ -152,7 +168,11 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         pytest.param(
             {"hour_sample": np.arange(5), "year_sample": np.arange(2)},
-            {"chp_coal": {"efficiency": {HEAT: 0.3, EE: 0.4}}},
+            {
+                "chp_coal": {
+                    "efficiency": {HEAT: pd.Series([0.3] * 5), EE: pd.Series([0.4] * 5)}
+                }
+            },
             {
                 "multi_family_profile": {
                     "normalized_profile": {

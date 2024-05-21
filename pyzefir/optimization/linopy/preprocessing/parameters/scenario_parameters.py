@@ -31,7 +31,7 @@ class ScenarioParameters(ModelParameters):
         max_generation_fraction: dict[str, dict[tuple[int, int], float]],
         base_total_emission: dict[str, float | int],
         power_reserves: dict[str, dict[str, float]],
-        numeric_tolerance: float,
+        ens_penalty_cost: float,
     ) -> None:
         self.discount_rate: ndarray = opt_config.discount_rate[indices.Y.ii]
         """ discount rate included in capex formula """
@@ -54,7 +54,7 @@ class ScenarioParameters(ModelParameters):
             for energy_type, res in power_reserves.items()
         }
         """power reserves for energy type and a given tag"""
-        self.numeric_tolerance: float = numeric_tolerance
-        """numerical tolerance for relaxing some constraints"""
         self.money_scale: float = opt_config.money_scale
         """money scale parameter"""
+        self.ens_penalty_cost: float = ens_penalty_cost
+        """set cost for ens. Letting to be equal zero means no ens"""

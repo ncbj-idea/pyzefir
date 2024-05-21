@@ -53,7 +53,12 @@ def test_load_scenario_data(
     with patch(
         "pyzefir.structure_creator.data_loader.input_data.pd.read_excel",
         return_value=mock_read_excel,
-    ), patch.object(ScenarioData, "_load_fractions", return_value=mock_load_fractions):
+    ), patch(
+        "pyzefir.structure_creator.data_loader.input_data.ScenarioData.validate_input_files",
+        return_value=None,
+    ), patch.object(
+        ScenarioData, "_load_fractions", return_value=mock_load_fractions
+    ):
         scenario_data = ScenarioData.load_scenario_data(Path("/mocked/path"))
 
         assert isinstance(scenario_data, ScenarioData)
@@ -78,6 +83,9 @@ def test_load_structure_data(
     with patch(
         "pyzefir.structure_creator.data_loader.input_data.pd.read_excel",
         return_value=mock_read_excel,
+    ), patch(
+        "pyzefir.structure_creator.data_loader.input_data.InputStructureData.validate_input_files",
+        return_value=None,
     ), patch.object(
         InputStructureData,
         "_load_lbs_files",

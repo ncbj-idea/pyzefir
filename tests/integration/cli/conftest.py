@@ -26,6 +26,7 @@ from linopy import solvers
 
 root_input_path = Path(__file__).parent.parent.parent / "resources" / "integration_test"
 input_path = root_input_path / "simple-data-poland"
+input_path_no_storages = root_input_path / "simple-data-poland-no-storages"
 
 parameters_path = root_input_path / "parameters"
 
@@ -76,7 +77,86 @@ def config_parser(
             "optimization": {
                 "binary_fraction": False,
                 "money_scale": 100.0,
-                "ens": False,
+                "ens_penalty_cost": 0,
+                "use_hourly_scale": True,
+                "solver": solver,
+            },
+            "debug": {
+                "format_network_exceptions": False,
+            },
+        }
+    )
+    return config
+
+
+@pytest.fixture
+def config_parser_with_xlsx(
+    output_path: Path, csv_dump_path: Path, solver: str
+) -> configparser.ConfigParser:
+    """Simple configuration file for pipeline test run."""
+    config = configparser.ConfigParser()
+    config.read_dict(
+        {
+            "input": {
+                "input_path": str(input_path),
+                "input_format": "xlsx",
+                "scenario": "scenario_1",
+            },
+            "output": {
+                "output_path": str(output_path),
+                "sol_dump_path": str(output_path / "file.sol"),
+                "opt_logs_path": str(output_path / "file.log"),
+                "csv_dump_path": str(csv_dump_path),
+                "xlsx_results": True,
+            },
+            "parameters": {
+                "hour_sample": str(parameters_path / "hour_sample.csv"),
+                "year_sample": str(parameters_path / "year_sample.csv"),
+                "discount_rate": str(parameters_path / "discount_rate_not_creator.csv"),
+            },
+            "optimization": {
+                "binary_fraction": False,
+                "money_scale": 100.0,
+                "ens_penalty_cost": 0,
+                "use_hourly_scale": True,
+                "solver": solver,
+            },
+            "debug": {
+                "format_network_exceptions": False,
+            },
+        }
+    )
+    return config
+
+
+@pytest.fixture
+def config_parser_no_storages(
+    output_path: Path, csv_dump_path: Path, solver: str
+) -> configparser.ConfigParser:
+    """Simple configuration file for pipeline test run."""
+    config = configparser.ConfigParser()
+    config.read_dict(
+        {
+            "input": {
+                "input_path": str(input_path_no_storages),
+                "input_format": "xlsx",
+                "scenario": "scenario_1",
+            },
+            "output": {
+                "output_path": str(output_path),
+                "sol_dump_path": str(output_path / "file.sol"),
+                "opt_logs_path": str(output_path / "file.log"),
+                "csv_dump_path": str(csv_dump_path),
+            },
+            "parameters": {
+                "hour_sample": str(parameters_path / "hour_sample.csv"),
+                "year_sample": str(parameters_path / "year_sample.csv"),
+                "discount_rate": str(parameters_path / "discount_rate_not_creator.csv"),
+            },
+            "optimization": {
+                "binary_fraction": False,
+                "money_scale": 1000.0,
+                "ens_penalty_cost": 100,
                 "use_hourly_scale": True,
                 "solver": solver,
             },
@@ -119,7 +199,7 @@ def config_parser_with_creator(
             "optimization": {
                 "binary_fraction": False,
                 "money_scale": 1000.0,
-                "ens": True,
+                "ens_penalty_cost": 100,
                 "use_hourly_scale": True,
             },
             "create": {

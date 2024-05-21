@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
 
@@ -20,10 +21,14 @@ from pyzefir.optimization.linopy.constraints_builder.builder import (
     PartialConstraintsBuilder,
 )
 
+_logger = logging.getLogger(__name__)
+
 
 class RampConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Ramp constraints builder is working...")
         self.ramp_up_constraint()
+        _logger.info("Ramp constraints builder is finished!")
 
     def ramp_up_constraint(self) -> None:
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
@@ -43,3 +48,4 @@ class RampConstraintsBuilder(PartialConstraintsBuilder):
                     gen_ramp >= -cap.isel(gen=gen_idx) * ramp,
                     name=f"{gen_name}_RAMP_MINUS_CONSTRAINT",
                 )
+        _logger.debug("Build ramp up constraint: Done")

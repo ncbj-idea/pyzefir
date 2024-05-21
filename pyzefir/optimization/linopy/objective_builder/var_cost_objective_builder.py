@@ -13,20 +13,24 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class VarCostObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
+        _logger.info("Building variable cost objective...")
         expr = 0.0
         for gen_idx in self.indices.GEN.ord:
             if self.parameters.gen.fuel[gen_idx] is not None:
                 expr += self.generator_var_cost(gen_idx)
-
+        _logger.info("Variable cost objective: Done")
         return expr
 
     def generator_var_cost(self, gen_idx: int) -> LinearExpression | float:

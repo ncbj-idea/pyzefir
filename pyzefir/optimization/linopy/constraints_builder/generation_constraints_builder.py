@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 
@@ -21,12 +22,16 @@ from pyzefir.optimization.linopy.constraints_builder.builder import (
 )
 from pyzefir.utils.functions import demand_chunk_unit_indices
 
+_logger = logging.getLogger(__name__)
+
 
 class GenerationConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Generation constraints builder is working...")
         self.generation_vs_capacity_constraints()
         self.generation_and_dump_energy()
         self.total_dump_energy()
+        _logger.info("Generation constraints builder is finished!")
 
     def generation_vs_capacity_constraints(self) -> None:
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
@@ -54,6 +59,7 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                     generation_brutto <= capacity * power_utilization,
                     name=f"{gen_name}_DISPATCHABLE_GEN_CAP_CONSTRAINT",
                 )
+        _logger.debug("Build generation vs capacity constraints: Done")
 
     def generation_and_dump_energy(self) -> None:
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
@@ -66,7 +72,11 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                 )
                 if energy_type_name in self.parameters.gen.ett[gen_idx]:
                     generation_brutto = self.variables.gen.gen.isel(gen=gen_idx)
-                    efficiency = self.parameters.gen.eff[gen_idx][energy_type_name]
+                    efficiency = xr.DataArray(
+                        self.parameters.gen.eff[gen_idx][energy_type_name],
+                        dims=["hour"],
+                        coords={"hour": self.indices.H.ii},
+                    )
                     demch_params = self.parameters.demand_chunks_parameters
 
                     # TODO: check if this is correct (dem_idxs always empty)
@@ -85,7 +95,6 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
 
                     if dch.size == 0:
                         dch = 0
-
                     self.model.add_constraints(
                         generation_brutto * efficiency
                         == energy_type_generation + energy_type_dump_energy + dch,
@@ -96,20 +105,23 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                         energy_type_dump_energy + energy_type_generation == 0,
                         name=f"{gen_name}_{energy_type_idx}_GENERATION_DUMP_CONSTRAINT",
                     )
+        _logger.debug("Build generation and dump energy constraints: Done")
 
     def total_dump_energy(self) -> None:
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
             de_et_sum = 0.0
             for et_name in self.parameters.gen.ett[gen_idx]:
-                de_et_sum += (
-                    self.variables.gen.dump_et.isel(
-                        gen=gen_idx,
-                        et=self.indices.ET.inverse[et_name],
-                    )
-                    / self.parameters.gen.eff[gen_idx][et_name]
+                de_et_sum += self.variables.gen.dump_et.isel(
+                    gen=gen_idx,
+                    et=self.indices.ET.inverse[et_name],
+                ) / xr.DataArray(
+                    self.parameters.gen.eff[gen_idx][et_name],
+                    dims=["hour"],
+                    coords={"hour": self.indices.H.ii},
                 )
 
             self.model.add_constraints(
                 de_et_sum == self.variables.gen.dump.isel(gen=gen_idx),
                 name=f"{gen_name}_TOTAL_DUMP_ENERGY",
             )
+        _logger.debug("Build total dump energy constraints: Done")

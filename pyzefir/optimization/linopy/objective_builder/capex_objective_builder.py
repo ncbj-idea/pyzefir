@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
 from linopy import LinearExpression
@@ -28,9 +29,12 @@ from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameter
 )
 from pyzefir.utils.functions import get_dict_vals
 
+_logger = logging.getLogger(__name__)
+
 
 class CapexObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression:
+        _logger.info("Building capex objective...")
         return self.global_capex() + self.local_capex()
 
     def local_capex(self) -> LinearExpression:
@@ -44,6 +48,7 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
             unit_type_param=self.parameters.tstor,
             aggr_map=self.indices.aggr_tstor_map,
         )
+        _logger.info("Building local capex expression: Done")
         return generator_capex + storage_capex
 
     def global_capex(self) -> LinearExpression:
@@ -63,6 +68,7 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
                 get_dict_vals(self.indices.aggr_stor_map)
             ),
         )
+        _logger.info("Building global capex expression: Done")
         return generator_capex + storage_capex
 
     def _global_capex(
@@ -142,10 +148,10 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         res = 0.0
         for y_idx in y_idxs.ord:
             res += (
-                am_indicator[s_idx, y_idx]
-                * capex[s_idx]
-                * cap_plus.sel(index=(u_idx, s_idx))
-                * disc_rate[y_idx]
+                am_indicator[y_idx, s_idx]
+                * capex[y_idx]
+                * cap_plus.sel(index=(u_idx, y_idx))
+                * disc_rate[s_idx]
                 / lt
             )
         return res
@@ -226,10 +232,10 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         res = 0.0
         for y_idx in y_idxs.ord:
             res += (
-                am_indicator[s_idx, y_idx]
-                * tcap_plus.sel(index=(aggr_idx, ut_idx, s_idx))
-                * capex[s_idx]
-                * disc_rate[y_idx]
+                am_indicator[y_idx, s_idx]
+                * tcap_plus.sel(index=(aggr_idx, ut_idx, y_idx))
+                * capex[y_idx]
+                * disc_rate[s_idx]
                 / lt
             )
         return res

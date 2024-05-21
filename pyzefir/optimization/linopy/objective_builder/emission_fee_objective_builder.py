@@ -13,15 +13,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 from linopy import LinearExpression
 
 from pyzefir.optimization.linopy.expression_handler import ExpressionHandler
 from pyzefir.optimization.linopy.objective_builder import ObjectiveBuilder
 
+_logger = logging.getLogger(__name__)
+
 
 class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
     def build_expression(self) -> LinearExpression | float:
+        _logger.info("Building emission fee objective...")
         result = 0.0
         if not (
             not self.parameters.gen.fuel
@@ -34,7 +38,7 @@ class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
                     result += self.yearly_generator_emission_cost(
                         year_idx=year_idx, gen_idx=gen_idx, eh=eh
                     )
-
+        _logger.info("Emission fee objective: Done")
         return result
 
     def yearly_generator_emission_cost(

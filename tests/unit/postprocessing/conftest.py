@@ -65,7 +65,10 @@ def generators_results() -> ExportableGeneratorsResults:
                 {"sample_1": [21, 42, 63, 84], "sample_2": [1.05, 0.21, 0.063, 0.0084]}
             ),
         },
-        capex=pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]}),
+        global_capex=pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]}),
+        local_capex={
+            "aggr_1": pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]})
+        },
     )
 
 
@@ -102,7 +105,10 @@ def storages_results() -> ExportableStorageResults:
         capacity=pd.DataFrame(
             {"sample_1": [15, 30, 45, 60], "sample_2": [0.75, 0.15, 0.045, 0.006]}
         ),
-        capex=pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]}),
+        global_capex=pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]}),
+        local_capex={
+            "aggr_1": pd.DataFrame({"sample_1": [0, 1, 2, 3], "sample_2": [0, 1, 2, 3]})
+        },
     )
 
 

@@ -114,8 +114,8 @@ def test_create_generator_no_optional_params(
             {
                 "unit_min_capacity": pd.Series([np.nan] * 4),
                 "unit_max_capacity": pd.Series([np.nan] * 4),
-                "unit_min_capacity_increase": pd.Series([np.nan] * 4),
-                "unit_max_capacity_increase": pd.Series([3, 4, 5, 2]),
+                "unit_min_capacity_increase": pd.Series([3, 4, 5, 2]),
+                "unit_max_capacity_increase": pd.Series([np.nan] * 4),
                 "min_device_nom_power": 1.0,
                 "max_device_nom_power": 10.0,
             },
@@ -126,8 +126,8 @@ def test_create_generator_no_optional_params(
             {
                 "unit_min_capacity": pd.Series([1, 1, 1, 1]),
                 "unit_max_capacity": pd.Series([1, 1, 1, 1]),
-                "unit_min_capacity_increase": pd.Series([2, 2, 2, 2]),
-                "unit_max_capacity_increase": pd.Series([np.nan] * 4),
+                "unit_min_capacity_increase": pd.Series([np.nan] * 4),
+                "unit_max_capacity_increase": pd.Series([2, 2, 2, 2]),
                 "min_device_nom_power": 5,
                 "max_device_nom_power": 15,
             },

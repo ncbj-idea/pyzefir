@@ -31,7 +31,7 @@ class DemandProfileParser(AbstractElementParser):
         demand_profiles: list[DemandProfile] = list()
         for name, demand_df in self.demand_dict.items():
             demand_profile = DemandProfile(
-                name=name,
+                name=str(name),
                 normalized_profile=demand_df.set_index("hour_idx").to_dict("series"),
             )
             demand_profiles.append(demand_profile)

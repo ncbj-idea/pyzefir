@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 from collections.abc import MutableMapping
 from typing import Generic, Iterator, TypeVar
 
@@ -38,6 +38,8 @@ from pyzefir.model.network_elements import (
     TransmissionFee,
 )
 from pyzefir.model.utils import NetworkConstants
+
+_logger = logging.getLogger(__name__)
 
 TNetworkDictElement = TypeVar(
     "TNetworkDictElement", bound=NetworkElement | EnergySourceType | DemandProfile
@@ -75,9 +77,12 @@ class NetworkElementsDict(MutableMapping, Generic[TNetworkDictElement]):
             __v (TNetworkDictElement): The value of the network element.
         """
         if __k in self.elements_dict:
-            raise NetworkValidatorException(
-                f"Network element {type(self.elements_dict[__k]).__name__} with name {__k} has been already added"
+            exception_str = (
+                f"Network element {type(self.elements_dict[__k]).__name__} "
+                f"with name {__k} has been already added"
             )
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         self.elements_dict.__setitem__(__k, __v)
 
     def __getitem__(self, __k: str) -> TNetworkDictElement:
@@ -214,11 +219,12 @@ class Network:
             gen_type (GeneratorType): The GeneratorType to add.
         """
         if not isinstance(gen_type, GeneratorType):
-            raise NetworkValidatorException(
-                f"Incorrect type. Should be GeneratorType, but it is {type(gen_type)} instead"
-            )
+            exception_str = f"Incorrect type. Should be GeneratorType, but it is {type(gen_type)} instead"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         gen_type.validate(self)
         self.generator_types[gen_type.name] = gen_type
+        _logger.debug("Add generator type %s: Done", gen_type.name)
 
     def add_storage_type(self, stor_type: StorageType) -> None:
         """
@@ -232,13 +238,16 @@ class Network:
             stor_type (StorageType): The StorageType to add.
         """
         if stor_type is None:
-            raise NetworkValidatorException("Energy Source Type cannot be None")
+            exception_str = "Energy Source Type cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         if not isinstance(stor_type, StorageType):
-            raise NetworkValidatorException(
-                f"Incorrect type. Should be StorageType, but it is {type(stor_type)} instead"
-            )
+            exception_str = f"Incorrect type. Should be StorageType, but it is {type(stor_type)} instead"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         stor_type.validate(self)
         self.storage_types[stor_type.name] = stor_type
+        _logger.debug("Add storage type %s: Done", stor_type.name)
 
     def add_demand_profile(self, demand: DemandProfile) -> None:
         """
@@ -252,13 +261,16 @@ class Network:
             demand (DemandProfile): The DemandProfile to add.
         """
         if demand is None:
-            raise NetworkValidatorException("Demand Profile cannot be None")
+            exception_str = "Demand Profile cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         if not isinstance(demand, DemandProfile):
-            raise NetworkValidatorException(
-                f"Incorrect type. Should be DemandProfile, but it is {type(demand)} instead"
-            )
+            exception_str = f"Incorrect type. Should be DemandProfile, but it is {type(demand)} instead"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         demand.validate(self)
         self.demand_profiles[demand.name] = demand
+        _logger.debug("Add demand profile %s: Done", demand.name)
 
     def add_bus(self, bus: Bus) -> None:
         """
@@ -271,9 +283,12 @@ class Network:
             bus (Bus): The Bus to add.
         """
         if bus is None:
-            raise NetworkValidatorException("Bus cannot be None")
+            exception_str = "Bus cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         bus.validate(self)
         self.buses[bus.name] = bus
+        _logger.debug("Add bus %s: Done", bus.name)
 
     def add_storage(self, storage: Storage) -> None:
         """
@@ -287,10 +302,13 @@ class Network:
 
         """
         if storage is None:
-            raise NetworkValidatorException("Storage cannot be None")
+            exception_str = "Storage cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         storage.validate(self)
         self.storages[storage.name] = storage
         self.buses[storage.bus].attach_storage(storage.name)
+        _logger.debug("Add storage %s: Done", storage.name)
 
     def add_generator(self, gen: Generator) -> None:
         """
@@ -304,13 +322,14 @@ class Network:
             gen (Generator): The Generator to add.
         """
         if not isinstance(gen, Generator):
-            raise NetworkValidatorException(
-                f"Generator must be an instance of Generator class, but it is {type(gen)} instead."
-            )
+            exception_str = f"Generator must be an instance of Generator class, but it is {type(gen)} instead."
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         gen.validate(self)
         self.generators[gen.name] = gen
         for bus_name in gen.buses:
             self.buses[bus_name].attach_generator(gen.name)
+        _logger.debug("Add generator %s: Done", gen.name)
 
     def add_line(self, line: Line) -> None:
         """
@@ -323,11 +342,15 @@ class Network:
             line (Line): The Line to add.
         """
         if line is None:
-            raise NetworkValidatorException("Line cannot be None")
+            exception_str = "Line cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
+
         line.validate(self)
         self.lines[line.name] = line
         self.buses[line.fr].attach_from_line(line.name)
         self.buses[line.to].attach_to_line(line.name)
+        _logger.debug("Add line %s: Done", line.name)
 
     def add_transmission_fee(self, transmission_fee: TransmissionFee) -> None:
         """
@@ -340,9 +363,12 @@ class Network:
             transmission_fee (TransmissionFee): The TransmissionFee to add.
         """
         if transmission_fee is None:
-            raise NetworkValidatorException("TransmissionFee cannot be None")
+            exception_str = "TransmissionFee cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         transmission_fee.validate(self)
         self.transmission_fees[transmission_fee.name] = transmission_fee
+        _logger.debug("Add transmission fee %s: Done", transmission_fee.name)
 
     def add_local_balancing_stack(self, local_bl_st: LocalBalancingStack) -> None:
         """
@@ -355,9 +381,12 @@ class Network:
             local_bl_st (LocalBalancingStack): The LocalBalancingStack to add.
         """
         if local_bl_st is None:
-            raise NetworkValidatorException("Local Balancing Stack cannot be None")
+            exception_str = "Local Balancing Stack cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         local_bl_st.validate(self)
         self.local_balancing_stacks[local_bl_st.name] = local_bl_st
+        _logger.debug("Add local balancing stack %s: Done", local_bl_st.name)
 
     def add_aggregated_consumer(self, aggregated_consumer: AggregatedConsumer) -> None:
         """
@@ -370,9 +399,12 @@ class Network:
             aggregated_consumer (AggregatedConsumer): The AggregatedConsumer to add.
         """
         if aggregated_consumer is None:
-            raise NetworkValidatorException("AggregatedConsumer cannot be None")
+            exception_str = "AggregatedConsumer cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         aggregated_consumer.validate(self)
         self.aggregated_consumers[aggregated_consumer.name] = aggregated_consumer
+        _logger.debug("Add aggregated consumer %s: Done", aggregated_consumer.name)
 
     def add_fuel(self, fuel: Fuel) -> None:
         """
@@ -385,9 +417,12 @@ class Network:
         fuel (Fuel): The Fuel to add.
         """
         if fuel is None:
-            raise NetworkValidatorException("Fuel cannot be None")
+            exception_str = "Fuel cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         fuel.validate(self)
         self.fuels[fuel.name] = fuel
+        _logger.debug("Add fuel %s: Done", fuel.name)
 
     def add_capacity_factor(self, capacity_factor: CapacityFactor) -> None:
         """
@@ -400,9 +435,12 @@ class Network:
             capacity_factor (CapacityFactor): The CapacityFactor to add.
         """
         if capacity_factor is None:
-            raise NetworkValidatorException("Capacity factor cannot be none")
+            exception_str = "Capacity factor cannot be none"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         capacity_factor.validate(self)
         self.capacity_factors[capacity_factor.name] = capacity_factor
+        _logger.debug("Add capacity factor %s: Done", capacity_factor.name)
 
     def add_emission_fee(self, emission_fee: EmissionFee) -> None:
         """
@@ -415,9 +453,12 @@ class Network:
             emission_fee (EmissionFee): The EmissionFee to add.
         """
         if emission_fee is None:
-            raise NetworkValidatorException("EmissionFee cannot be None")
+            exception_str = "EmissionFee cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         emission_fee.validate(self)
         self.emission_fees[emission_fee.name] = emission_fee
+        _logger.debug("Add emission fee %s: Done", emission_fee.name)
 
     def add_demand_chunk(self, demand_chunk: DemandChunk) -> None:
         """
@@ -430,9 +471,12 @@ class Network:
             demand_chunk (DemandChunk): The DemandChunk to add.
         """
         if demand_chunk is None:
-            raise NetworkValidatorException("DemandChunk cannot be None")
+            exception_str = "DemandChunk cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         demand_chunk.validate(self)
         self.demand_chunks[demand_chunk.name] = demand_chunk
+        _logger.debug("Add demand chunk %s: Done", demand_chunk.name)
 
     def add_dsr(self, dsr: DSR) -> None:
         """
@@ -445,6 +489,9 @@ class Network:
             dsr (DSR): The DSR to add.
         """
         if dsr is None:
-            raise NetworkValidatorException("DSR cannot be None")
+            exception_str = "DSR cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
         dsr.validate(self)
         self.dsr[dsr.name] = dsr
+        _logger.debug("Add DSR %s: Done", dsr.name)

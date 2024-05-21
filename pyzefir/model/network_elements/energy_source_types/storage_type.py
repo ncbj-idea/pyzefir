@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -27,6 +28,8 @@ from pyzefir.model.exceptions import (
 )
 from pyzefir.model.network_elements import EnergySourceType
 from pyzefir.model.utils import check_interval
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -55,7 +58,7 @@ class StorageType(EnergySourceType):
     """
     Parameter describes the fraction of stored energy losses during charging
     """
-    cycle_length: int
+    cycle_length: int | None = None
     """
     Number of hours after which state of charge must be 0;
     if cycle_len = 10, then soc = 0 for hours: 0, 10, 20, ...
@@ -89,13 +92,14 @@ class StorageType(EnergySourceType):
         Raises:
             NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
+        _logger.debug("Validating storage type object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         self._validate_energy_source_type_base(network, exception_list)
         for attr, attr_type in [
             ("generation_efficiency", float | int),
             ("load_efficiency", float | int),
-            ("cycle_length", int),
+            ("cycle_length", int | None),
             ("power_to_capacity", float | int),
             ("energy_type", str),
             ("energy_loss", float | int),
@@ -132,7 +136,9 @@ class StorageType(EnergySourceType):
                 )
 
         if exception_list:
+            _logger.debug("Got error while adding StorageType: %s", exception_list)
             raise StorageTypeValidatorExceptionGroup(
                 f"While adding StorageType {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Storage type %s validation: Done", self.name)

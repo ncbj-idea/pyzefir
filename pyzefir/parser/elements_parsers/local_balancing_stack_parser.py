@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import numpy as np
 import pandas as pd
 
 from pyzefir.model.network_elements import LocalBalancingStack
@@ -30,10 +30,7 @@ class LocalBalancingStackParser(AbstractElementParser):
         )
 
     def create(self) -> tuple[LocalBalancingStack, ...]:
-        stacks = self.stack_df.apply(
-            self._create_stack,
-            axis=1,
-        )
+        stacks = self.stack_df.apply(self._create_stack, axis=1, result_type="reduce")
         return tuple(stacks)
 
     def _create_stack(
@@ -41,8 +38,12 @@ class LocalBalancingStackParser(AbstractElementParser):
         df_row: pd.Series,
     ) -> LocalBalancingStack:
         return LocalBalancingStack(
-            name=df_row["name"],
-            buses_out={col: bus_name for col, bus_name in df_row[1:].items()},
+            name=str(df_row["name"]),
+            buses_out={
+                col: bus_name
+                for col, bus_name in df_row[1:].items()
+                if not isinstance(bus_name, float) or not np.isnan(bus_name)
+            },
             buses=self.stack_buses_mapping[df_row["name"]],
         )
 

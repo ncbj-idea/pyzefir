@@ -112,12 +112,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 0.2},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.2] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
@@ -157,12 +163,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 0.2},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.2] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
@@ -202,12 +214,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
@@ -248,12 +266,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                 },
@@ -298,12 +322,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.ones(N_YEARS) * 1e3),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 0.2},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.2] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.ones(N_YEARS) * 1e2),
                 },
@@ -347,12 +377,18 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 0.5, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.5] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.ones(N_YEARS) * 1e3),
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 0.2},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([0.2] * N_HOURS),
+                    },
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.ones(N_YEARS) * 1e2),
                 },
@@ -400,14 +436,20 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 1.0, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([1.0] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.linspace(5 * 1e2, 1e2, N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 1,
                     "build_time": 0,
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.linspace(1e4, 2 * 1e3, N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 1,
@@ -457,14 +499,20 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 1.0, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([1.0] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.linspace(5 * 1e2, 1e2, N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 1,
                     "build_time": 0,
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.linspace(1e4, 2 * 1e3, N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 1,
@@ -514,14 +562,20 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 1.0, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([1.0] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.ones(N_YEARS) * 1e2),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 2,
                     "build_time": 1,
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.ones(N_YEARS) * 1e3),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 3,
@@ -571,14 +625,20 @@ from tests.utils import get_resources
             },
             {
                 "heat_plant_biomass": {
-                    "efficiency": {HEAT: 1.0, EE: 0.0},
+                    "efficiency": {
+                        HEAT: pd.Series([1.0] * N_HOURS),
+                        EE: pd.Series([0.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.ones(N_YEARS) * 1e2),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 2,
                     "build_time": 1,
                 },
                 "pp_coal": {
-                    "efficiency": {HEAT: 0.0, EE: 1.0},
+                    "efficiency": {
+                        HEAT: pd.Series([0.0] * N_HOURS),
+                        EE: pd.Series([1.0] * N_HOURS),
+                    },
                     "capex": pd.Series(np.ones(N_YEARS) * 1e3),
                     "opex": pd.Series(np.zeros(N_YEARS)),
                     "life_time": 3,

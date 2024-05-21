@@ -17,11 +17,14 @@
 
 import logging
 
-from linopy import Model
+from linopy import Model, solvers
 
 from pyzefir.optimization.input_data import OptimizationInputData
 from pyzefir.optimization.linopy.constraints_builder.balancing_constraints_builder import (
     BalancingConstraintsBuilder,
+)
+from pyzefir.optimization.linopy.constraints_builder.capacity_binding_builder import (
+    CapacityBindingBuilder,
 )
 from pyzefir.optimization.linopy.constraints_builder.capacity_evolution_constraints_builder import (
     CapacityEvolutionConstrBuilder,
@@ -58,6 +61,9 @@ from pyzefir.optimization.linopy.objective_builder.emission_fee_objective_builde
 )
 from pyzefir.optimization.linopy.objective_builder.ens_penalty_builder import (
     EnsPenaltyCostObjectiveBuilder,
+)
+from pyzefir.optimization.linopy.objective_builder.generation_compensation_objective_builder import (
+    GenerationCompensationObjectiveBuilder,
 )
 from pyzefir.optimization.linopy.objective_builder.opex_objective_builder import (
     OpexObjectiveBuilder,
@@ -98,6 +104,7 @@ class LinopyOptimizationModel(OptimizationModel):
         StorageConstraintsBuilder,
         RampConstraintsBuilder,
         CapacityEvolutionConstrBuilder,
+        CapacityBindingBuilder,
     ]
     _objective_builders = [
         CapexObjectiveBuilder,
@@ -108,7 +115,9 @@ class LinopyOptimizationModel(OptimizationModel):
         TransmissionFeeObjectiveBuilder,
         DsrPenaltyObjectiveBuilder,
         CurtailedEnergyCostObjectiveBuilder,
+        GenerationCompensationObjectiveBuilder,
     ]
+    _direct_solvers = ["gurobi", "highs"]
 
     def __init__(self) -> None:
         """
@@ -137,7 +146,7 @@ class LinopyOptimizationModel(OptimizationModel):
             self.input_data.network, self.indices, self.input_data.config
         )
         self._variables = OptimizationVariables(
-            self.model, self.indices, self.input_data.config, self.parameters
+            self.model, self.indices, self.input_data.config
         )
         self._set_constraints()
         self._set_objective_function()
@@ -176,12 +185,16 @@ class LinopyOptimizationModel(OptimizationModel):
         """
         Runs the optimization.
         """
+        config = self.input_data.config
+        solver = config.solver_name or solvers.available_solvers[0]
+        solver_settings = config.solver_settings.get(solver, {})
         self.model.solve(
-            solver_name=self.input_data.config.solver_name,
-            io_api="direct",
-            log_fn=self.input_data.config.opt_logs_dump_path,
-            solution_fn=self.input_data.config.sol_dump_path,
+            solver_name=solver,
+            io_api="direct" if solver in self._direct_solvers else "lp",
+            log_fn=config.opt_logs_dump_path,
+            solution_fn=config.sol_dump_path,
             keep_files=True,
+            **solver_settings,
         )
         self.update_model_status()
         if self.status == OptimizationStatus.OPTIMAL:

@@ -86,6 +86,7 @@ class Bus(NetworkElement):
                     f"energy types: {sorted(network.energy_types)}"
                 )
             )
+        _logger.debug("Validate energy type: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -101,15 +102,18 @@ class Bus(NetworkElement):
             NetworkValidatorExceptionGroup: If any of the validation fails
 
         """
+        _logger.debug("Validating bus object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_name_type(exception_list)
         self._validate_energy_type(network, exception_list)
         self._validate_dsr_mapping(network, exception_list)
         if exception_list:
+            _logger.debug("Got error validating bus: %s", exception_list)
             raise BusValidatorExceptionGroup(
                 f"While adding Bus {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Bus %s validation: Done", self.name)
 
     def attach_generator(self, generator_name: str) -> None:
         """
@@ -188,3 +192,4 @@ class Bus(NetworkElement):
                         f"DSR type {self.dsr_type} does not exist in Network DSR"
                     )
                 )
+        _logger.debug("Validate dsr mapping: OK")

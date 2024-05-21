@@ -41,7 +41,7 @@ from tests.unit.parser.elements_parsers.utils import assert_equal
                 "max_capacity": pd.Series([np.nan] * 4),
                 "min_capacity_increase": pd.Series([np.nan] * 4),
                 "max_capacity_increase": pd.Series([np.nan] * 4),
-                "efficiency": {HEATING: 0.84},
+                "efficiency": pd.DataFrame({HEATING: [0.84] * 8760}),
                 "energy_types": {HEATING},
                 "emission_reduction": {"CO2": 0.4, "SO2": 0.25},
                 "conversion_rate": {ELECTRICITY: pd.Series(np.ones(8760))},

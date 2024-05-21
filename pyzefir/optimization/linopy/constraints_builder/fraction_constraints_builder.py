@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 
@@ -20,12 +21,16 @@ from pyzefir.optimization.linopy.constraints_builder.builder import (
     PartialConstraintsBuilder,
 )
 
+_logger = logging.getLogger(__name__)
+
 
 class FractionConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Fraction constraints builder is working...")
         self.build_base_fraction_constraint()
         self.build_fraction_upper_bound_constraint()
         self.build_lbs_involvement_in_consumer_aggregates_constraint()
+        _logger.info("Fraction constraints builder is finished!")
 
     def build_base_fraction_constraint(self) -> None:
         """Fixing fractions value in year y=0 of each local balancing stack in each aggregated consumer."""
@@ -38,6 +43,7 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
             self.variables.frac.fraction.sel(year=0) == base_fraction,
             name="BASE_FRACTION_CONSTRAINT",
         )
+        _logger.debug("Build base fraction constraint: Done")
 
     def build_fraction_upper_bound_constraint(self) -> None:
         """
@@ -53,6 +59,7 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
             self.variables.frac.fraction <= lbs_indicator,
             name="FRACTION_UPPER_BOUND_CONSTRAINT",
         )
+        _logger.debug("Build fraction upper bound constraint: Done")
 
     def build_lbs_involvement_in_consumer_aggregates_constraint(self) -> None:
         """
@@ -63,3 +70,4 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
             self.variables.frac.fraction.sum("lbs") == 1.0,
             name="LBS_INVOLVEMENT_IN_CONSUMER_AGGREGATES_CONSTRAINT",
         )
+        _logger.debug("Build lbs involvement in consumer aggregates constraint: Done")

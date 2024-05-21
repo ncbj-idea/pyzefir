@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import logging
 from typing import Any
 
 import numpy as np
@@ -67,6 +67,8 @@ from pyzefir.parser.elements_parsers.transmission_fee_parser import (
 )
 from pyzefir.utils.path_manager import DataCategories, DataSubCategories
 
+_logger = logging.getLogger(__name__)
+
 
 class NetworkCreator:
     @staticmethod
@@ -74,6 +76,7 @@ class NetworkCreator:
         df_dict: dict[str, dict[str, pd.DataFrame]],
         config_dict: dict[str, Any] | None = None,
     ) -> Network:
+        _logger.info("Creating network...")
         network_constants = NetworkCreator._create_network_constants(
             df_dict, config_dict
         )
@@ -96,6 +99,7 @@ class NetworkCreator:
         emission_fees = NetworkCreator._create_emission_fees(df_dict)
         demand_chunks = NetworkCreator._create_demand_chunks(df_dict)
         dsr = NetworkCreator._create_dsr(df_dict)
+        _logger.info("Network creation: Done")
 
         return NetworkCreator._create_network(
             network_constants,
@@ -240,6 +244,7 @@ class NetworkCreator:
         config_dict = config_dict if config_dict else dict()
         constants_dict["min_generation_fraction"] = min_generation_fr
         constants_dict["max_generation_fraction"] = max_generation_fr
+        _logger.info("Create network constants: Done")
         return NetworkConstants(**constants_dict | config_dict)
 
     @staticmethod
@@ -249,6 +254,7 @@ class NetworkCreator:
         demand_profiles = DemandProfileParser(
             df_dict[DataCategories.DEMAND],
         ).create()
+        _logger.info("Creating demand profiles: Done")
         return demand_profiles
 
     @staticmethod
@@ -256,6 +262,7 @@ class NetworkCreator:
         buses = BusParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.BUSES],
         ).create()
+        _logger.info("Create buses: Done")
         return buses
 
     @staticmethod
@@ -265,6 +272,7 @@ class NetworkCreator:
         transmission_fees = TransmissionFeeParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.TRANSMISSION_FEES],
         ).create()
+        _logger.info("Creating transmission fees: Done")
         return transmission_fees
 
     @staticmethod
@@ -285,6 +293,7 @@ class NetworkCreator:
         lines = LineParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.LINES]
         ).create()
+        _logger.info("Creating lines: Done")
         return lines
 
     @staticmethod
@@ -323,7 +332,11 @@ class NetworkCreator:
                 DataSubCategories.GENERATOR_EMISSION_FEES
             ],
             n_consumers=df_dict[DataCategories.SCENARIO][DataSubCategories.N_CONSUMERS],
+            df_binding=df_dict[DataCategories.STRUCTURE][
+                DataSubCategories.GENERATOR_BINDING
+            ],
         ).create()
+        _logger.info("Creating energy source units: Done")
         return generators, storages
 
     @staticmethod
@@ -333,11 +346,13 @@ class NetworkCreator:
         emission_df = df_dict[DataCategories.STRUCTURE][
             DataSubCategories.EMISSION_TYPES
         ]
+        _logger.info("Creating emission types: Done")
         return list(emission_df["name"])
 
     @staticmethod
     def _create_energy_types(df_dict: dict[str, dict[str, pd.DataFrame]]) -> list[str]:
         energy_df = df_dict[DataCategories.STRUCTURE][DataSubCategories.ENERGY_TYPES]
+        _logger.info("Creating energy types: Done")
         return list(energy_df["name"])
 
     @staticmethod
@@ -351,7 +366,7 @@ class NetworkCreator:
             df_dict[DataCategories.STRUCTURE][DataSubCategories.BUSES],
             df_dict[DataCategories.STRUCTURE][DataSubCategories.TECHNOLOGYSTACK_BUSES],
         ).create()
-
+        _logger.info("Creating local balancing stacks: Done")
         return stacks
 
     @staticmethod
@@ -371,7 +386,7 @@ class NetworkCreator:
             .squeeze(),
             df_dict[DataCategories.SCENARIO][DataSubCategories.N_CONSUMERS],
         ).create()
-
+        _logger.info("Creating aggregated consumers: Done")
         return aggregated_consumers
 
     @staticmethod
@@ -382,7 +397,7 @@ class NetworkCreator:
             df_dict[DataCategories.SCENARIO][DataSubCategories.FUEL_PRICES],
             df_dict[DataCategories.SCENARIO][DataSubCategories.FUEL_AVAILABILITY],
         ).create()
-
+        _logger.info("Creating fuels: Done")
         return fuels
 
     @staticmethod
@@ -392,7 +407,7 @@ class NetworkCreator:
         capacity_factors = CapacityFactorParser(
             df_dict[DataCategories.CAPACITY_FACTORS][DataSubCategories.PROFILES]
         ).create()
-
+        _logger.info("Creating capacity factors: Done")
         return capacity_factors
 
     @staticmethod
@@ -434,7 +449,14 @@ class NetworkCreator:
             curtailment_cost=df_dict[DataCategories.SCENARIO][
                 DataSubCategories.CURTAILMENT_COST
             ],
+            generators_series_efficiency=df_dict[
+                DataCategories.GENERATOR_TYPE_EFFICIENCY
+            ],
+            generation_compensation=df_dict[DataCategories.SCENARIO][
+                DataSubCategories.GENERATION_COMPENSATION
+            ],
         ).create()
+        _logger.info("Creating energy source types: Done")
         return generator_types, storage_types
 
     @staticmethod
@@ -444,7 +466,7 @@ class NetworkCreator:
         demand_chunks = DemandChunkParser(
             df_dict[DataCategories.DEMAND_CHUNKS]
         ).create()
-
+        _logger.info("Creating demand chunks: Done")
         return demand_chunks
 
     @classmethod
@@ -454,5 +476,5 @@ class NetworkCreator:
         dsr = DSRParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.DSR]
         ).create()
-
+        _logger.info("Creating dsr: Done")
         return dsr

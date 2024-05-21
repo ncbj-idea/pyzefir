@@ -104,7 +104,7 @@ def test_line_flows_and_transmission_loss(
             0.01,
             0.005,
             [OptimizationStatus.OPTIMAL],
-            True,
+            1.0,
         ),
         (
             np.arange(100),
@@ -114,7 +114,7 @@ def test_line_flows_and_transmission_loss(
             0.01 - 0.00001,
             0.005,
             [OptimizationStatus.WARNING],
-            False,
+            np.nan,
         ),
         (
             np.arange(100),
@@ -124,7 +124,7 @@ def test_line_flows_and_transmission_loss(
             0.01 - 0.00001,
             0.005,
             [OptimizationStatus.OPTIMAL],
-            True,
+            1.0,
         ),
         (
             np.arange(100),
@@ -134,7 +134,7 @@ def test_line_flows_and_transmission_loss(
             0.01,
             0.005 - 0.00001,
             [OptimizationStatus.WARNING],
-            False,
+            np.nan,
         ),
         (
             np.arange(100),
@@ -144,7 +144,7 @@ def test_line_flows_and_transmission_loss(
             0.01,
             0.005 - 0.00001,
             [OptimizationStatus.OPTIMAL],
-            True,
+            1.0,
         ),
     ],
 )
@@ -155,8 +155,8 @@ def test_line_capacity(
     ee_energy_usage: float,
     heat_line_capacity: float,
     ee_line_capacity: float,
-    ens: bool,
     expected_opt_status: list[OptimizationStatus],
+    ens: float,
     network: Network,
     grid_connection: Line,
     heating_system_connection: Line,

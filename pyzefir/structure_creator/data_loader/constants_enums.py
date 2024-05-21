@@ -32,6 +32,7 @@ class XlsxFileName(StrEnum):
     subsystems = auto()
     emissions = auto()
     transmission_fees = auto()
+    generation_compensation = auto()
 
     def __str__(self) -> str:
         return f"{self.name}.xlsx"

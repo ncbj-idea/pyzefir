@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import numpy as np
 
@@ -20,10 +21,14 @@ from pyzefir.optimization.linopy.constraints_builder.builder import (
     PartialConstraintsBuilder,
 )
 
+_logger = logging.getLogger(__name__)
+
 
 class LineFlowConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Line flow constraints builder is working...")
         self.build_max_flow_constraints()
+        _logger.info("Line flow constraints builder is finished!")
 
     def build_max_flow_constraints(self) -> None:
         for line_idx, line_name in self.indices.LINE.mapping.items():
@@ -33,3 +38,4 @@ class LineFlowConstraintsBuilder(PartialConstraintsBuilder):
                     self.variables.line.flow.isel(line=line_idx) <= max_capacity,
                     name=f"{line_name}_LINE_FLOW_UPPER_BOUND_CONSTRAINT",
                 )
+        _logger.debug("Build max flow constraints: Done")

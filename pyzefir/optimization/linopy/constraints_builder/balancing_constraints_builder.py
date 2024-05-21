@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import xarray as xr
 from linopy import LinearExpression
@@ -22,14 +23,19 @@ from pyzefir.optimization.linopy.constraints_builder.builder import (
 )
 from pyzefir.utils.functions import demand_chunk_unit_indices
 
+_logger = logging.getLogger(__name__)
+
 
 class BalancingConstraintsBuilder(PartialConstraintsBuilder):
     def build_constraints(self) -> None:
+        _logger.info("Balancing constraints builder is working...")
         self.balancing_constraint()
         self.demand_chunk_balancing_constraint()
         self.load_shifting_constraints()
+        _logger.info("Balancing constraints builder is finished!")
 
     def balancing_constraint(self) -> None:
+        _logger.debug("Building balancing constraints...")
         for bus_idx, bus_name in self.indices.BUS.mapping.items():
             net_load = self._bus_net_load(bus_idx)
             net_outflow = self._bus_outflow(bus_idx)
@@ -42,8 +48,10 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
                 shift + net_load + net_outflow == net_inflow + net_injection + ens,
                 name=f"{bus_name}_BALANCING_CONSTRAINT",
             )
+        _logger.debug("Build balancing constraints: Done")
 
     def load_shifting_constraints(self) -> None:
+        _logger.debug("Loading shifting constraints...")
         if len(self.parameters.bus.dsr_type):
             balancing_periods = self.parameters.dsr.balancing_periods
             for bus_idx, dsr_idx in self.parameters.bus.dsr_type.items():
@@ -53,8 +61,10 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
                         self._gen_compensation_constraint(interval, bus_idx, dsr_idx)
                         self._gen_relative_shift_limit(interval, bus_idx, dsr_idx)
                         self._gen_abs_shift_limit(interval, bus_idx, dsr_idx)
+        _logger.debug("Load shifting constraints: Done")
 
     def _shift(self, bus_idx: int) -> LinearExpression | float:
+        _logger.debug("Shifting values for bus_idx: %i", bus_idx)
         if bus_idx in self.parameters.bus.dsr_type:
             return self.variables.bus.shift_plus.isel(
                 bus=bus_idx
@@ -62,21 +72,25 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
         return 0.0
 
     def _bus_net_inflow(self, bus_idx: int) -> LinearExpression | float:
+        _logger.debug("Get bus net inflow for bus_idx: %i", bus_idx)
         result = 0.0
         for line_idx in self.parameters.bus.lines_in[bus_idx]:
             result += self.expr.netto_flow_l(line_idx)
         return result
 
     def _bus_outflow(self, bus_idx: int) -> LinearExpression | float:
+        _logger.debug("Get bus outflow for bus_idx: %i", bus_idx)
         result = 0.0
         for line_idx in self.parameters.bus.lines_out[bus_idx]:
             result += self.variables.line.flow.isel(line=line_idx)
         return result
 
     def _bus_net_load(self, bus_idx: int) -> LinearExpression:
+        _logger.debug("Get bus net load for bus_idx: %i", bus_idx)
         return self.expr.fraction_dem(bus_idx) + self._converters_demand(bus_idx)
 
     def _bus_net_injection(self, bus_idx: int) -> LinearExpression:
+        _logger.debug("Get bus net injection for bus_idx: %i", bus_idx)
         return self._storages_net_injection(bus_idx) + self._generators_net_injection(
             bus_idx
         )
@@ -137,6 +151,7 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
         return result
 
     def demand_chunk_balancing_constraint(self) -> None:
+        _logger.debug("Building demand chunk balancing constraints...")
         dch_params = self.parameters.demand_chunks_parameters
         generators_energy_type = self.parameters.gen.ett
         gen_dch_var = self.variables.gen.gen_dch
@@ -182,10 +197,16 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
                     name=f"DEMCH_{dem_idx}_START_{p_start}_END_{p_end}_BALANCING_CONSTRAINT",
                 )
                 time_period_idx += 1
+        _logger.debug("Build demand chunk balancing constraints: Done")
 
     def _gen_compensation_constraint(
         self, interval: range, bus_idx: int, dsr_idx: int
     ) -> None:
+        _logger.debug(
+            "Get gen compensation constraint for bus_idx: %i, dsr_idx: %i",
+            bus_idx,
+            dsr_idx,
+        )
         shift_minus = self.variables.bus.shift_minus
         shift_plus = self.variables.bus.shift_plus
         compensation_factor = self.parameters.dsr.compensation_factor
@@ -199,10 +220,15 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
     def _gen_relative_shift_limit(
         self, interval: range, bus_idx: int, dsr_idx: int
     ) -> None:
+        _logger.debug(
+            "Get gen relative shift limit for bus_idx: %i, dsr_idx: %i",
+            bus_idx,
+            dsr_idx,
+        )
         relative_shift_limit = self.parameters.dsr.relative_shift_limit
         shift_minus = self.variables.bus.shift_minus
         net_load = self._bus_net_load(bus_idx)
-        if len(relative_shift_limit):
+        if dsr_idx in relative_shift_limit.keys():
             self.model.add_constraints(
                 shift_minus.isel(bus=bus_idx, hour=list(interval)).sum(["hour"])
                 <= relative_shift_limit[dsr_idx]
@@ -211,9 +237,14 @@ class BalancingConstraintsBuilder(PartialConstraintsBuilder):
             )
 
     def _gen_abs_shift_limit(self, interval: range, bus_idx: int, dsr_idx: int) -> None:
+        _logger.debug(
+            "Get gen absolute shift limit for bus_idx: %i, dsr_idx: %i",
+            bus_idx,
+            dsr_idx,
+        )
         abs_shift_limit = self.parameters.dsr.abs_shift_limit
         shift_minus = self.variables.bus.shift_minus
-        if len(abs_shift_limit):
+        if dsr_idx in abs_shift_limit.keys():
             self.model.add_constraints(
                 shift_minus.isel(bus=bus_idx, hour=list(interval)).sum(["hour"])
                 <= abs_shift_limit[dsr_idx],

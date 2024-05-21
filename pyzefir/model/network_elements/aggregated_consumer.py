@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -32,6 +33,8 @@ from pyzefir.model.utils import check_interval, validate_dict_type, validate_ser
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(name=__name__)
 
 
 class AggregatedConsumerValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -148,6 +151,7 @@ class AggregatedConsumer(NetworkElement):
                             f"Difference: {diff}"
                         )
                     )
+        _logger.debug("Validate demand profile: OK")
 
     def _validate_stack_base_fraction_type(
         self, exception_list: list[NetworkValidatorException]
@@ -246,6 +250,7 @@ class AggregatedConsumer(NetworkElement):
                         f"Found value: {fraction}"
                     )
                 )
+        _logger.debug("Validate stack base fraction: OK")
 
     def _validate_yearly_energy_usage_types(
         self, exception_list: list[NetworkValidatorException]
@@ -338,6 +343,7 @@ class AggregatedConsumer(NetworkElement):
                         f"Difference: {diff}"
                     )
                 )
+        _logger.debug("Validate yearly energy usage: OK")
 
     def _validate_fraction_types(
         self,
@@ -493,6 +499,7 @@ class AggregatedConsumer(NetworkElement):
 
         if all_fractions_ok:
             self._validate_fraction_values(exception_list)
+        _logger.debug("Validate fractions: OK")
 
     def _validate_fraction_aggregated_values(
         self,
@@ -625,6 +632,7 @@ class AggregatedConsumer(NetworkElement):
                     "For n_consumers series all values must be positive and given for each year in simulation."
                 )
             )
+        _logger.debug("Validate n consumers: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -641,6 +649,7 @@ class AggregatedConsumer(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If AggregatedConsumer is invalid.
         """
+        _logger.debug("Validating aggregated consumer object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         self._validate_name_type(exception_list=exception_list)
@@ -663,7 +672,11 @@ class AggregatedConsumer(NetworkElement):
                 )
 
         if exception_list:
+            _logger.debug(
+                "Got error validating aggregated consumer: %s", exception_list
+            )
             raise AggregatedConsumerValidatorExceptionGroup(
                 f"While adding AggregatedConsumer {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Aggregated consumer %s validation: Done", self.name)

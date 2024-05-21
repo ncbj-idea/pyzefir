@@ -49,13 +49,13 @@ def test_dsr_variables(
     model = Model()
     parameters = OptimizationParameters(complete_network, indices, opt_config)
     parameters.bus.dsr_type = bus_dsr_type
-    opt_var = OptimizationVariables(model, indices, opt_config, parameters)
+    opt_var = OptimizationVariables(model, indices, opt_config)
     shift_minus_variables = opt_var.bus.shift_minus
     shift_plus_variables = opt_var.bus.shift_plus
-    bs_dsr, yy, hh = (
-        len(bus_dsr_type),
+    bus_dsr, yy, hh = (
+        len(indices.BUS),
         len(opt_config.year_sample),
         len(opt_config.hour_sample),
     )
-    assert shift_minus_variables.shape == (bs_dsr, hh, yy)
-    assert shift_plus_variables.shape == (bs_dsr, hh, yy)
+    assert shift_minus_variables.shape == (bus_dsr, hh, yy)
+    assert shift_plus_variables.shape == (bus_dsr, hh, yy)

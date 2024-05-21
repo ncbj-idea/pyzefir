@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 
 from pyzefir.model.network import Network
+from pyzefir.optimization.linopy.model import LinopyOptimizationModel
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
     create_default_opf_config,
@@ -62,7 +63,7 @@ def test_local_supplementary_capacity_upper_bound_constraints(
             "aggr": {
                 "stack_base_fraction": {"lbs": 0.6, "lbs2": 0.4},
                 "n_consumers": pd.Series([1000, 1000, 1000, 1000, 1000]),
-            }
+            },
         },
     )
     set_network_elements_parameters(
@@ -85,15 +86,31 @@ def test_local_supplementary_capacity_upper_bound_constraints(
     engine = run_opt_engine(network, opt_config)
 
     aggr_to_type = engine.indices.aggr_tgen_map
-    t_type = list(aggr_to_type[0])[0]  # only one type in the test
-    aggr_name = engine.indices.AGGR.mapping[0]
-    u_idxs = _u_idxs(engine.parameters.gen.tgen, t_type)
-    lt, bt = engine.parameters.tgen.lt[t_type], engine.parameters.tgen.bt[t_type]
-    t_name, u_name = engine.indices.TGEN.mapping[t_type], engine.indices.GEN.mapping
+    for aggr_idx, aggr_name in engine.indices.AGGR.mapping.items():
+        for t_type in aggr_to_type[aggr_idx]:
+            _test_capacity_constraints(engine, aggr_idx, aggr_name, t_type)
+
+
+def _test_capacity_constraints(
+    engine: LinopyOptimizationModel, aggr_idx: int, aggr_name: str, t_type: set[int]
+) -> None:
+    u_idxs = _u_idxs(
+        engine.parameters.gen.tgen,
+        t_type,
+        engine.indices.aggr_gen_map[aggr_idx],
+    )
+    lt, bt = (
+        engine.parameters.tgen.lt[t_type],
+        engine.parameters.tgen.bt[t_type],
+    )
+    t_name, u_name = (
+        engine.indices.TGEN.mapping[t_type],
+        engine.indices.GEN.mapping,
+    )
 
     tcap = engine.results.generators_results.tcap[aggr_name][t_name].values.flatten()
 
-    tcap_base_minus = engine.results.generators_results.tcap_base_minus["aggr"][
+    tcap_base_minus = engine.results.generators_results.tcap_base_minus[aggr_name][
         t_name
     ].values.flatten()
 
@@ -111,10 +128,12 @@ def test_local_supplementary_capacity_upper_bound_constraints(
     t_all_cap_minus_sum = tcap_minus.sum(axis=1)
     assert np.all(tcap_plus + TOL >= t_all_cap_minus_sum)
 
-    assert np.allclose(tcap, np.array([35000, 24000, 24000, 24000, 24000]))
-    assert np.allclose(tcap_base_minus, np.array([0, 11000, 0, 0, 0]))
-    assert tcap_plus.sum() <= TOL
-    assert tcap_minus.sum() <= TOL
+    if aggr_name == "aggr":
+        # num values expected for the aggregate aggr:
+        assert np.allclose(tcap, np.array([35000, 24000, 24000, 24000, 24000]))
+        assert np.allclose(tcap_base_minus, np.array([0, 11000, 0, 0, 0]))
+        assert tcap_plus.sum() <= TOL
+        assert tcap_minus.sum() <= TOL
 
     for y in engine.indices.Y.ord:
         initial_cap = (
@@ -129,8 +148,10 @@ def test_local_supplementary_capacity_upper_bound_constraints(
         assert abs(initial_cap + incr_cap - decr_cap - tcap[y]) <= TOL
 
 
-def _u_idxs(t_gen: dict[int, int], t_type: int) -> set:
-    return {u_idx for u_idx, u_type_idx in t_gen.items() if u_type_idx == t_type}
+def _u_idxs(t_gen: dict[int, int], t_type: set[int], unit_in_aggr: set[int]) -> set:
+    return {
+        u_idx for u_idx, u_type_idx in t_gen.items() if u_type_idx == t_type
+    }.intersection(unit_in_aggr)
 
 
 def _s_range(y: int, lt: int, bt: int) -> range:

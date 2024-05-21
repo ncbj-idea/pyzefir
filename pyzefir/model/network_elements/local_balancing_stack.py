@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -27,6 +28,8 @@ from pyzefir.model.network_element import NetworkElement
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
+
+_logger = logging.getLogger(__name__)
 
 
 class LocalBalancingStackValidatorExceptionGroup(NetworkValidatorExceptionGroup):
@@ -110,6 +113,7 @@ class LocalBalancingStack(NetworkElement):
                         f"{network.buses[bus_name].energy_type}."
                     )
                 )
+        _logger.debug("Validate buses_out: OK")
 
     def _validate_buses_type(
         self, exception_list: list[NetworkValidatorException]
@@ -159,6 +163,7 @@ class LocalBalancingStack(NetworkElement):
                     "Buses names collection type (values of buses dict) must contain strings only"
                 )
             )
+        _logger.debug("Validate buses type: OK")
 
     def _validate_buses(
         self, network: Network, exception_list: list[NetworkValidatorException]
@@ -199,6 +204,7 @@ class LocalBalancingStack(NetworkElement):
                             f"with energy type for the same bus in Network"
                         )
                     )
+        _logger.debug("Validate buses: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -212,12 +218,17 @@ class LocalBalancingStack(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If LocalBalancingStack is invalid.
         """
+        _logger.debug("Validating local balancing stack object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_name_type(exception_list)
         self._validate_buses_out(network=network, exception_list=exception_list)
         self._validate_buses(network=network, exception_list=exception_list)
         if exception_list:
+            _logger.exception(
+                "Got error validating local balancing stack: %s", exception_list
+            )
             raise LocalBalancingStackValidatorExceptionGroup(
                 f"While adding Local Balancing Stack {self.name} following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Local balancing stack %s validation: Done", self.name)

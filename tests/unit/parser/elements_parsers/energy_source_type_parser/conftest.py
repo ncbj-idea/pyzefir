@@ -62,6 +62,16 @@ def generator_types_mock() -> pd.DataFrame:
 
 
 @pytest.fixture
+def generator_type_efficiency_series_mock() -> dict[str, pd.DataFrame]:
+    """generator_types / generator_type_efficiency.csv mock"""
+    return {
+        "GEN_TYPE_3": pd.DataFrame(
+            {"hour_idx": range(8760), HEATING: [0.84] * 8760},
+        )
+    }
+
+
+@pytest.fixture
 def generator_type_efficiency_mock() -> pd.DataFrame:
     """generator_types / Efficiency.csv mock"""
     return pd.DataFrame(
@@ -70,7 +80,6 @@ def generator_type_efficiency_mock() -> pd.DataFrame:
             ["GEN_TYPE_1", HEATING, 0.3],
             ["GEN_TYPE_1", ELECTRICITY, 0.4],
             ["GEN_TYPE_2", ELECTRICITY, 0.9],
-            ["GEN_TYPE_3", HEATING, 0.84],
         ],
     )
 
@@ -201,6 +210,18 @@ def generators_power_utilization() -> pd.DataFrame:
 
 
 @pytest.fixture
+def generation_compensation() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=["hour_idx", "GEN_TYPE_1", "GEN_TYPE_2", "GEN_TYPE_3"],
+        data=[
+            [0, -3.1, 0.1, 10.1],
+            [1, 0, -0.1, 1.1],
+            [2, 1.3, 0.8, 2.6],
+        ],
+    )
+
+
+@pytest.fixture
 def energy_source_type_parser(
     storage_types_mock: pd.DataFrame,
     generator_types_mock: pd.DataFrame,
@@ -213,6 +234,8 @@ def energy_source_type_parser(
     energy_source_evolution_limits_mock: pd.DataFrame,
     energy_curtailment_cost_mock: pd.DataFrame,
     generators_power_utilization: pd.DataFrame,
+    generator_type_efficiency_series_mock: dict[str, pd.DataFrame],
+    generation_compensation: pd.DataFrame,
 ) -> EnergySourceTypeParser:
     return EnergySourceTypeParser(
         cost_parameters_df=cost_parameters_mock,
@@ -228,4 +251,6 @@ def energy_source_type_parser(
         n_years=default_network_constants.n_years,
         n_hours=default_network_constants.n_hours,
         curtailment_cost=energy_curtailment_cost_mock,
+        generators_series_efficiency=generator_type_efficiency_series_mock,
+        generation_compensation=generation_compensation,
     )

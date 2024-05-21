@@ -46,7 +46,11 @@ class LocalLbsHandler:
             if "LINES" in lbs_data
             else pd.DataFrame()
         )
-        df = pd.concat([technology_df, capa_df, lines_df], axis=1)
+        if "TAGS" in lbs_data:
+            tags_df = lbs_data["TAGS"].set_index("technology_id").add_prefix("TAG_")
+            df = pd.concat([technology_df, capa_df, lines_df, tags_df], axis=1)
+        else:
+            df = pd.concat([technology_df, capa_df, lines_df], axis=1)
         merged_df = bus_df.merge(df, left_index=True, right_index=True)
         merged_df.insert(0, "lbs", lbs_name)
         return merged_df
@@ -98,9 +102,16 @@ class GlobalSystemsHandler:
         merged_df = merged_df.merge(
             transmission_fee_df, left_on="subsystem_id", right_index=True
         )
+        if "TAGS" in subsystems:
+            tags_df = subsystems["TAGS"].set_index("global_tech_id").add_prefix("TAG_")
+            merged_df = merged_df.merge(tags_df, left_index=True, right_index=True)
         merged_df = merged_df.reset_index()
         merged_df = merged_df.rename(
-            columns={"global_tech_id": "gen_name", "subsystem_id": "bus_name"}
+            columns={
+                "global_tech_id": "gen_name",
+                "subsystem_id": "bus_name",
+                "binding_id": "binding_name",
+            }
         )
         return merged_df.reset_index()
 

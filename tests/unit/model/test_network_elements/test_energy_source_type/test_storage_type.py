@@ -55,7 +55,7 @@ from tests.unit.model.test_network_elements.helpers import assert_same_exception
                 cycle_length="string",
             ),
             "StorageType attribute 'cycle_length' for default must be an instance "
-            "of <class 'int'>, but it is an instance of <class 'str'> instead",
+            "of int | None, but it is an instance of <class 'str'> instead",
             id="cycle_length_wrong_type",
         ),
         pytest.param(

@@ -293,7 +293,7 @@ def test_load_shifting(
                         interval,
                         compensation_factor[dsr_idx],
                     )
-                    if len(relative_shift_limit):
+                    if dsr_idx in relative_shift_limit.keys():
                         _test_relative_shift_limit(
                             y,
                             shift_minus[bus_name],
@@ -301,7 +301,7 @@ def test_load_shifting(
                             relative_shift_limit[dsr_idx],
                             net_load,
                         )
-                    if len(abs_shift_limit):
+                    if dsr_idx in abs_shift_limit.keys():
                         _test_absolute_shift_limit(
                             y, shift_minus[bus_name], interval, abs_shift_limit[dsr_idx]
                         )

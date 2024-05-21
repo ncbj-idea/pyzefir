@@ -107,7 +107,8 @@ def test_min_max_nom_dev(
     )
     opt_config = create_default_opf_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
-    for unit_idx in (1, 2):
+    aggr_idx = engine.indices.AGGR.inverse["aggr"]
+    for unit_idx in engine.indices.aggr_gen_map[aggr_idx]:
         _min_max_power_test(engine.parameters, engine.results, unit_idx)
 
 

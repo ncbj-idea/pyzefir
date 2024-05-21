@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -26,6 +27,8 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_element import NetworkElement
+
+_logger = logging.getLogger(name=__name__)
 
 if TYPE_CHECKING:
     from pyzefir.model.network import Network
@@ -119,6 +122,7 @@ class DemandChunk(NetworkElement):
                     f"Demand should be type of float, not {self.demand.dtype}"
                 )
             )
+        _logger.debug("Validate periods and demands: OK")
 
     def validate(self, network: Network) -> None:
         """
@@ -134,6 +138,7 @@ class DemandChunk(NetworkElement):
         Raises:
             NetworkValidatorExceptionGroup: If any of the validation fails
         """
+        _logger.debug("Validating demand chunk object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
 
         if isinstance(self.tag, str):
@@ -170,7 +175,9 @@ class DemandChunk(NetworkElement):
         self._validate_periods_and_demand(exception_list, network)
 
         if exception_list:
+            _logger.debug("Got error validating demand chunk: %s", exception_list)
             raise DemandChunkValidatorExceptionGroup(
                 f"While adding DemandChunk {self.name} " "following errors occurred: ",
                 exception_list,
             )
+        _logger.debug("Demand chunk %s validation: Done", self.name)
