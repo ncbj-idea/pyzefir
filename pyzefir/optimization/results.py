@@ -83,6 +83,7 @@ from pyzefir.optimization.linopy.preprocessing.variables.storage_type_variables 
 from pyzefir.optimization.linopy.preprocessing.variables.storage_variables import (
     StorageVariables,
 )
+from pyzefir.optimization.linopy.utils import get_generator_types_capacity_multipliers
 from pyzefir.utils.functions import get_dict_vals
 
 HOUR_LABEL: Final[str] = "Hour"
@@ -242,6 +243,7 @@ class ResultsGroup(abc.ABC):
         unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
         money_scale: float,
         cap_plus: Variable,
+        multipliers: dict[int, float] | None = None,
     ) -> dict[str, pd.DataFrame]:
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
         non_lbs_unit_idxs: dict[int, int] = {
@@ -256,16 +258,21 @@ class ResultsGroup(abc.ABC):
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
             year_results = dict()
+            mul = multipliers[ut_idx] if multipliers is not None else 1.0
             for year_idx in year_idxs.ord:
                 unit_capex = 0.0
-                unit_capex += money_scale * ResultsGroup.global_capex_per_unit_per_year(
-                    capex=capex,
-                    cap_plus=cap_plus.solution,
-                    disc_rate=disc_rate,
-                    lt=lt,
-                    s_idx=year_idx,
-                    u_idx=u_idx,
-                    y_idxs=year_idxs,
+                unit_capex += (
+                    money_scale
+                    * ResultsGroup.global_capex_per_unit_per_year(
+                        capex=capex,
+                        cap_plus=cap_plus.solution,
+                        disc_rate=disc_rate,
+                        lt=lt,
+                        s_idx=year_idx,
+                        u_idx=u_idx,
+                        y_idxs=year_idxs,
+                    )
+                    * mul
                 )
                 year_results[indices.Y.mapping[year_idx]] = unit_capex
             result[unit_index.mapping[u_idx]] = pd.DataFrame.from_dict(
@@ -283,6 +290,7 @@ class ResultsGroup(abc.ABC):
         unit_type_map: dict[int, int],
         aggr_unit_map: dict[int, set[int]],
         gen_mapping: bidict,
+        multipliers: dict[int, float] | None = None,
     ) -> dict[str, pd.DataFrame]:
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
         year_idxs = indices.Y
@@ -295,6 +303,7 @@ class ResultsGroup(abc.ABC):
             aggr_name = indices.AGGR.mapping.get(aggr_idx)
             aggr_result = {}
             for ut_idx in ut_idxs:
+                mul = multipliers[ut_idx] if multipliers is not None else 1.0
                 capex = unit_type_param.capex[ut_idx]
                 lt = unit_type_param.lt[ut_idx]
                 year_results = dict()
@@ -312,6 +321,7 @@ class ResultsGroup(abc.ABC):
                             aggr_idx=aggr_idx,
                             y_idxs=year_idxs,
                         )
+                        * mul
                     )
                     year_results[indices.Y.mapping[year_idx]] = unit_capex
                 aggr_result[gen_mapping[ut_idx]] = pd.DataFrame.from_dict(
@@ -452,6 +462,10 @@ class GeneratorsResults(ResultsGroup):
             discount_rate=scenario_parameters.discount_rate,
             cap_plus=variable_group.cap_plus,
             money_scale=scenario_parameters.money_scale,
+            multipliers=get_generator_types_capacity_multipliers(
+                scenario_parameters.generator_capacity_cost,
+                tparameters,
+            ),
         )
         self.local_capex = self.calculate_local_capex(
             indices=indices,
@@ -462,6 +476,10 @@ class GeneratorsResults(ResultsGroup):
             tcap_plus=tvariable_group.tcap_plus,
             money_scale=scenario_parameters.money_scale,
             gen_mapping=indices.TGEN.mapping,
+            multipliers=get_generator_types_capacity_multipliers(
+                scenario_parameters.generator_capacity_cost,
+                tparameters,
+            ),
         )
 
     @staticmethod

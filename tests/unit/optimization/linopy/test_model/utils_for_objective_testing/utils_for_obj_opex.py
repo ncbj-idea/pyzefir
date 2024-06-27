@@ -21,6 +21,7 @@ from pyzefir.optimization.linopy.preprocessing.indices import IndexingSet, Indic
 from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
     OptimizationParameters,
 )
+from pyzefir.optimization.linopy.utils import get_generators_capacity_multipliers
 from pyzefir.optimization.results import Results
 
 
@@ -40,6 +41,12 @@ def generator_opex(
         results.generators_results.cap,
         parameters.gen.tgen,
         parameters.tgen.opex,
+        multipliers=get_generators_capacity_multipliers(
+            parameters.scenario_parameters.generator_capacity_cost,
+            parameters.tgen,
+            parameters.gen,
+        ),
+        year_aggregation=indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy(),
     )
 
 
@@ -51,6 +58,7 @@ def storage_opex(
         results.storages_results.cap,
         parameters.stor.tstor,
         parameters.tstor.opex,
+        indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy(),
     )
 
 
@@ -59,10 +67,19 @@ def _opex_expression(
     cap: dict[str, pd.DataFrame],
     type_gen: dict,
     opex: np.ndarray,
+    year_aggregation: np.ndarray,
+    multipliers: dict[int, float] | None = None,
 ) -> float:
     result = 0.0
     for u_idx in unit_index.ord:
         result += (
-            opex[type_gen[u_idx]] * cap[unit_index.mapping[u_idx]]["cap"].values
-        ).sum()
+            (
+                opex[type_gen[u_idx]]
+                * cap[unit_index.mapping[u_idx]]["cap"].values
+                * year_aggregation
+            ).sum()
+            * multipliers[u_idx]
+            if multipliers is not None
+            else 1.0
+        )
     return result

@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, GRID, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -147,7 +147,7 @@ def test_capacity(
     set_network_elements_parameters(network.demand_profiles, demand_params)
     set_network_elements_parameters(network.aggregated_consumers, aggr_params)
 
-    opt_config = create_default_opf_config(**opt_config_params)
+    opt_config = create_default_opt_config(**opt_config_params)
     engine = run_opt_engine(network, opt_config)
     results = engine.results
 

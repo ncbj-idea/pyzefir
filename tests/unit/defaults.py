@@ -42,9 +42,22 @@ default_network_constants: Final[NetworkConstants] = NetworkConstants(
         CO2_EMISSION: np.nan,
         PM10_EMISSION: np.nan,
     },
-    min_generation_fraction={"HEAT": {("example_tag", "example_tag2"): 0.0}},
-    max_generation_fraction={"HEAT": {("example_tag", "example_tag2"): 100.0}},
     power_reserves={},
+)
+
+default_network_constants_netto_cost: Final[NetworkConstants] = NetworkConstants(
+    DEFAULT_YEARS,
+    DEFAULT_HOURS,
+    {
+        CO2_EMISSION: pd.Series([np.nan] * DEFAULT_YEARS),
+        PM10_EMISSION: pd.Series([np.nan] * DEFAULT_YEARS),
+    },
+    base_total_emission={
+        CO2_EMISSION: np.nan,
+        PM10_EMISSION: np.nan,
+    },
+    power_reserves={},
+    generator_capacity_cost="netto",
 )
 
 
@@ -87,10 +100,48 @@ default_generator_type = {
         ELECTRICITY: get_random_series() * 100,
         HEATING: get_random_series() * 100,
     },
-    "emission_reduction": {CO2_EMISSION: 0.34, PM10_EMISSION: 0.1},
+    "emission_reduction": {
+        CO2_EMISSION: pd.Series([0.34] * default_network_constants.n_years),
+        PM10_EMISSION: pd.Series([0.1] * default_network_constants.n_years),
+    },
     "life_time": 50,
     "build_time": 5,
-    "power_utilization": 0.9,
+    "power_utilization": pd.Series([0.9] * default_network_constants.n_hours),
+    "minimal_power_utilization": pd.Series([0.2] * default_network_constants.n_hours),
+    "capex": get_random_series() * 100,
+    "opex": get_random_series() * 100,
+    "name": "default_generator_type",
+    "generation_compensation": None,
+}
+
+default_generator_type_netto = {
+    "energy_types": {ELECTRICITY},
+    "fuel": "coal",
+    "efficiency": pd.DataFrame(
+        {
+            ELECTRICITY: [0.5] * default_network_constants.n_hours,
+        }
+    ),
+    "min_capacity": pd.Series(
+        [np.nan] + list(get_random_series(default_network_constants.n_years - 1) * 100)
+    ),
+    "max_capacity": pd.Series(
+        [np.nan] + list(get_random_series(default_network_constants.n_years - 1) * 100)
+    ),
+    "min_capacity_increase": pd.Series(
+        [np.nan] + list(get_random_series(default_network_constants.n_years - 1))
+    ),
+    "max_capacity_increase": pd.Series(
+        [np.nan] + list(get_random_series(default_network_constants.n_years - 1))
+    ),
+    "conversion_rate": {
+        ELECTRICITY: get_random_series() * 100,
+    },
+    "emission_reduction": {CO2_EMISSION: 0.34},
+    "life_time": 50,
+    "build_time": 5,
+    "power_utilization": pd.Series([0.9] * default_network_constants.n_hours),
+    "minimal_power_utilization": pd.Series([0.9] * default_network_constants.n_hours),
     "capex": get_random_series() * 100,
     "opex": get_random_series() * 100,
     "name": "default_generator_type",
@@ -208,15 +259,22 @@ default_generator_type_params = {
             ),
         },
     },
-    "emission_reduction": {CO2_EMISSION: 0.34, PM10_EMISSION: 0.1},
+    "emission_reduction": {
+        CO2_EMISSION: pd.Series([0.34] * default_network_constants.n_years),
+        PM10_EMISSION: pd.Series([0.1] * default_network_constants.n_years),
+    },
     "life_time": 50,
     "build_time": 5,
     "power_utilization": pd.Series(
         data=[1.0] * DEFAULT_HOURS, index=np.arange(DEFAULT_HOURS)
     ),
+    "minimal_power_utilization": pd.Series(
+        data=[0.0] * DEFAULT_HOURS, index=np.arange(DEFAULT_HOURS)
+    ),
     "capex": pd.Series([_DEFAULT_GENERATOR_CAPEX] * DEFAULT_SERIES_LENGTH),
     "opex": pd.Series([_DEFAULT_GENERATOR_OPEX] * DEFAULT_SERIES_LENGTH),
-    "ramp": np.nan,
+    "ramp_down": np.nan,
+    "ramp_up": np.nan,
     "generation_compensation": None,
 }
 

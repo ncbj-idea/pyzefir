@@ -42,4 +42,5 @@ class VarCostObjectiveBuilder(ObjectiveBuilder):
         return (
             fuel_consumption
             * xr.DataArray(cost, dims=["year"], coords=[self.indices.Y.ii], name="cost")
+            * self.indices.years_aggregation_array
         ).sum()

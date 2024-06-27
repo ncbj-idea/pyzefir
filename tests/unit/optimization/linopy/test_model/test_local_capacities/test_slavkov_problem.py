@@ -25,7 +25,7 @@ from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
 from pyzefir.optimization.results import Results
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -105,7 +105,7 @@ def test_min_max_nom_dev(
         network.generator_types,
         {"local_coal_heat_plant2": {"capex": np.array([5200, 4900, 4800, 4500, 4400])}},
     )
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
     aggr_idx = engine.indices.AGGR.inverse["aggr"]
     for unit_idx in engine.indices.aggr_gen_map[aggr_idx]:

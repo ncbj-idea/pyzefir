@@ -32,8 +32,7 @@ class NetworkConstants:
     relative_emission_limits: dict[str, pd.Series]
     base_total_emission: dict[str, float | int]
     power_reserves: dict[str, dict[str, float | int]]
-    min_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
-    max_generation_fraction: dict[str, dict[tuple[str, str], float]] | None = None
+    generator_capacity_cost: str = "brutto"
     binary_fraction: bool = False
     ens_penalty_cost: float = 100
 

@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from typing import Any, Type
 
 import numpy as np
@@ -25,100 +24,120 @@ from pyzefir.optimization.opt_config import OptConfig, OptConfigError
 
 @pytest.mark.parametrize(
     (
-        "hours",
-        "years",
-        "hour_sample",
-        "year_sample",
-        "discount_rate",
+        "kwargs",
         "error",
         "error_msg",
     ),
     [
         (
-            100,
-            array([[1]]),
-            None,
-            None,
-            arange(5),
+            {
+                "hours": 100,
+                "years": array([[1]]),
+                "hour_sample": None,
+                "year_sample": None,
+                "discount_rate": arange(5),
+            },
             OptConfigError,
             "discount_rate, hours and years must be 1D arrays",
         ),
         (
-            array([[1]]),
-            10,
-            None,
-            None,
-            arange(5),
+            {
+                "hours": array([[1]]),
+                "years": 10,
+                "hour_sample": None,
+                "year_sample": None,
+                "discount_rate": arange(5),
+            },
             OptConfigError,
             "discount_rate, hours and years must be 1D arrays",
         ),
         (
-            20,
-            10,
-            20,
-            10,
-            array([[1]]),
+            {
+                "hours": 20,
+                "years": 10,
+                "hour_sample": 20,
+                "year_sample": 10,
+                "discount_rate": array([[1]]),
+            },
             OptConfigError,
             "discount_rate, hours and years must be 1D arrays",
         ),
         (
-            20,
-            10,
-            21,
-            10,
-            arange(10),
+            {
+                "hours": 20,
+                "years": 10,
+                "hour_sample": 21,
+                "year_sample": 10,
+                "discount_rate": arange(10),
+            },
             ValueError,
             "Cannot take a larger sample than population when 'replace=False'",
         ),
         (
-            10,
-            10,
-            10,
-            10,
-            arange(4),
+            {
+                "hours": 10,
+                "years": 10,
+                "hour_sample": 10,
+                "year_sample": 10,
+                "discount_rate": arange(4),
+            },
             OptConfigError,
             "discount_rate shape is different than years shape",
         ),
         (
-            10,
-            10,
-            10,
-            np.array([0, 2, 3, 5]),
-            arange(10),
+            {
+                "hours": 10,
+                "years": 10,
+                "hour_sample": 10,
+                "year_sample": array([0, 2, 3, 5]),
+                "discount_rate": arange(10),
+            },
             OptConfigError,
             "year sample must be consecutive starting from 0",
         ),
         (
-            10,
-            10,
-            10,
-            np.array([3, 4, 5]),
-            arange(10),
+            {
+                "hours": 10,
+                "years": 10,
+                "hour_sample": 10,
+                "year_sample": array([3, 4, 5]),
+                "discount_rate": arange(10),
+            },
             OptConfigError,
             "year sample must be consecutive starting from 0",
         ),
         (
-            10,
-            10,
-            10,
-            15,
-            arange(10),
+            {
+                "hours": 10,
+                "years": 10,
+                "hour_sample": 10,
+                "year_sample": 15,
+                "discount_rate": arange(10),
+            },
             OptConfigError,
             "year sample 15 must be less than or equal to year shape 10",
+        ),
+        (
+            {
+                "hours": 10,
+                "years": 15,
+                "hour_sample": 10,
+                "year_sample": 15,
+                "discount_rate": arange(15),
+                "generator_capacity_cost": "not-correct",
+            },
+            OptConfigError,
+            "generator capacity cost should be 'brutto' or 'netto'",
         ),
     ],
 )
 def test_errors(
-    hours: int | ndarray,
-    years: int | ndarray,
-    hour_sample: int | ndarray | None,
-    year_sample: int | ndarray | None,
-    discount_rate: ndarray,
+    kwargs: dict[str, Any],
     error: Type[Exception],
     error_msg: str,
 ) -> None:
     with pytest.raises(error) as err:
-        OptConfig(hours, years, discount_rate, hour_sample, year_sample)
+        OptConfig(**kwargs)
     if isinstance(err.value, ExceptionGroup):
         assert error_msg in [str(e) for e in err.value.exceptions]
     else:

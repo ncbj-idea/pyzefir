@@ -33,19 +33,22 @@ class RampConstraintsBuilder(PartialConstraintsBuilder):
     def ramp_up_constraint(self) -> None:
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
             t_idx = self.parameters.gen.tgen[gen_idx]
-            ramp = self.parameters.tgen.ramp[t_idx]
-            if not np.isnan(ramp):
+            ramp_down = self.parameters.tgen.ramp_down[t_idx]
+            ramp_up = self.parameters.tgen.ramp_up[t_idx]
+            if not np.isnan(ramp_up) or not np.isnan(ramp_down):
                 gen = self.variables.gen.gen
                 cap = self.variables.gen.cap
                 gen_ramp = gen.isel(gen=gen_idx, hour=slice(1, None, None)) - gen.isel(
                     gen=gen_idx, hour=slice(None, -1, None)
                 )
-                self.model.add_constraints(
-                    gen_ramp <= cap.isel(gen=gen_idx) * ramp,
-                    name=f"{gen_name}_RAMP_PLUS_CONSTRAINT",
-                )
-                self.model.add_constraints(
-                    gen_ramp >= -cap.isel(gen=gen_idx) * ramp,
-                    name=f"{gen_name}_RAMP_MINUS_CONSTRAINT",
-                )
+                if not np.isnan(ramp_up):
+                    self.model.add_constraints(
+                        gen_ramp <= cap.isel(gen=gen_idx) * ramp_up,
+                        name=f"{gen_name}_RAMP_UP_CONSTRAINT",
+                    )
+                if not np.isnan(ramp_down):
+                    self.model.add_constraints(
+                        -gen_ramp <= cap.isel(gen=gen_idx) * ramp_down,
+                        name=f"{gen_name}_RAMP_DOWN_CONSTRAINT",
+                    )
         _logger.debug("Build ramp up constraint: Done")

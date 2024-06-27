@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, GRID, HEAT, HS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -211,7 +211,7 @@ def test_generation_and_dump_energy(
     set_network_elements_parameters(network.generator_types, generator_type_params)
     set_network_elements_parameters(network.aggregated_consumers, aggr_params)
 
-    opt_config = create_default_opf_config(**config_params)
+    opt_config = create_default_opt_config(**config_params)
     network.fuels["coal"].cost = network.fuels["coal"].cost / opt_config.hourly_scale
     network.fuels["biomass"].cost = (
         network.fuels["biomass"].cost / opt_config.hourly_scale

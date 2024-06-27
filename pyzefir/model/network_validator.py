@@ -50,7 +50,6 @@ class NetworkValidator:
             BaseTotalEmissionValidation,
             BaseCapacityValidator,
             NetworkElementsValidation,
-            NetworkGenerationFraction,
             PowerReserveValidation,
             DsrBusesOutValidation,
         )
@@ -505,167 +504,24 @@ class BaseCapacityValidator(BasicValidator):
         )
 
 
-class NetworkGenerationFraction(BasicValidator):
-    @staticmethod
-    def _validate_min_max_gen_frac(
-        min_max: dict[str, dict[tuple[str, str], float]],
-        message: str,
-        energy_types: list[str],
-        exception_list: list[NetworkValidatorException],
-    ) -> None:
-        """Check if all min/max generation fraction are in [0,1] and if energy type is correct"""
-
-        for energy_type, tags_gen_frac in min_max.items():
-            for tags_pair, generation_fraction in tags_gen_frac.items():
-                if energy_type not in energy_types:
-                    exception_list.append(
-                        NetworkValidatorException(
-                            f"Incorrect energy type <{energy_type}> for tags <{tags_pair}>"
-                        )
-                    )
-                if (
-                    generation_fraction < 0
-                    or generation_fraction > 1
-                    or np.isnan(generation_fraction)
-                ):
-                    exception_list.append(
-                        NetworkValidatorException(
-                            f"{message} generation fraction <{generation_fraction}> for energy type <{energy_type}>, "
-                            f"tags <{tags_pair}> "
-                            f"must be a number greater than zero and "
-                            f"smaller than one "
-                        )
-                    )
-
-    @staticmethod
-    def _get_n_tag_elemets(
-        tag: str, subtag: str, network: Network
-    ) -> tuple[int, int, int, int]:
-        gen, stor = network.generators, network.storages
-        n_gen_tag = len([v.tags for k, v in gen.items() if tag in v.tags])
-        n_stor_tag = len([v.tags for k, v in stor.items() if tag in v.tags])
-        n_gen_subtag = len([v.tags for k, v in gen.items() if subtag in v.tags])
-        n_stor_subtag = len([v.tags for k, v in stor.items() if subtag in v.tags])
-        return n_gen_tag, n_stor_tag, n_gen_subtag, n_stor_subtag
-
-    @staticmethod
-    def _validate_proper_subtags(
-        min_max: dict[str, dict[tuple[str, str], float]],
-        network: Network,
-        exception_list: list[NetworkValidatorException],
-    ) -> None:
-        """Check subtag is a proper set"""
-        for energy_type, tags_gen_frac in min_max.items():
-            for tags in tags_gen_frac.keys():
-                tag, subtag = tags
-                (
-                    n_gen_tag,
-                    n_stor_tag,
-                    n_gen_subtag,
-                    n_stor_subtag,
-                ) = NetworkGenerationFraction._get_n_tag_elemets(tag, subtag, network)
-                if n_gen_tag + n_stor_tag <= n_gen_subtag + n_stor_subtag:
-                    exception_str = f"Subtag <{subtag}> is not a proper subset of the tag set <{tag}>"
-                    _logger.debug(exception_str)
-                    exception_list.append(NetworkValidatorException(exception_str))
-
-    @staticmethod
-    def _gen_et_validation(
-        energy_types_dict: dict[str, str],
-        network: Network,
-        tag: str,
-        energy_type: str,
-        exception_list: list[NetworkValidatorException],
-    ) -> None:
-        gen = network.generators
-        gens_et = [
-            {
-                "name": v.name,
-                "energy_type": {
-                    energy_types_dict[bus]
-                    for bus in v.buses.union({v.bus})
-                    if bus is not None
-                },
-            }
-            for k, v in gen.items()
-            if tag in v.tags
-        ]
-        for gen_et in gens_et:
-            if energy_type not in gen_et["energy_type"]:
-                unit_name = gen_et["name"]
-                exception_str = (
-                    f"Energy type for generators of the tag: {tag} "
-                    f"for <{unit_name}> do not match energy type in Generation Fraction"
-                )
-                _logger.debug(exception_str)
-                exception_list.append(NetworkValidatorException(exception_str))
-
-    @staticmethod
-    def _stor_et_validation(
-        energy_types_dict: dict[str, str],
-        network: Network,
-        tag: str,
-        energy_type: str,
-        exception_list: list[NetworkValidatorException],
-    ) -> None:
-        stor = network.storages
-        stors_et = [
-            {
-                "name": v.name,
-                "energy_type": {
-                    energy_types_dict[bus] for bus in {v.bus} if bus is not None
-                },
-            }
-            for k, v in stor.items()
-            if tag in v.tags
-        ]
-        for stor_et in stors_et:
-            if energy_type not in stor_et["energy_type"]:
-                unit_name = stor_et["name"]
-                exception_str = (
-                    f"Energy type for storages of the tag: {tag} "
-                    f"for <{unit_name}> do not match energy type in Generation Fraction"
-                )
-                _logger.debug(exception_str)
-                exception_list.append(NetworkValidatorException(exception_str))
-
-    @staticmethod
-    def _validate_tag_energy_types(
-        min_max: dict[str, dict[tuple[str, str], float]],
-        network: Network,
-        exception_list: list[NetworkValidatorException],
-    ) -> None:
-        """Check tags energy types"""
-        for energy_type, tags_gen_frac in min_max.items():
-            et = {v.name: v.energy_type for k, v in network.buses.items()}
-            for tags in tags_gen_frac.keys():
-                for tag in tags:
-                    NetworkGenerationFraction._gen_et_validation(
-                        et, network, tag, energy_type, exception_list
-                    )
-                    NetworkGenerationFraction._stor_et_validation(
-                        et, network, tag, energy_type, exception_list
-                    )
-
+class GeneratorCapacityCostValidator(BasicValidator):
     @staticmethod
     def validate(
         network: Network, exception_list: list[NetworkValidatorException]
     ) -> None:
-        energy_types = network.energy_types
-        min_gen_fr = network.constants.min_generation_fraction
-        max_gen_fr = network.constants.max_generation_fraction
-        NetworkGenerationFraction._validate_min_max_gen_frac(
-            min_gen_fr, "Min", energy_types, exception_list
-        )
-        NetworkGenerationFraction._validate_min_max_gen_frac(
-            max_gen_fr, "Max", energy_types, exception_list
-        )
-
-        for min_max_gen_fr in (min_gen_fr, max_gen_fr):
-            NetworkGenerationFraction._validate_proper_subtags(
-                min_max_gen_fr, network, exception_list
-            )
-            NetworkGenerationFraction._validate_tag_energy_types(
-                min_max_gen_fr, network, exception_list
-            )
-        _logger.debug("Network generation fractions are OK.")
+        """
+        If generator_capacity_cost is set to 'netto', all generator_types must have exactly
+        one energy type, if it is set to 'brutto' - no restrictions.
+        """
+        if network.constants.generator_capacity_cost == "netto":
+            for generator_type in network.generator_types.values():
+                if len(generator_type.energy_types) > 1:
+                    exception_list.append(
+                        NetworkValidatorException(
+                            f"generator type '{generator_type.name}' have more than one energy "
+                            f"type defined, but generator_capacity_cost "
+                            f"parameter is set to '{network.constants.generator_capacity_cost}'; if you want to "
+                            "have generator types with more than one energy type, please set generator_capacity_cost "
+                            "to 'brutto'"
+                        )
+                    )

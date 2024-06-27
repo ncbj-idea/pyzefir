@@ -21,7 +21,7 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_elements import Storage
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -94,7 +94,7 @@ def test_generation_upper_bound(
         },
     )
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
 
     gen, cap = engine.results.storages_results.gen, engine.results.storages_results.cap

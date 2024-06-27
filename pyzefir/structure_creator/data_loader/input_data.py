@@ -48,6 +48,7 @@ class ScenarioData:
     fractions: dict[str, dict[str, pd.DataFrame]]
     generation_fraction: pd.DataFrame
     generation_compensation: pd.DataFrame
+    yearly_emission_reduction: pd.DataFrame
 
     @staticmethod
     def validate_input_files(input_path: Path) -> None:
@@ -63,7 +64,6 @@ class ScenarioData:
             XlsxFileName.generation_fraction,
             XlsxFileName.generation_compensation,
         ]
-
         fractions_directory = input_path / SubDirectory.fractions
         for element_path in fractions_directory.iterdir():
             if not element_path.is_file() and not element_path.suffix == ".xlsx":
@@ -120,6 +120,11 @@ class ScenarioData:
             ),
             generation_compensation=pd.read_excel(
                 input_path / XlsxFileName.generation_compensation
+            ),
+            yearly_emission_reduction=(
+                pd.read_excel(input_path / XlsxFileName.yearly_emission_reduction)
+                if (input_path / XlsxFileName.yearly_emission_reduction).exists()
+                else pd.DataFrame()
             ),
         )
         _logger.debug("Scenario input files loaded.")

@@ -49,7 +49,11 @@ class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
         penalty_cost = self._get_ens_penalty()
         _logger.info("Ens penalty set to {}".format(penalty_cost))
         _logger.info("Ens penalty cost objective: Done")
-        return (self.variables.bus.bus_ens * penalty_cost).sum()
+        return (
+            self.variables.bus.bus_ens
+            * penalty_cost
+            * self.indices.years_aggregation_array
+        ).sum()
 
     def _get_ens_penalty(self) -> float:
         ens_penalty_multiplier = self.parameters.scenario_parameters.ens_penalty_cost

@@ -17,8 +17,7 @@
 
 import pytest
 from numpy import all, arange, array, ndarray, ones
-from pandas import DataFrame, Series
-from pandas.testing import assert_frame_equal
+from pandas import Series
 
 from pyzefir.model.network import Network, NetworkElementsDict
 from pyzefir.model.network_elements import Generator, GeneratorType
@@ -167,11 +166,6 @@ def test_create(
     for gen_id, gen_name in indices.GEN.mapping.items():
         gen = complete_network.generators[gen_name]
         gen_type = complete_network.generator_types[gen.energy_source_type]
-
-        assert_frame_equal(
-            DataFrame(result.eff[gen_id]).reset_index(drop=True),
-            gen_type.efficiency.loc[h_sample].reset_index(drop=True),
-        )
 
         assert result.base_cap[gen_id] == gen.unit_base_cap
         assert tresult.lt[type_dict[gen_id]] == gen_type.life_time

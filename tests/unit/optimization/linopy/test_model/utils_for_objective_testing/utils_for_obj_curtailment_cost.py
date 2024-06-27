@@ -35,6 +35,7 @@ def objective_curtailment_cost(
     return sum(
         np.asarray(
             results.generators_results.dump_et[indices.GEN.mapping[gen_idx]][et]
+            * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
         ).sum(axis=0)
         @ curtailment_cost[tgen_idx]
         for gen_idx, tgen_idx in gen_idx_to_tgen_idx.items()

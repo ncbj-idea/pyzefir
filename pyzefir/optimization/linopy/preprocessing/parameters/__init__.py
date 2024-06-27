@@ -60,6 +60,25 @@ class ModelParameters(ABC):
         }
 
     @staticmethod
+    def get_frame_data_prop_from_element_type(
+        d: NetworkElementsDict[NetworkElement],
+        II: IndexingSet,
+        prop: str,
+        sample: ndarray | None = None,
+    ) -> dict[int, Any]:
+        result: dict[int, dict[str, ndarray]] = dict()
+        for ii, name in II.mapping.items():
+            if not is_none_general(getattr(d[name], prop)):
+                dt_frame = getattr(d[name], prop)
+                energy_type_dict = dict()
+                for energy_type in list(dt_frame):
+                    energy_type_dict[energy_type] = ModelParameters.sample_series(
+                        dt_frame[energy_type], sample
+                    )
+                result[ii] = energy_type_dict
+        return result
+
+    @staticmethod
     def sample_series(data: Series | Any, sample: Iterable | None) -> ndarray | Any:
         if isinstance(data, Series):
             return data.values[sample] if sample is not None else data.values

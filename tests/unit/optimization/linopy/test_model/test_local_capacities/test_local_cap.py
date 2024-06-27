@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from pyzefir.optimization.linopy.model import LinopyOptimizationModel
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -82,7 +82,7 @@ def test_local_supplementary_capacity_upper_bound_constraints(
         {"local_coal_heat_plant2": {"energy_source_type": "local_coal_heat_plant"}},
     )
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
 
     aggr_to_type = engine.indices.aggr_tgen_map

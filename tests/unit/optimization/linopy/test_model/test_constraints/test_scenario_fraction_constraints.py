@@ -29,7 +29,7 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_elements import AggregatedConsumer, LocalBalancingStack
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -130,7 +130,7 @@ def test_min_max_fraction(
     """
     Tests if fraction values in each year are within given boundaries
     """
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.arange(5),
         year_sample=np.arange(N_YEARS),
     )
@@ -196,7 +196,7 @@ def test_max_fraction_change(
     """
     Tests if fraction values increases as given in max_fraction_increase parameter
     """
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.arange(5),
         year_sample=np.arange(N_YEARS),
     )

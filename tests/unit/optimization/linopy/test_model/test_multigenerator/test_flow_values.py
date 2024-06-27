@@ -23,7 +23,7 @@ from pyzefir.model.network_elements import Line
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, GRID, HEAT, HS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -119,7 +119,7 @@ def test_flow_values(
     set_network_elements_parameters(network.demand_profiles, demand_params)
     set_network_elements_parameters(network.lines, line_params)
 
-    opt_config = create_default_opf_config(**config_params)
+    opt_config = create_default_opt_config(**config_params)
     engine = run_opt_engine(network, opt_config)
 
     for line_name in line_params:

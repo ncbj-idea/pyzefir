@@ -64,10 +64,12 @@ def get_dataset_config_from_categories(
                 dataset_name=DataSubCategories.GENERATOR_TYPES,
                 columns={
                     "name": str,
-                    "ramp": float,
+                    "ramp_down": float,
+                    "ramp_up": float,
                     "build_time": int,
                     "life_time": int,
                     "power_utilization": float,
+                    "minimal_power_utilization": float,
                 },
                 default_type={bool},
             ),
@@ -98,6 +100,11 @@ def get_dataset_config_from_categories(
             ),
             DatasetConfig(
                 dataset_name=DataSubCategories.POWER_UTILIZATION,
+                columns={"hour_idx": int},
+                default_type={float},
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.MINIMAL_POWER_UTILIZATION,
                 columns={"hour_idx": int},
                 default_type={float},
             ),
@@ -272,8 +279,11 @@ def get_dataset_config_from_categories(
             DatasetConfig(
                 dataset_name=DataSubCategories.GENERATION_FRACTION,
                 columns={
+                    "name": str,
                     "tag": str,
                     "subtag": str,
+                    "year": int,
+                    "type": str,
                     "energy_type": str,
                     "min_generation_fraction": float,
                     "max_generation_fraction": float,
@@ -342,6 +352,21 @@ def get_dataset_config_from_categories(
                 dataset_name=DataSubCategories.EMISSION_FEES,
                 columns={"year_idx": int},
                 default_type={float},
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.YEARLY_EMISSION_REDUCTION,
+                columns={"year_idx": int, "emission_type": str},
+                default_type={float},
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.CAPACITY_BOUNDS,
+                columns={
+                    "name": str,
+                    "left_technology_name": str,
+                    "sense": str,
+                    "right_technology_name": str,
+                    "left_coeff": float,
+                },
             ),
         ],
         DataCategories.DEMAND: DatasetConfig(

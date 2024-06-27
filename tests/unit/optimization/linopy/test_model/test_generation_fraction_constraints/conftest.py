@@ -20,12 +20,15 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_elements import (
     AggregatedConsumer,
     Bus,
+    CapacityFactor,
     DemandProfile,
     Fuel,
     Generator,
     GeneratorType,
     Line,
     LocalBalancingStack,
+    Storage,
+    StorageType,
     TransmissionFee,
 )
 from pyzefir.model.network_elements.emission_fee import EmissionFee
@@ -39,6 +42,7 @@ def network(
     fuels: dict[str, Fuel],
     demand_profile: DemandProfile,
     generator_types: dict[str, GeneratorType],
+    storage_types: dict[str, StorageType],
     grid_bus: Bus,
     hs_bus: Bus,
     local_ee_bus: Bus,
@@ -54,6 +58,9 @@ def network(
     coal_chp: Generator,
     lbs: LocalBalancingStack,
     aggr: AggregatedConsumer,
+    ee_storage: Storage,
+    local_pv: Generator,
+    cfs: dict[str, CapacityFactor],
 ) -> Network:
     """
     Network used all tests in this module contains
@@ -79,6 +86,7 @@ def network(
     result.add_generator_type(generator_types["heat_plant_biomass"])
     result.add_generator_type(generator_types["heat_plant_coal"])
     result.add_generator_type(generator_types["chp_coal"])
+    result.add_storage_type(storage_types["ee_storage_type"])
     result.add_demand_profile(demand_profile)
     result.add_emission_fee(emission_fee_CO2)
     result.add_emission_fee(emission_fee_PM10)
@@ -98,5 +106,10 @@ def network(
 
     result.add_local_balancing_stack(lbs)
     result.add_aggregated_consumer(aggr)
+
+    result.add_storage(ee_storage)
+    result.add_capacity_factor(cfs["sun"])
+    result.add_generator_type(generator_types["pv"])
+    result.add_generator(local_pv)
 
     return result

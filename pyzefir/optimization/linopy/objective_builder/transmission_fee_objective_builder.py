@@ -45,4 +45,4 @@ class TransmissionFeeObjectiveBuilder(ObjectiveBuilder):
         )
         line_flow = self.variables.line.flow.isel(line=line_idx)
 
-        return line_flow * transmission_fee
+        return line_flow * transmission_fee * self.indices.years_aggregation_array

@@ -37,7 +37,7 @@ class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
                 for year_idx in self.indices.Y.ord:
                     result += self.yearly_generator_emission_cost(
                         year_idx=year_idx, gen_idx=gen_idx, eh=eh
-                    )
+                    ) * self.indices.year_aggregates(year_idx)
         _logger.info("Emission fee objective: Done")
         return result
 
@@ -56,7 +56,7 @@ class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
             generator_emission = (
                 fc
                 * self.parameters.fuel.u_emission[fuel_idx][emission_type]
-                * (1 - self.parameters.gen.em_red[gen_idx][emission_type])
+                * (1 - self.parameters.gen.em_red[gen_idx][emission_type][year_idx])
             )
             total_emission += (
                 generator_emission

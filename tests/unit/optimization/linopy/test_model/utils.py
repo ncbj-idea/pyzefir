@@ -29,7 +29,7 @@ from tests.unit.optimization.linopy.constants import (
 )
 
 
-def create_default_opf_config(
+def create_default_opt_config(
     hour_sample: np.ndarray,
     year_sample: np.ndarray,
     discount_rate: np.ndarray = DEFAULT_DISCOUNT_RATE,
@@ -37,6 +37,8 @@ def create_default_opf_config(
     years: int = N_YEARS,
     use_hourly_scale: bool = True,
     use_ens: bool = True,
+    generator_capacity_cost: str = "brutto",
+    year_aggregates: np.ndarray | None = None,
 ) -> OptConfig:
     return OptConfig(
         hours=hours,
@@ -46,6 +48,8 @@ def create_default_opf_config(
         discount_rate=discount_rate,
         use_hourly_scale=use_hourly_scale,
         ens=1.0 if use_ens else 0.0,
+        year_aggregates=year_aggregates,
+        generator_capacity_cost=generator_capacity_cost,
     )
 
 

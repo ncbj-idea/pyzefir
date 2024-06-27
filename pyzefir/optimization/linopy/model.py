@@ -26,6 +26,9 @@ from pyzefir.optimization.linopy.constraints_builder.balancing_constraints_build
 from pyzefir.optimization.linopy.constraints_builder.capacity_binding_builder import (
     CapacityBindingBuilder,
 )
+from pyzefir.optimization.linopy.constraints_builder.capacity_bounds_constraint_builder import (
+    CapacityBoundsConstraintsBuilder,
+)
 from pyzefir.optimization.linopy.constraints_builder.capacity_evolution_constraints_builder import (
     CapacityEvolutionConstrBuilder,
 )
@@ -34,6 +37,9 @@ from pyzefir.optimization.linopy.constraints_builder.fraction_constraints_builde
 )
 from pyzefir.optimization.linopy.constraints_builder.generation_constraints_builder import (
     GenerationConstraintsBuilder,
+)
+from pyzefir.optimization.linopy.constraints_builder.generation_fraction_constraints_builder import (
+    GenerationFractionConstraintsBuilder,
 )
 from pyzefir.optimization.linopy.constraints_builder.generation_ramp import (
     RampConstraintsBuilder,
@@ -105,6 +111,8 @@ class LinopyOptimizationModel(OptimizationModel):
         RampConstraintsBuilder,
         CapacityEvolutionConstrBuilder,
         CapacityBindingBuilder,
+        CapacityBoundsConstraintsBuilder,
+        GenerationFractionConstraintsBuilder,
     ]
     _objective_builders = [
         CapexObjectiveBuilder,
@@ -205,6 +213,7 @@ class LinopyOptimizationModel(OptimizationModel):
                 parameters=self.parameters,
             )
         else:
+            self.model.print_infeasibilities()
             logging.getLogger(__name__).warning(
                 "Model cannot be solved, optimization status is %s", self.status.name
             )

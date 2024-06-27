@@ -316,6 +316,49 @@ def test_invalid_directory_path_sol_dump_path(
 
 
 @pytest.mark.parametrize(
+    "param_value,is_correct",
+    (("netto", True), ("brutto", True), ("bum-shakalaka!", False)),
+)
+def test_load_generator_capacity_cost_parameter(
+    tmp_path: Path,
+    mock_input_directory: Path,
+    mock_output_directory: Path,
+    mock_tmp_dir: Path,
+    param_value: str,
+    is_correct: bool,
+) -> None:
+    """
+    Test if config file loading behaves correctly with generator capacity cost parameter.
+    """
+    config_file = create_test_config_file(
+        input_dict={
+            "input_path": str(mock_input_directory),
+            "scenario": "scenario",
+            "input_format": "csv",
+        },
+        output_dict={
+            "output_path": str(mock_output_directory),
+            "sol_dump_path": tmp_path / "model.sol",
+        },
+    )
+    config_file.add_section("optimization")
+    config_file["optimization"].update(generator_capacity_cost=param_value)
+    dump_test_config_file(config_file, tmp_path / "config.ini")
+    if is_correct:
+        config = ConfigLoader(tmp_path / "config.ini").load()
+        assert (
+            config.network_config["generator_capacity_cost"] == param_value or "netto"
+        )
+    else:
+        msg = re.escape(
+            f"given value of a generator_capacity_cost {param_value} is different than allowed values "
+            "netto or brutto"
+        )
+        with pytest.raises(ConfigException, match=msg):
+            ConfigLoader(tmp_path / "config.ini").load()
+
+
+@pytest.mark.parametrize(
     "value, expected_value",
     (
         ("", ""),

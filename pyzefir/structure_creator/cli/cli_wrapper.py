@@ -45,11 +45,12 @@ def create_structure(
         n_years=n_years,
     )
     _logger.info("Creating structure and initial setup...")
-    StructureCreator.create_structure_and_initial(
+    capacity_bounds_df = StructureCreator.create_structure_and_initial(
         input_structure=input_data.structure_data, output_path=Path(output_path)
     )
     _logger.info("Creating scenario...")
     create_scenario(
+        capacity_bounds_df=capacity_bounds_df,
         scenario_data=input_data.scenario_data,
         output_path=Path(output_path) / SubDirectory.scenarios,
         scenario_name=scenario_name,

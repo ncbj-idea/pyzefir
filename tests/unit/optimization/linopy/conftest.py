@@ -27,6 +27,7 @@ from pyzefir.model.network_elements import (
     CapacityFactor,
     DemandProfile,
     Fuel,
+    GenerationFraction,
     GeneratorType,
     StorageType,
 )
@@ -192,7 +193,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 EE,
             },
             efficiency=pd.DataFrame({EE: [0.9] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "pp_gas": create_generator_type(
             name="pp_gas",
@@ -201,7 +201,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 EE,
             },
             efficiency=pd.DataFrame({EE: [0.8] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_plant_coal": create_generator_type(
             name="heat_plant_coal",
@@ -210,7 +209,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency=pd.DataFrame({HEAT: [0.9] * N_HOURS}),
             life_time=30,
             build_time=1,
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "local_coal_heat_plant": create_generator_type(
             name="local_coal_heat_plant",
@@ -219,7 +217,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency=pd.DataFrame({HEAT: [0.88] * N_HOURS}),
             life_time=25,
             build_time=1,
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "local_coal_heat_plant2": create_generator_type(
             name="local_coal_heat_plant2",
@@ -228,7 +225,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency=pd.DataFrame({HEAT: [0.88] * N_HOURS}),
             life_time=25,
             build_time=1,
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_plant_biomass": create_generator_type(
             name="heat_plant_biomass",
@@ -237,7 +233,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency=pd.DataFrame({HEAT: [0.5] * N_HOURS}),
             life_time=25,
             build_time=1,
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "chp_coal": create_generator_type(
             name="chp_coal",
@@ -246,7 +241,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             efficiency=pd.DataFrame({HEAT: [0.5] * N_HOURS, EE: [0.3] * N_HOURS}),
             life_time=30,
             build_time=1,
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "heat_pump": create_generator_type(
             name="heat_pump",
@@ -255,7 +249,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency=pd.DataFrame({HEAT: [0.9] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "boiler_coal": create_generator_type(
             name="boiler_coal",
@@ -264,7 +257,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency=pd.DataFrame({HEAT: [0.8] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "boiler_biomass": create_generator_type(
             name="boiler_biomass",
@@ -273,7 +265,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
                 HEAT,
             },
             efficiency=pd.DataFrame({HEAT: [0.84] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "pv": create_generator_type(
             name="pv",
@@ -282,7 +273,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="sun",
             efficiency=pd.DataFrame({EE: [0.9] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "solar": create_generator_type(
             name="solar",
@@ -291,7 +281,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="sun",
             efficiency=pd.DataFrame({HEAT: [0.8] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
         "wind_farm": create_generator_type(
             name="wind_farm",
@@ -300,7 +289,6 @@ def generator_types(cop: Series) -> dict[str, GeneratorType]:
             },
             capacity_factor="wind",
             efficiency=pd.DataFrame({EE: [0.85] * N_HOURS}),
-            power_utilization=pd.Series(data=[1.0] * N_HOURS, index=np.arange(N_HOURS)),
         ),
     }
 
@@ -313,6 +301,19 @@ def storage_types() -> dict[str, StorageType]:
         ),
         "ee_storage_type": create_storage_type(name="ee_storage_type", energy_type=EE),
     }
+
+
+@pytest.fixture
+def generation_fraction() -> GenerationFraction:
+    return GenerationFraction(
+        name="boiler_coal_solar_generation_fraction",
+        tag="example_tag",
+        sub_tag="example_sub_tag",
+        energy_type=HEAT,
+        fraction_type="yearly",
+        min_generation_fraction=pd.Series([np.nan, 0, np.nan, np.nan, 0]),
+        max_generation_fraction=pd.Series([np.nan, 0.5, np.nan, np.nan, 0.9]),
+    )
 
 
 @pytest.fixture

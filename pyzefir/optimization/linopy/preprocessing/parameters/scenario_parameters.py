@@ -27,11 +27,10 @@ class ScenarioParameters(ModelParameters):
         indices: Indices,
         opt_config: OptConfig,
         rel_em_limit: dict[str, ndarray],
-        min_generation_fraction: dict[str, dict[tuple[int, int], float]],
-        max_generation_fraction: dict[str, dict[tuple[int, int], float]],
         base_total_emission: dict[str, float | int],
         power_reserves: dict[str, dict[str, float]],
         ens_penalty_cost: float,
+        generator_capacity_cost: str,
     ) -> None:
         self.discount_rate: ndarray = opt_config.discount_rate[indices.Y.ii]
         """ discount rate included in capex formula """
@@ -41,13 +40,6 @@ class ScenarioParameters(ModelParameters):
         """  ratio of the hours for hours scale """
         self.base_total_emission: dict[str, float | int] = base_total_emission
         """ Total emissions for a given type for the base year """
-        self.min_generation_fraction: dict[str, dict[tuple[int, int], float]] = (
-            min_generation_fraction
-        )
-        """Min percentage usage of the units in the tag"""
-        self.max_generation_fraction: dict[str, dict[tuple[int, int], float]] = (
-            max_generation_fraction
-        )
         """Max percentage usage of the units in the tag"""
         self.power_reserves: dict[str, dict[int, float]] | None = {
             energy_type: {indices.TAGS.inverse[tag]: val for tag, val in res.items()}
@@ -58,3 +50,6 @@ class ScenarioParameters(ModelParameters):
         """money scale parameter"""
         self.ens_penalty_cost: float = ens_penalty_cost
         """set cost for ens. Letting to be equal zero means no ens"""
+        self.generator_capacity_cost: str = generator_capacity_cost
+        """set generator_capacity_cost parameter; if netto then additional efficiency incorporated
+        in capex/opex"""

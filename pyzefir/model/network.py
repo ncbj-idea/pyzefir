@@ -22,12 +22,14 @@ from pyzefir.model.network_elements import (
     DSR,
     AggregatedConsumer,
     Bus,
+    CapacityBound,
     CapacityFactor,
     DemandChunk,
     DemandProfile,
     EmissionFee,
     EnergySourceType,
     Fuel,
+    GenerationFraction,
     Generator,
     GeneratorType,
     Line,
@@ -184,6 +186,10 @@ class Network:
         self.demand_profiles: NetworkElementsDict[DemandProfile] = NetworkElementsDict()
         self.demand_chunks: NetworkElementsDict[DemandChunk] = NetworkElementsDict()
         self.dsr: NetworkElementsDict[DSR] = NetworkElementsDict()
+        self.capacity_bounds: NetworkElementsDict[CapacityBound] = NetworkElementsDict()
+        self.generation_fractions: NetworkElementsDict[GenerationFraction] = (
+            NetworkElementsDict()
+        )
 
         self.constants = network_constants
 
@@ -495,3 +501,39 @@ class Network:
         dsr.validate(self)
         self.dsr[dsr.name] = dsr
         _logger.debug("Add DSR %s: Done", dsr.name)
+
+    def add_capacity_bound(self, capacity_bound: CapacityBound) -> None:
+        """
+        Adds Capacity Bound to the network.
+
+        Raises:
+            NetworkValidatorException:
+
+        Args:
+            capacity_bound (CapacityBound): The Capacity Bound to add.
+        """
+        if capacity_bound is None:
+            exception_str = "CapacityBound cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
+        capacity_bound.validate(self)
+        self.capacity_bounds[capacity_bound.name] = capacity_bound
+        _logger.debug("Add CapacityBound %s: Done", capacity_bound.name)
+
+    def add_generation_fraction(self, generation_fraction: GenerationFraction) -> None:
+        """
+        Adds Generation Fraction to the network.
+
+        Raises:
+            NetworkValidatorException:
+
+        Args:
+            generation_fraction (GenerationFraction): The Generation Fraction to add.
+        """
+        if generation_fraction is None:
+            exception_str = "Generation Fraction cannot be None"
+            _logger.debug(exception_str)
+            raise NetworkValidatorException(exception_str)
+        generation_fraction.validate(self)
+        self.generation_fractions[generation_fraction.name] = generation_fraction
+        _logger.debug("Add Generation Fraction %s: Done", generation_fraction.name)

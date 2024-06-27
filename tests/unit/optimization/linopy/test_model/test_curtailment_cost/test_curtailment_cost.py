@@ -27,7 +27,7 @@ from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
 from pyzefir.optimization.results import Results
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -47,15 +47,16 @@ from tests.unit.optimization.linopy.utils import TOL
 
 
 @pytest.mark.parametrize(
-    ("hour_sample", "year_sample", "energy_curtailment_cost"),
+    ("hour_sample", "year_sample", "energy_curtailment_cost", "n_years_aggregation"),
     [
-        (np.arange(50), np.arange(N_YEARS), {"pv": pd.Series([50.0] * 5)}),
+        (np.arange(50), np.arange(N_YEARS), {"pv": pd.Series([50.0] * 5)}, 1),
         (
             np.arange(50),
             np.arange(N_YEARS),
             {"pv": pd.Series([50.0] * 5), "heat_plant_biomass": pd.Series([100.0] * 5)},
+            1,
         ),
-        (np.arange(50), np.arange(3), {"pv": pd.Series([50.0] * 5)}),
+        (np.arange(50), np.arange(3), {"pv": pd.Series([50.0] * 5)}, 1),
         (
             np.arange(100),
             np.arange(4),
@@ -63,6 +64,16 @@ from tests.unit.optimization.linopy.utils import TOL
                 "pv": pd.Series([10.0, 20.0, 30.0, 40.0] * 4),
                 "heat_plant_biomass": pd.Series([100.0] * 4),
             },
+            1,
+        ),
+        (
+            np.arange(100),
+            np.arange(4),
+            {
+                "pv": pd.Series([10.0, 20.0, 30.0, 40.0] * 4),
+                "heat_plant_biomass": pd.Series([100.0] * 4),
+            },
+            5,
         ),
     ],
 )
@@ -70,6 +81,7 @@ def test_curtailment_cost(
     hour_sample: np.ndarray,
     year_sample: np.ndarray,
     energy_curtailment_cost: dict[str, pd.Series],
+    n_years_aggregation: int,
     network: Network,
     ee_storage: Storage,
     heat_storage: Storage,
@@ -92,7 +104,13 @@ def test_curtailment_cost(
             {gen_type: {"energy_curtailment_cost": cost}},
         )
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(
+        hour_sample,
+        year_sample,
+        year_aggregates=np.array(
+            [1] + [n_years_aggregation] * (len(year_sample) - 2) + [1]
+        ),
+    )
     engine = run_opt_engine(network, opt_config)
 
     parameters = engine.parameters

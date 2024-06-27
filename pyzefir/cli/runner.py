@@ -22,6 +22,7 @@ import click
 from pyzefir.cli.logger import setup_logging, tear_down_logger
 from pyzefir.model.exception_formatter import NetworkExceptionFormatter
 from pyzefir.model.network import Network
+from pyzefir.model.network_aggregator import NetworkAggregator
 from pyzefir.model.network_validator import NetworkValidator
 from pyzefir.optimization.exportable_results import ExportableResults
 from pyzefir.optimization.input_data import OptimizationInputData
@@ -115,6 +116,16 @@ class CliRunner:
         config_dict = self.config_params.network_config
         network = NetworkCreator.create(loaded_csv_data, config_dict)
         NetworkValidator(network).validate()
+        network_aggregator = NetworkAggregator(
+            n_years=self.config_params.n_years,
+            n_years_aggregation=self.config_params.n_years_aggregation,
+            year_sample=self.config_params.year_sample,
+            aggregation_method=self.config_params.aggregation_method,
+        )
+        network_aggregator.aggregate_network(network)
+        self.config_params = network_aggregator.aggregate_config_params(
+            config_params=self.config_params
+        )
 
         return network
 
@@ -132,6 +143,8 @@ class CliRunner:
             use_hourly_scale=self.config_params.use_hourly_scale,
             solver_name=self.config_params.solver,
             solver_settings=self.config_params.solver_settings,
+            generator_capacity_cost=network.constants.generator_capacity_cost,
+            year_aggregates=self.config_params.year_aggregates,
         )
 
     def _run_optimization(self, network: Network, opt_config: OptConfig) -> Results:

@@ -409,10 +409,10 @@ def test_xlsx_to_csv_convert(scenario_path_str: str | None) -> None:
         "fuels": 2,
         "capacity_factors": 1,
         "demand_chunks": 2,
-        "generator_types": 6,
+        "generator_types": 7,
         "storage_types": 1,
         "demand_types": 2,
-        "scenarios": 14,
+        "scenarios": 16,
         "conversion_rate": 1,
         "generator_type_efficiency": 2,
     }

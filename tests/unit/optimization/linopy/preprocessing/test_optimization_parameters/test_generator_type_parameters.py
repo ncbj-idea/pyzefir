@@ -79,7 +79,7 @@ from tests.unit.optimization.linopy.preprocessing.test_optimization_parameters.u
             array([2]),
             ["pp_coal", "pp_gas"],
             {
-                "ramp": 0.4,
+                "r": 0.4,
             },
             id="ramp",
         ),
@@ -127,7 +127,7 @@ def test_create(
             "energy_curtailment_cost",
         ]:
             if param in params_to_change:
-                if bool(generator_type.energy_curtailment_cost.__len__()):
+                if generator_type.energy_curtailment_cost is not None:
                     assert vectors_eq_check(
                         getattr(generator_type_params, param)[generator_type_id],
                         getattr(generator_type, param),

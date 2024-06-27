@@ -116,6 +116,7 @@ def test_datacategories_get_dynamic_categories() -> None:
                 DataSubCategories.GENERATOR_TYPE_ENERGY_CARRIER,
                 DataSubCategories.GENERATOR_TYPE_ENERGY_TYPE,
                 DataSubCategories.POWER_UTILIZATION,
+                DataSubCategories.MINIMAL_POWER_UTILIZATION,
             ],
         ),
         (

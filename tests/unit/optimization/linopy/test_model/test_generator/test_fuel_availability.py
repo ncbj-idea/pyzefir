@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from pyzefir.model.network_elements import Generator, GeneratorType
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -109,7 +109,7 @@ def test_fuel_availability(
     coal always cheaper than biomass (default settings), so will be built first.
     Intentionally oversized biomass energy_per_unit
     """
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     network_with_additional_gen.fuels["coal"].cost = pd.Series(np.zeros(N_YEARS))
     for fuel_name, fuel_aval in fuel_availability.items():
         network_with_additional_gen.fuels[fuel_name].availability = fuel_aval

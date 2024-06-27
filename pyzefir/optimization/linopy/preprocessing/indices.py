@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Self
 
 import numpy as np
+import xarray as xr
 from bidict import bidict
 from numpy import array
 
@@ -179,6 +180,23 @@ class Indices:
         self._AGGR_STORS, self._AGGR_TSTORS = self._init_aggr_stor_indices(network)
         """ aggregated consumer storage and storage type index """
         self.DSR = IndexingSet.create_from_network_elements_dict(network.dsr, "DSR")
+        """ DSR """
+        self._YEAR_AGGREGATES = opt_config.year_aggregates
+        """ year aggregates """
+        self._YEAR_AGGREGATION_DATA_ARRAY = xr.DataArray(
+            self._YEAR_AGGREGATES if self._YEAR_AGGREGATES is not None else 1,
+            dims=["year"],
+            coords=[self.Y.ii],
+            name="year_aggregation_scale",
+        )
+        """ year aggregation data array """
+        self.CAP_BOUND = IndexingSet.create_from_network_elements_dict(
+            network.capacity_bounds, "CAP_BOUND"
+        )
+        """capacity bounds"""
+        self.GF = IndexingSet.create_from_network_elements_dict(
+            network.generation_fractions, "Generation Fractions"
+        )
 
     def _init_aggr_gen_indices(self, network: Network) -> tuple[dict, dict]:
         aggr_gens = {
@@ -321,3 +339,22 @@ class Indices:
             set[int]: set of aggregator storages
         """
         return self._AGGR_STORS[aggr_idx]
+
+    def year_aggregates(self, year: int) -> int:
+        """
+        Returns year aggregate size for a given year
+
+        Args:
+            year (int): year
+
+        Raises:
+            KeyError: if year does not exist in the network
+
+        Returns:
+            int: year aggregate size
+        """
+        return self._YEAR_AGGREGATES[year] if self._YEAR_AGGREGATES is not None else 1
+
+    @property
+    def years_aggregation_array(self) -> xr.DataArray:
+        return self._YEAR_AGGREGATION_DATA_ARRAY

@@ -23,7 +23,7 @@ from pyzefir.model.utils import NetworkConstants
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import CO2, PM10
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -150,7 +150,7 @@ def test_generator_emission_limit_constraint(
         power_reserves={},
     )
     network.constants = new_network_constants
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.arange(10), year_sample=np.arange(N_YEARS)
     )
     engine = run_opt_engine(network, opt_config)

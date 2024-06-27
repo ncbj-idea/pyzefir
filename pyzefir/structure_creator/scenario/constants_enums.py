@@ -33,6 +33,8 @@ class ScenarioSheetName(StrEnum):
     GENERATION_FRACTION = "Generation Fraction"
     CURTAILMENT_COST = "Curtailment Cost"
     GENERATION_COMPENSATION = "Generation Compensation"
+    YEARLY_EMISSION_REDUCTION = "Yearly Emission Reduction"
+    CAPACITY_BOUNDS = "Capacity Bounds"
 
 
 @unique
@@ -64,3 +66,4 @@ class ScenarioSheetsColumnName(StrEnum):
     EMISSION_FEE = auto()
     EMISSION_TYPE = auto()
     CURTAILMENT = auto()
+    YEARLY_EMISSION_REDUCTION = auto()

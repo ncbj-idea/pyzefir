@@ -40,6 +40,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.capacity_bound import CapacityBound
 from pyzefir.model.network_elements.fuel import FuelValidatorExceptionGroup
 from tests.unit.defaults import (
     CO2_EMISSION,
@@ -729,13 +730,16 @@ def test_add_generation_compensation() -> None:
             life_time=5,
             capex=pd.Series([10] * 4),
             opex=pd.Series([0] * 4),
-            power_utilization=pd.Series([1] * 24),
+            power_utilization=pd.Series([1.0] * 24),
+            minimal_power_utilization=pd.Series([0.0] * 24),
             min_capacity=pd.Series([np.nan] * 4),
             max_capacity=pd.Series([np.nan] * 4),
             min_capacity_increase=pd.Series([np.nan] * 4),
             max_capacity_increase=pd.Series([np.nan] * 4),
             efficiency=pd.DataFrame({"HEATING": [0.85] * 24}),
-            emission_reduction={"CO2": 0.2},
+            emission_reduction={
+                "CO2": pd.Series([0.2] * default_network_constants.n_years)
+            },
             generation_compensation=generation_compensation,
         )
     )
@@ -743,3 +747,93 @@ def test_add_generation_compensation() -> None:
         "TestGenType"
     ].generation_compensation
     assert np.all(network_generation_compensation == generation_compensation)
+
+
+def test_add_capacity_bound(network: Network) -> None:
+    coal = Fuel(
+        name="coal",
+        cost=pd.Series([1, 2, 3, 4]),
+        availability=pd.Series([1, 2, 3, 4]),
+        emission={},
+        energy_per_unit=0.4,
+    )
+    network.add_fuel(coal)
+    bus_a = Bus(name="bus_A", energy_type=ELECTRICITY)
+    bus_b = Bus(name="bus_B", energy_type=HEATING)
+    gen_type = get_default_generator_type(series_length=network.constants.n_years)
+    stor_type = get_default_storage_type(series_length=network.constants.n_years)
+    gen_a = Generator(
+        name="gen_A",
+        energy_source_type=gen_type.name,
+        bus={"bus_A", "bus_B"},
+        unit_base_cap=25,
+        unit_min_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_max_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_min_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+        unit_max_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+    )
+    gen_b = Generator(
+        name="gen_B",
+        energy_source_type=gen_type.name,
+        bus={"bus_A", "bus_B"},
+        unit_base_cap=25,
+        unit_min_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_max_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_min_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+        unit_max_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+    )
+    stor_a = Storage(
+        name="stor_a",
+        energy_source_type=stor_type.name,
+        bus="bus_A",
+        unit_base_cap=25,
+        unit_min_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_max_capacity=pd.Series([np.nan] * default_network_constants.n_years),
+        unit_min_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+        unit_max_capacity_increase=pd.Series(
+            [np.nan] * default_network_constants.n_years
+        ),
+    )
+    emission_fee_A = EmissionFee(
+        name="EFee_A",
+        emission_type=CO2_EMISSION,
+        price=pd.Series([0.1] * default_network_constants.n_years),
+    )
+    emission_fee_B = EmissionFee(
+        name="EFee_B",
+        emission_type=PM10_EMISSION,
+        price=pd.Series([0.1] * default_network_constants.n_years),
+    )
+
+    network.add_bus(bus_a)
+    network.add_bus(bus_b)
+    network.add_generator_type(gen_type)
+    network.add_storage_type(stor_type)
+    network.add_generator(gen_a)
+    network.add_generator(gen_b)
+    network.add_storage(stor_a)
+    network.add_emission_fee(emission_fee_A)
+    network.add_emission_fee(emission_fee_B)
+
+    capacity_bound = CapacityBound(
+        name="Capacity_Bound_gen_A__gen_B",
+        left_technology="gen_A",
+        right_technology="gen_B",
+        sense="EQ",
+        left_coefficient=0.4,
+    )
+
+    network.add_capacity_bound(capacity_bound)
+
+    assert network.capacity_bounds
+    assert len(network.capacity_bounds) == 1

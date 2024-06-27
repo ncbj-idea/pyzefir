@@ -17,6 +17,7 @@
 from pyzefir.model.network_element import NetworkElement
 from pyzefir.model.network_elements.aggregated_consumer import AggregatedConsumer
 from pyzefir.model.network_elements.bus import Bus
+from pyzefir.model.network_elements.capacity_bound import CapacityBound
 from pyzefir.model.network_elements.capacity_factor import CapacityFactor
 from pyzefir.model.network_elements.demand_chunk import DemandChunk
 from pyzefir.model.network_elements.demand_profile import DemandProfile
@@ -35,6 +36,7 @@ from pyzefir.model.network_elements.energy_sources.energy_source_base import (
 from pyzefir.model.network_elements.energy_sources.generator import Generator
 from pyzefir.model.network_elements.energy_sources.storage import Storage
 from pyzefir.model.network_elements.fuel import Fuel
+from pyzefir.model.network_elements.generation_fraction import GenerationFraction
 from pyzefir.model.network_elements.line import Line
 from pyzefir.model.network_elements.local_balancing_stack import LocalBalancingStack
 from pyzefir.model.network_elements.transmission_fee import TransmissionFee
@@ -58,4 +60,6 @@ __all__ = [
     "EmissionFee",
     "DemandChunk",
     "DSR",
+    "CapacityBound",
+    "GenerationFraction",
 ]

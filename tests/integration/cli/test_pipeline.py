@@ -133,6 +133,17 @@ def test_simple_run_with_creator(
     runner.invoke(cli_run, ["--config", str(config_ini_path)], catch_exceptions=False)
 
 
+def test_simple_run_with_generator_capacity_cost(
+    config_ini_path: Path,
+    config_parser_with_creator: configparser.ConfigParser,
+) -> None:
+    config = config_parser_with_creator
+    config["optimization"]["generator_capacity_cost"] = "netto"
+    set_up_config_ini(config_ini_path, config)
+    runner = CliRunner()
+    runner.invoke(cli_run, ["--config", str(config_ini_path)], catch_exceptions=False)
+
+
 def test_simple_run_and_xlsx_dump(
     config_ini_path: Path,
     config_parser_with_xlsx: configparser.ConfigParser,

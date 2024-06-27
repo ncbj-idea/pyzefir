@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections import defaultdict
 from copy import deepcopy
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -30,6 +32,7 @@ class EnergySourceTypeParserException(CsvParserException):
 
 
 class EnergySourceTypeParser(AbstractElementParser):
+
     def __init__(
         self,
         cost_parameters_df: pd.DataFrame,
@@ -47,6 +50,8 @@ class EnergySourceTypeParser(AbstractElementParser):
         curtailment_cost: pd.DataFrame,
         generators_series_efficiency: dict[str, pd.DataFrame],
         generation_compensation: pd.DataFrame,
+        yearly_emission_reduction: pd.DataFrame,
+        generators_minimal_power_utilization: pd.DataFrame,
     ) -> None:
         self.generators_energy_type = generators_energy_type.copy(deep=True).set_index(
             "generator_type"
@@ -73,6 +78,10 @@ class EnergySourceTypeParser(AbstractElementParser):
         self.curtailment_cost = curtailment_cost.copy(deep=True)
         self.generators_series_efficiency = deepcopy(generators_series_efficiency)
         self.generation_compensation = deepcopy(generation_compensation)
+        self.yearly_emission_reduction = yearly_emission_reduction.copy(deep=True)
+        self.generators_minimal_power_utilization = (
+            generators_minimal_power_utilization.copy(deep=True)
+        )
 
     def _prepare_energy_source_parameters(self) -> dict[str, pd.DataFrame]:
         """
@@ -96,6 +105,32 @@ class EnergySourceTypeParser(AbstractElementParser):
         return result_dict
 
     @staticmethod
+    def _prepare_generator_emission_reduction(
+        df_er: pd.DataFrame,
+        df_yer: pd.DataFrame,
+        n_years: int,
+    ) -> dict[str, dict[str, pd.Series]]:
+        result_dict: dict[str, dict[str, pd.Series]] = defaultdict(dict)
+        emission_dict: dict[str, dict[str, list[float]]] = defaultdict(dict)
+        if not df_yer.empty:
+            for emission_type, group in df_yer.groupby("emission_type"):
+                for col in group.columns[2:]:
+                    emission_dict[col][emission_type] = group[col].dropna().tolist()
+        for generator in df_er.index:
+            for emission_type in df_er.columns:
+                first_value = df_er.loc[generator, emission_type]
+                remaining_values = emission_dict.get(generator, {}).get(emission_type)
+                if not remaining_values:
+                    result_dict[generator][emission_type] = pd.Series(
+                        [first_value] * n_years
+                    )
+                else:
+                    result_dict[generator][emission_type] = pd.Series(
+                        [first_value] + remaining_values
+                    )
+        return dict(result_dict)
+
+    @staticmethod
     def _prepare_conversion_rate_dict(
         conversion_rate: dict[str, pd.DataFrame],
     ) -> dict[str, dict[str, pd.Series]]:
@@ -112,6 +147,7 @@ class EnergySourceTypeParser(AbstractElementParser):
         energy_source_type_df: dict[str, pd.DataFrame],
         efficiency_df: pd.DataFrame,
         conv_dict: dict[str, dict[str, pd.Series]],
+        emission_reduction_dict: dict[str, dict[str, pd.Series]],
     ) -> GeneratorType:
         name = df_row["name"]
         energy_source_df = energy_source_type_df[name]
@@ -121,7 +157,6 @@ class EnergySourceTypeParser(AbstractElementParser):
         energy_types = self.generators_energy_type.loc[name]
         if isinstance(energy_types, pd.DataFrame):
             energy_types = energy_types.squeeze()
-
         energy_types = set(energy_types)
         gen_type = GeneratorType(
             name=name,
@@ -139,7 +174,7 @@ class EnergySourceTypeParser(AbstractElementParser):
             ),
             efficiency=self._get_generator_efficiency(name, efficiency_df),
             energy_types=energy_types,
-            emission_reduction=self.generators_emission_reduction.loc[name].to_dict(),
+            emission_reduction=emission_reduction_dict[name],
             fuel=(
                 None
                 if pd.isna(fuel_row["fuel_name"]).all()
@@ -150,9 +185,18 @@ class EnergySourceTypeParser(AbstractElementParser):
                 if pd.isna(fuel_row["capacity_factor_name"]).all()
                 else str(fuel_row["capacity_factor_name"].iloc[0])
             ),
-            power_utilization=self._get_power_utilization(name, df_row),
-            ramp=df_row["ramp"] if "ramp" in df_row else np.nan,
-            tags=create_tags_list(df_row[5:]),
+            power_utilization=self._get_power_utilization_boundaries(
+                name, df_row, self.generators_power_utilization, "power_utilization"
+            ),
+            minimal_power_utilization=self._get_power_utilization_boundaries(
+                name,
+                df_row,
+                self.generators_minimal_power_utilization,
+                "minimal_power_utilization",
+            ),
+            ramp_down=df_row["ramp_down"] if "ramp_down" in df_row else np.nan,
+            ramp_up=df_row["ramp_up"] if "ramp_up" in df_row else np.nan,
+            tags=create_tags_list(df_row[7:]),
             generation_compensation=(
                 self.generation_compensation[name]
                 if name in self.generation_compensation.columns
@@ -221,12 +265,24 @@ class EnergySourceTypeParser(AbstractElementParser):
             values="efficiency",
         )
         conv_dict = self._prepare_conversion_rate_dict(self.conversion_rate)
+        emission_reduction_dict: dict[str, dict[str, pd.Series]] = (
+            self._prepare_generator_emission_reduction(
+                self.generators_emission_reduction,
+                self.yearly_emission_reduction,
+                self.n_years,
+            )
+        )
 
         generator_types = tuple(
             self.generators_type.apply(
                 self._create_generator_type,
                 axis=1,
-                args=(energy_source_type_df, efficiency_df, conv_dict),
+                args=(
+                    energy_source_type_df,
+                    efficiency_df,
+                    conv_dict,
+                    emission_reduction_dict,
+                ),
                 result_type="reduce",
             )
         )
@@ -242,30 +298,34 @@ class EnergySourceTypeParser(AbstractElementParser):
 
         return generator_types, storage_types
 
-    def _get_power_utilization(self, name: str, df_row: pd.Series) -> pd.Series | float:
-        power_utilization = df_row["power_utilization"]
-        if (
-            not np.isnan(power_utilization)
-            and name in self.generators_power_utilization.columns
-        ):
+    def _get_power_utilization_boundaries(
+        self,
+        name: str,
+        df_row: pd.Series,
+        power_utilization_df: pd.DataFrame,
+        type_of_utilization: Literal["power_utilization", "minimal_power_utilization"],
+    ) -> pd.Series | float:
+        default_value = 1.0 if type_of_utilization == "power_utilization" else 0.0
+        utilization = df_row[type_of_utilization]
+        if not np.isnan(utilization) and name in power_utilization_df.columns:
             raise EnergySourceTypeParserException(
-                f"Power utilization for {name} must be specified by passing value "
+                f"{type_of_utilization} for {name} must be specified by passing value "
                 f"in generator_types.xlsx: Generator Types sheet or Power Utilization sheet, "
                 f"but two methods were used at once"
             )
-        if not np.isnan(power_utilization):
-            power_utilization = pd.Series(
-                data=[float(power_utilization)] * self.n_hours,
+        if not np.isnan(utilization):
+            utilization = pd.Series(
+                data=[float(utilization)] * self.n_hours,
                 index=np.arange(self.n_hours),
             )
-        elif name in self.generators_power_utilization.columns:
-            power_utilization = self.generators_power_utilization[name]
+        elif name in power_utilization_df.columns:
+            utilization = power_utilization_df[name]
         else:
-            power_utilization = pd.Series(
-                data=[1.0] * self.n_hours,
+            utilization = pd.Series(
+                data=[default_value] * self.n_hours,
                 index=np.arange(self.n_hours),
             )
-        return power_utilization
+        return utilization
 
     def _get_generator_efficiency(
         self, name: str, efficiency_df: pd.DataFrame

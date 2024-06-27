@@ -54,4 +54,5 @@ class GenerationCompensationObjectiveBuilder(ObjectiveBuilder):
                 coords=[self.indices.Y.ii],
                 name="compensation",
             )
+            * self.indices.years_aggregation_array
         ).sum() * hourly_scale

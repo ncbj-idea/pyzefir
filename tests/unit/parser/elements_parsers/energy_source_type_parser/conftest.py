@@ -52,11 +52,17 @@ def storage_types_mock() -> pd.DataFrame:
 def generator_types_mock() -> pd.DataFrame:
     """generator_types / Generator_Types.csv mock"""
     return pd.DataFrame(
-        columns=["name", "build_time", "life_time", "power_utilization"],
+        columns=[
+            "name",
+            "build_time",
+            "life_time",
+            "power_utilization",
+            "minimal_power_utilization",
+        ],
         data=[
-            ["GEN_TYPE_1", 0, 20, np.nan],
-            ["GEN_TYPE_2", 1, 30, 0.9],
-            ["GEN_TYPE_3", 0, 15, 0.9],
+            ["GEN_TYPE_1", 0, 20, np.nan, np.nan],
+            ["GEN_TYPE_2", 1, 30, 0.9, 0.2],
+            ["GEN_TYPE_3", 0, 15, 0.9, 0.2],
         ],
     )
 
@@ -93,6 +99,19 @@ def emission_reduction_mock() -> pd.DataFrame:
             ["GEN_TYPE_1", 0.2, 0.3],
             ["GEN_TYPE_2", 0.3, 0.1],
             ["GEN_TYPE_3", 0.4, 0.25],
+        ],
+    )
+
+
+@pytest.fixture
+def yearly_emission_reduction_mock() -> pd.DataFrame:
+    """scenario / Yearly_Emission_Reduction.csv mock"""
+    return pd.DataFrame(
+        columns=["year_idx", "emission_type", "GEN_TYPE_3"],
+        data=[
+            [1, "CO2", 0.5],
+            [2, "CO2", 0.5],
+            [3, "CO2", 0.6],
         ],
     )
 
@@ -210,6 +229,14 @@ def generators_power_utilization() -> pd.DataFrame:
 
 
 @pytest.fixture
+def minimal_generators_power_utilization() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=["hour_idx", "GEN_TYPE_1"],
+        data=[[hour_idx, 0.2] for hour_idx in range(8760)],
+    )
+
+
+@pytest.fixture
 def generation_compensation() -> pd.DataFrame:
     return pd.DataFrame(
         columns=["hour_idx", "GEN_TYPE_1", "GEN_TYPE_2", "GEN_TYPE_3"],
@@ -236,6 +263,8 @@ def energy_source_type_parser(
     generators_power_utilization: pd.DataFrame,
     generator_type_efficiency_series_mock: dict[str, pd.DataFrame],
     generation_compensation: pd.DataFrame,
+    yearly_emission_reduction_mock: pd.DataFrame,
+    minimal_generators_power_utilization: pd.DataFrame,
 ) -> EnergySourceTypeParser:
     return EnergySourceTypeParser(
         cost_parameters_df=cost_parameters_mock,
@@ -253,4 +282,6 @@ def energy_source_type_parser(
         curtailment_cost=energy_curtailment_cost_mock,
         generators_series_efficiency=generator_type_efficiency_series_mock,
         generation_compensation=generation_compensation,
+        yearly_emission_reduction=yearly_emission_reduction_mock,
+        generators_minimal_power_utilization=minimal_generators_power_utilization,
     )

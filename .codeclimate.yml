@@ -1,0 +1,17 @@
+---
+version: "2"
+
+plugins:
+  sonar-python:
+    enabled: true
+    config:
+      tests_patterns:
+        - tests/**
+
+checks:
+  file-lines:
+    config:
+      threshold: 500
+  method-complexity:
+    config:
+      threshold: 10

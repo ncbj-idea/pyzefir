@@ -171,6 +171,48 @@ class LbsStructureCreator:
         return df
 
 
+class CapacityBoundsCreator:
+    @staticmethod
+    def handle_capacity_bounds_df_structure(df: pd.DataFrame) -> pd.DataFrame:
+        df.insert(
+            0,
+            "name",
+            "capacity_bound__" + df["mapped_left_tech"] + "_" + df["mapped_right_tech"],
+        )
+        df = df.rename(
+            columns={
+                "mapped_left_tech": "left_technology_name",
+                "mapped_right_tech": "right_technology_name",
+            }
+        )
+        return df
+
+    @staticmethod
+    def create_capacity_bounds_df(df_data: pd.DataFrame) -> pd.DataFrame:
+        if "left_technology_name" not in df_data.columns:
+            return pd.DataFrame()
+        dfs = []
+        for _, df in df_data.groupby("lbs"):
+            df = df[~df.index.duplicated(keep="first")]
+            df["mapped_left_tech"] = df["left_technology_name"].map(
+                lambda x: df.loc[x, "gen_name"] if pd.notna(x) else np.nan
+            )
+            df["mapped_right_tech"] = df["right_technology_name"].map(
+                lambda x: df.loc[x, "gen_name"] if pd.notna(x) else np.nan
+            )
+            df = (
+                df[["mapped_left_tech", "sense", "mapped_right_tech", "left_coeff"]]
+                .reset_index(drop=True)
+                .dropna()
+            )
+            if df.empty:
+                continue
+            df = CapacityBoundsCreator.handle_capacity_bounds_df_structure(df)
+            dfs.append(df)
+
+        return pd.concat(dfs) if dfs else pd.DataFrame()
+
+
 class GeneratorStructureCreator:
     @staticmethod
     def create_generator_storage_df(

@@ -230,10 +230,11 @@ def create_generation_compensation_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def create_scenario_data_dict(
     scenario_data: ScenarioData,
+    capacity_bounds_df: pd.DataFrame,
     n_years: int,
     n_hours: int,
 ) -> dict[ScenarioSheetName, pd.DataFrame]:
-    return {
+    dfs_dict = {
         ScenarioSheetName.COST_PARAMETERS: create_cost_parameters_df(
             cost_parameters=scenario_data.cost_parameters, n_years=n_years
         ),
@@ -294,11 +295,19 @@ def create_scenario_data_dict(
             scenario_data.generation_compensation
         ),
     }
+    if not scenario_data.yearly_emission_reduction.empty:
+        dfs_dict[ScenarioSheetName.YEARLY_EMISSION_REDUCTION] = (
+            scenario_data.yearly_emission_reduction
+        )
+    if not capacity_bounds_df.empty:
+        dfs_dict[ScenarioSheetName.CAPACITY_BOUNDS] = capacity_bounds_df
+    return dfs_dict
 
 
 def create_scenario(
     scenario_data: ScenarioData,
     output_path: Path,
+    capacity_bounds_df: pd.DataFrame,
     scenario_name: str,
     n_years: int,
     n_hours: int,
@@ -306,6 +315,7 @@ def create_scenario(
     _logger.debug("Creating scenario data objects ...")
     scenario_data_dict = create_scenario_data_dict(
         scenario_data=scenario_data,
+        capacity_bounds_df=capacity_bounds_df,
         n_years=n_years,
         n_hours=n_hours,
     )

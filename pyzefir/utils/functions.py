@@ -54,23 +54,6 @@ def invert_dict_of_sets(dict_: dict[T, set[Y]]) -> dict[Y, set[T]]:
     return dict(result_dict)
 
 
-def tag_str_to_idx(
-    min_max_gen_frac: dict[str, dict[tuple[int, int], float]] | None,
-    tag_str_to_idx_arg: dict[int, int],
-) -> dict[str, dict[tuple[int, int], float]] | None:
-    """for opt_parameters: reading min/max generation fractions replace tags str by idxs
-    using tag_str_to_idx map"""
-    if min_max_gen_frac is None:
-        return None
-    return {
-        k: {
-            (tag_str_to_idx_arg[t[0]], tag_str_to_idx_arg[t[1]]): p
-            for t, p in v.items()
-        }
-        for k, v in min_max_gen_frac.items()
-    }
-
-
 def is_flow_int(num: float | int | str | None) -> bool:
     """check if general float number allowing int type"""
     if (

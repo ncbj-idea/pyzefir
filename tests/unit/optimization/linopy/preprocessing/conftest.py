@@ -32,7 +32,11 @@ from pyzefir.model.network_elements import (
     Storage,
     TransmissionFee,
 )
-from tests.unit.optimization.linopy.conftest import N_HOURS, N_YEARS
+from tests.unit.optimization.linopy.conftest import (
+    N_HOURS,
+    N_YEARS,
+    generation_fraction,
+)
 from tests.unit.optimization.linopy.names import EE, GRID, HEAT, HS
 from tests.unit.optimization.linopy.utils import add_generators, add_storages, aggr_name
 
@@ -168,6 +172,7 @@ def lbs_generators() -> dict[int, dict[str, Generator]]:
                 unit_min_capacity=pd.Series([np.nan] * N_YEARS),
                 unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
                 unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
+                tags=["example_tag"],
             ),
         },
         1: {
@@ -180,6 +185,7 @@ def lbs_generators() -> dict[int, dict[str, Generator]]:
                 unit_min_capacity=pd.Series([np.nan] * N_YEARS),
                 unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
                 unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
+                tags=["example_sub_tag"],
             ),
             f"wind_farm_{lbs_name(1)}": Generator(
                 name=f"wind_farm_{lbs_name(1)}",
@@ -385,6 +391,7 @@ def complete_network(
     create_lbs_hs_line: Callable[..., Line],
     lbs_factory: Callable[..., LocalBalancingStack],
     aggr_factory: Callable[..., AggregatedConsumer],
+    generation_fraction: generation_fraction,
 ) -> Network:
     _network = deepcopy(empty_network)
     _network.add_bus(grid_bus)
@@ -432,5 +439,6 @@ def complete_network(
             },
         )
     )
+    _network.add_generation_fraction(generation_fraction)
 
     return _network

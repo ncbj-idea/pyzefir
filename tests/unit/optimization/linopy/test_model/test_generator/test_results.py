@@ -26,7 +26,7 @@ from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.names import HS
 from tests.unit.optimization.linopy.preprocessing.utils import create_storage_type
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -36,7 +36,7 @@ def prepare_results(network: Network) -> tuple[Results, ExportableResults]:
     hour_sample = np.arange(50)
     year_sample = np.arange(5)
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     storage_type = create_storage_type(name="test_storage_type", energy_type="heat")
     network.add_storage_type(storage_type)
     storage = Storage(

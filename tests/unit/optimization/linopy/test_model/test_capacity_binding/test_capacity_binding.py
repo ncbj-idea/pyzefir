@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from pyzefir.optimization.results import Results
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -84,7 +84,7 @@ def test_engine_capacity_bindings(
             }
         },
     )
-    opt_config = create_default_opf_config(np.arange(50), N_YEARS)
+    opt_config = create_default_opt_config(np.arange(50), N_YEARS)
 
     unit_min_start = pd.Series([1] * N_YEARS)
     iter = 0

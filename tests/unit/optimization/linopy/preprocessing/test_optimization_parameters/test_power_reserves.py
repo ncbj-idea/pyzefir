@@ -31,7 +31,7 @@ from pyzefir.optimization.opt_config import OptConfig
         (
             {"pp_coal_grid": ["tag1"]},
             {"power_reserves": {"electricity": {"tag1": 50.0}}},
-            {"electricity": {0: 50.0}},
+            {"electricity": {2: 50.0}},
         )
     ],
 )

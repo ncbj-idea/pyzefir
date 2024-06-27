@@ -46,6 +46,7 @@ class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
             for et in gen_ett[gen_idx]:
                 result += (
                     self.variables.gen.dump_et.isel(gen=gen_idx, et=et)
+                    * self.indices.years_aggregation_array
                     * curtailment_cost_per_year
                 )
         _logger.info("Curtailed energy cost objective: Done")

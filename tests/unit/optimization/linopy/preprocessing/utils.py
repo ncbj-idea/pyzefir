@@ -41,7 +41,7 @@ def create_generator_type(  # noqa: C901
     build_time: int = 0,
     capex: Series | None = None,
     opex: Series | None = None,
-    emission_reduction: dict[str, float] | None = None,
+    emission_reduction: dict[str, pd.Series] | None = None,
     conversion_rate: dict[str, Series] | None = None,
     capacity_factor: str | None = None,
     fuel: str | None = None,
@@ -50,6 +50,7 @@ def create_generator_type(  # noqa: C901
     delta_cap_min: Series | None = None,
     delta_cap_max: Series | None = None,
     power_utilization: pd.Series | float = 1.0,
+    minimal_power_utilization: pd.Series | float = 0.0,
     generation_compensation: pd.Series | None = None,
 ) -> GeneratorType:
     cap_min = pd.Series([np.nan] * N_YEARS) if cap_min is None else cap_min
@@ -59,6 +60,16 @@ def create_generator_type(  # noqa: C901
     )
     delta_cap_max = (
         pd.Series([np.nan] * N_YEARS) if delta_cap_max is None else delta_cap_max
+    )
+    power_utilization = (
+        pd.Series([power_utilization] * N_HOURS)
+        if isinstance(power_utilization, float)
+        else power_utilization
+    )
+    minimal_power_utilization = (
+        pd.Series([minimal_power_utilization] * N_HOURS)
+        if isinstance(minimal_power_utilization, float)
+        else minimal_power_utilization
     )
 
     return GeneratorType(
@@ -78,7 +89,8 @@ def create_generator_type(  # noqa: C901
             if not efficiency.empty
             else pd.DataFrame({HEAT: [0.92] * N_HOURS})
         ),
-        emission_reduction=emission_reduction or {CO2: 0.0, PM10: 0.0},
+        emission_reduction=emission_reduction
+        or {CO2: pd.Series([0.0] * N_YEARS), PM10: pd.Series([0.0] * N_YEARS)},
         conversion_rate=conversion_rate if conversion_rate is not None else dict(),
         capacity_factor=capacity_factor,
         fuel=fuel,
@@ -87,6 +99,7 @@ def create_generator_type(  # noqa: C901
         min_capacity_increase=delta_cap_min,
         max_capacity_increase=delta_cap_max,
         power_utilization=power_utilization,
+        minimal_power_utilization=minimal_power_utilization,
         generation_compensation=generation_compensation,
     )
 
@@ -140,6 +153,7 @@ def generator_type_factory(
     fuel: str | None = None,
     capacity_factor: str | None = None,
     power_utilization: float = 1.0,
+    minimal_power_utilization: float = 0.2,
 ) -> GeneratorType:
     return GeneratorType(
         name=name,
@@ -153,7 +167,8 @@ def generator_type_factory(
         opex=_get_or_else(opex, Series()),
         life_time=life_time,
         build_time=build_time,
-        power_utilization=power_utilization,
+        power_utilization=Series([power_utilization] * N_HOURS),
+        minimal_power_utilization=Series([minimal_power_utilization] * N_HOURS),
         min_capacity=Series([np.nan] * N_YEARS),
         max_capacity=Series([np.nan] * N_YEARS),
         min_capacity_increase=Series([np.nan] * N_YEARS),

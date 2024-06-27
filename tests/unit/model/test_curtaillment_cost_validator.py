@@ -24,17 +24,15 @@ from pyzefir.model.network_elements import GeneratorType
 
 
 @pytest.mark.parametrize(
-    "element_name, element_params, exception_msg",
+    "element_params, exception_msg",
     (
         pytest.param(
-            "generator_types",
             {"CHP_COAL": {"energy_curtailment_cost": pd.Series([50.0, 50.4, 51.2])}},
             "Incorrect year indices for energy curtailment cost of generator type <CHP_COAL> "
             "The number of indexes should match the number of years",
             id="Incorrect indices for energy curtailment",
         ),
         pytest.param(
-            "generator_types",
             {
                 "CHP_COAL": {
                     "energy_curtailment_cost": pd.Series([50.0, 50.4, np.nan, "string"])
@@ -47,7 +45,6 @@ from pyzefir.model.network_elements import GeneratorType
 )
 def test_network_curtailment_cost_validation(
     network: Network,
-    element_name: str,
     element_params: dict,
     exception_msg: str,
 ) -> None:
@@ -68,8 +65,9 @@ def test_network_curtailment_cost_validation(
             efficiency={"ELECTRICITY": 0.8, "HEATING": 0.9},
             energy_types=set(network.energy_types),
             emission_reduction={},
-            ramp=9,
-            power_utilization=0.9,
+            ramp_down=9,
+            power_utilization=pd.Series([0.9] * network.constants.n_hours),
+            minimal_power_utilization=pd.Series([0.2] * network.constants.n_hours),
         )
         gen_type.validate_curtailment_cost(
             network, name, curt_cost["energy_curtailment_cost"], exception_list

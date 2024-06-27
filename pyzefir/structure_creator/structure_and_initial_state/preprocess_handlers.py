@@ -33,7 +33,9 @@ class LocalLbsHandler:
         return pd.concat(dfs)
 
     @staticmethod
-    def _create_lbs_dataframe(lbs_name: str, lbs_data: dict[str, pd.DataFrame]) -> None:
+    def _create_lbs_dataframe(
+        lbs_name: str, lbs_data: dict[str, pd.DataFrame]
+    ) -> pd.DataFrame:
         bus_df = LocalLbsHandler._create_flat_bus_df(
             lbs_data["TECHNOLOGY TO BUS"], lbs_data["BUSES"]
         )
@@ -46,11 +48,20 @@ class LocalLbsHandler:
             if "LINES" in lbs_data
             else pd.DataFrame()
         )
+        capacity_bound_df = (
+            LocalLbsHandler._create_flat_capacity_bounds(lbs_data["CAPACITY_BOUNDS"])
+            if "CAPACITY_BOUNDS" in lbs_data
+            else pd.DataFrame()
+        )
         if "TAGS" in lbs_data:
             tags_df = lbs_data["TAGS"].set_index("technology_id").add_prefix("TAG_")
-            df = pd.concat([technology_df, capa_df, lines_df, tags_df], axis=1)
+            df = pd.concat(
+                [technology_df, capa_df, lines_df, tags_df, capacity_bound_df], axis=1
+            )
         else:
-            df = pd.concat([technology_df, capa_df, lines_df], axis=1)
+            df = pd.concat(
+                [technology_df, capa_df, lines_df, capacity_bound_df], axis=1
+            )
         merged_df = bus_df.merge(df, left_index=True, right_index=True)
         merged_df.insert(0, "lbs", lbs_name)
         return merged_df
@@ -85,10 +96,17 @@ class LocalLbsHandler:
         lines_df.index = lines_df["bus_from_id"].map(index_dict)
         return lines_df
 
+    @staticmethod
+    def _create_flat_capacity_bounds(cb_df: pd.DataFrame) -> pd.DataFrame:
+        cb_df.loc[:, "left_technology_name"] = cb_df.loc[:, "left_tech_id"]
+        cb_df = cb_df.set_index("left_tech_id")
+        cb_df = cb_df.rename(columns={"right_tech_id": "right_technology_name"})
+        return cb_df.fillna(1.0)
+
 
 class GlobalSystemsHandler:
     @staticmethod
-    def create_subsystem_dataframe(subsystems: dict[str, pd.DataFrame]) -> None:
+    def create_subsystem_dataframe(subsystems: dict[str, pd.DataFrame]) -> pd.DataFrame:
         connection_df = GlobalSystemsHandler._create_flat_subsystem_connection_df(
             subsystems["TECHNOLOGY TO SUBSYSTEM"], subsystems["SUBSYSTEMS"]
         )

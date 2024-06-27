@@ -27,7 +27,7 @@ from pyzefir.model.network_elements import (
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.names import EE, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -61,7 +61,7 @@ def test_netto_generation(
         * ee and heat generation of coal power plant and biomass heat plant equals (respectively) heat and ee demand,
         * fraction of lbs in aggr is constant and equals 1.0 in each year
     """
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     if ens:
         network.aggregated_consumers["aggr"].yearly_energy_usage["heat"] *= 1e9
         network.aggregated_consumers["aggr"].yearly_energy_usage["electricity"] *= 1e9

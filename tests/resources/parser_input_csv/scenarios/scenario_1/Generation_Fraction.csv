@@ -1,2 +1,3 @@
-tag,subtag,energy_type,min_generation_fraction,max_generation_fraction
-example_tag,example_tag2,HEAT,0,0.9
+name,tag,subtag,year,type,energy_type,min_generation_fraction,max_generation_fraction
+example_generation_fraction,example_tag,example_tag2,0,yearly,HEAT,0,0.9
+example_generation_fraction,example_tag,example_tag2,2,yearly,HEAT,0,0.8

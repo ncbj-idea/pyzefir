@@ -31,7 +31,10 @@ def objective_dsr(
         penalization = parameters.dsr.penalization
         bus_parameters = parameters.bus
         return sum(
-            np.asarray(shift_minus[indices.BUS.mapping[bus_idx]]).sum()
+            np.asarray(
+                shift_minus[indices.BUS.mapping[bus_idx]]
+                * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
+            ).sum()
             * penalization[dsr_idx]
             for bus_idx, dsr_idx in bus_parameters.dsr_type.items()
         )

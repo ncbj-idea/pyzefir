@@ -44,6 +44,11 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                 dims=["hour"],
                 coords={"hour": self.indices.H.ii},
             )
+            minimal_power_utilization = xr.DataArray(
+                self.parameters.tgen.minimal_power_utilization[gen_to_tgen[gen_idx]],
+                dims=["hour"],
+                coords={"hour": self.indices.H.ii},
+            )
             if capacity_factor_id is not None:
                 capacity_factor = xr.DataArray(
                     self.parameters.cf.profile[capacity_factor_id],
@@ -59,6 +64,10 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                     generation_brutto <= capacity * power_utilization,
                     name=f"{gen_name}_DISPATCHABLE_GEN_CAP_CONSTRAINT",
                 )
+                self.model.add_constraints(
+                    generation_brutto >= capacity * minimal_power_utilization,
+                    name=f"{gen_name}_DISPATCHABLE_MIN_POWER_UTILIZATION_CONSTRAINT",
+                )
         _logger.debug("Build generation vs capacity constraints: Done")
 
     def generation_and_dump_energy(self) -> None:
@@ -73,7 +82,9 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                 if energy_type_name in self.parameters.gen.ett[gen_idx]:
                     generation_brutto = self.variables.gen.gen.isel(gen=gen_idx)
                     efficiency = xr.DataArray(
-                        self.parameters.gen.eff[gen_idx][energy_type_name],
+                        self.parameters.tgen.eff[self.parameters.gen.tgen[gen_idx]][
+                            energy_type_name
+                        ],
                         dims=["hour"],
                         coords={"hour": self.indices.H.ii},
                     )
@@ -115,7 +126,9 @@ class GenerationConstraintsBuilder(PartialConstraintsBuilder):
                     gen=gen_idx,
                     et=self.indices.ET.inverse[et_name],
                 ) / xr.DataArray(
-                    self.parameters.gen.eff[gen_idx][et_name],
+                    self.parameters.tgen.eff[self.parameters.gen.tgen[gen_idx]][
+                        et_name
+                    ],
                     dims=["hour"],
                     coords={"hour": self.indices.H.ii},
                 )

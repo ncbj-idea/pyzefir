@@ -27,7 +27,7 @@ from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
 from pyzefir.optimization.results import Results
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -47,7 +47,7 @@ from tests.unit.optimization.linopy.utils import TOL
 
 
 @pytest.mark.parametrize(
-    ("dsr", "n_consumers", "hour_sample"),
+    ("dsr", "n_consumers", "hour_sample", "n_years_aggregation"),
     [
         (
             {
@@ -62,6 +62,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([10, 10, 10, 10, 10]),
             np.arange(100),
+            1,
         ),
         (
             {
@@ -76,6 +77,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([10, 10, 10, 10, 10]),
             np.arange(100),
+            1,
         ),
         (
             {
@@ -90,6 +92,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([10, 10, 10, 10, 10]),
             np.arange(100),
+            1,
         ),
         (
             {
@@ -104,6 +107,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([10, 10, 10, 10, 10]),
             np.arange(100),
+            1,
         ),
         (
             {
@@ -118,6 +122,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([10, 30, 10, 15, 50]),
             np.arange(50),
+            1,
         ),
         (
             {
@@ -140,6 +145,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([100, 20, 30, 10, 100]),
             np.arange(50),
+            1,
         ),
         (
             {
@@ -162,6 +168,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([100, 20, 30, 10, 100]),
             np.arange(20),
+            1,
         ),
         (
             {
@@ -184,6 +191,7 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([100, 20, 30, 10, 100]),
             np.arange(20),
+            1,
         ),
         (
             {
@@ -206,6 +214,45 @@ from tests.unit.optimization.linopy.utils import TOL
             },
             pd.Series([100, 20, 30, 10, 100]),
             np.arange(20),
+            1,
+        ),
+        (
+            {
+                "dsr_1": {
+                    "bus": "local_ee_bus",
+                    "balancing_period_len": 25,
+                    "compensation_factor": 0.5,
+                    "penalization": 5,
+                    "abs_shift_limit": None,
+                    "relative_shift_limit": 0.4,
+                },
+                "dsr_2": {
+                    "bus": "local_ee_bus2",
+                    "balancing_period_len": 25,
+                    "compensation_factor": 0.7,
+                    "penalization": 4,
+                    "abs_shift_limit": None,
+                    "relative_shift_limit": None,
+                },
+            },
+            pd.Series([100, 20, 30, 10, 100]),
+            np.arange(20),
+            3,
+        ),
+        (
+            {
+                "dsr_1": {
+                    "bus": "local_ee_bus",
+                    "balancing_period_len": 20,
+                    "compensation_factor": 0.1,
+                    "penalization": 5,
+                    "abs_shift_limit": 0.5,
+                    "relative_shift_limit": None,
+                }
+            },
+            pd.Series([10, 10, 10, 10, 10]),
+            np.arange(100),
+            6,
         ),
     ],
 )
@@ -213,6 +260,7 @@ def test_load_shifting(
     dsr: dict[str, dict[str, str | int | float]],
     n_consumers: pd.Series,
     hour_sample: np.ndarray,
+    n_years_aggregation: int,
     network: Network,
 ) -> None:
     """
@@ -264,7 +312,11 @@ def test_load_shifting(
         },
     )
 
-    opt_config = create_default_opf_config(hour_sample, np.arange(N_YEARS))
+    opt_config = create_default_opt_config(
+        hour_sample,
+        np.arange(N_YEARS),
+        year_aggregates=np.array([1] + [n_years_aggregation] * (N_YEARS - 2) + [1]),
+    )
     engine = run_opt_engine(network, opt_config)
 
     parameters = engine.parameters

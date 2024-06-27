@@ -55,7 +55,7 @@ from tests.unit.optimization.linopy.test_model.utils import (
             "heat",
             {0: "heat"},
             "heat_tag",
-            {0: 1},
+            {0: 3},
             np.array([[0, 100], [101, 8760]]),
             {0: np.array([[0, 100], [101, 8760]])},
             np.array([[20, 20, 20], [20000, 20000, 20000]]),

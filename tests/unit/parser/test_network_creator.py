@@ -36,6 +36,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.capacity_bound import CapacityBound
 from pyzefir.model.network_elements.dsr import DSR
 from pyzefir.model.network_elements.emission_fee import EmissionFee
 from pyzefir.model.utils import NetworkConstants
@@ -242,6 +243,13 @@ def test_network_creator_create_network() -> None:
         relative_shift_limit=0.1,
         abs_shift_limit=None,
     )
+    capacity_bound = CapacityBound(
+        name="Capacity_Bound_gen_A__gen_B",
+        left_technology="gen_A",
+        right_technology="gen_B",
+        sense="EQ",
+        left_coefficient=0.4,
+    )
     network = NetworkCreator._create_network(
         energy_types=[ELECTRICITY, HEATING],
         buses=(bus_a, bus_b, bus_c),
@@ -261,6 +269,8 @@ def test_network_creator_create_network() -> None:
         emission_fees=(emission_fee_A, emission_fee_B),
         demand_chunks=(),
         dsr=(dsr,),
+        capacity_bounds=(capacity_bound,),
+        generation_fractions=(),
     )
 
     assert isinstance(network, Network)
@@ -396,6 +406,13 @@ def test_network_creator_create_assertion_occurred() -> None:
         relative_shift_limit=0.1,
         abs_shift_limit=None,
     )
+    capacity_bound = CapacityBound(
+        name="Capacity_Bound_gen_A__gen_B",
+        left_technology="gen_A",
+        right_technology="gen_B",
+        sense="EQ",
+        left_coefficient=0.4,
+    )
 
     with pytest.raises(NetworkValidatorException) as error_info:
         NetworkCreator._create_network(
@@ -417,6 +434,8 @@ def test_network_creator_create_assertion_occurred() -> None:
             emission_fees=(),
             demand_chunks=(),
             dsr=(dsr,),
+            generation_fractions=(),
+            capacity_bounds=(capacity_bound,),
         )
     assert (
         str(error_info.value.args[0])
@@ -471,6 +490,8 @@ def test_network_creator_create_assertion_occurred() -> None:
             emission_fees=(em_so2,),
             demand_chunks=(),
             dsr=(dsr,),
+            generation_fractions=(),
+            capacity_bounds=(),
         )
 
     assert (

@@ -23,7 +23,7 @@ from pyzefir.model.network_elements import Generator
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -244,7 +244,7 @@ def test_gen_and_de(
     set_network_elements_parameters(network.demand_profiles, demand_params)
     set_network_elements_parameters(network.generator_types, generator_type_params)
 
-    opt_config = create_default_opf_config(**config_params)
+    opt_config = create_default_opt_config(**config_params)
     engine = run_opt_engine(network, opt_config)
 
     assert np.allclose(

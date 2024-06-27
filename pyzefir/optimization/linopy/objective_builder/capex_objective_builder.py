@@ -27,12 +27,14 @@ from pyzefir.optimization.linopy.preprocessing.parameters.generator_type_paramet
 from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameters import (
     StorageTypeParameters,
 )
+from pyzefir.optimization.linopy.utils import get_generator_types_capacity_multipliers
 from pyzefir.utils.functions import get_dict_vals
 
 _logger = logging.getLogger(__name__)
 
 
 class CapexObjectiveBuilder(ObjectiveBuilder):
+
     def build_expression(self) -> LinearExpression:
         _logger.info("Building capex objective...")
         return self.global_capex() + self.local_capex()
@@ -42,6 +44,10 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
             tcap_plus=self.variables.tgen.tcap_plus,
             unit_type_param=self.parameters.tgen,
             aggr_map=self.indices.aggr_tgen_map,
+            multipliers=get_generator_types_capacity_multipliers(
+                self.parameters.scenario_parameters.generator_capacity_cost,
+                self.parameters.tgen,
+            ),
         )
         storage_capex = self._local_capex(
             tcap_plus=self.variables.tstor.tcap_plus,
@@ -58,6 +64,10 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
             unit_type_idx=self.parameters.gen.tgen,
             non_lbs_unit_idxs=get_dict_vals(self.parameters.bus.generators).difference(
                 get_dict_vals(self.indices.aggr_gen_map)
+            ),
+            multipliers=get_generator_types_capacity_multipliers(
+                self.parameters.scenario_parameters.generator_capacity_cost,
+                self.parameters.tgen,
             ),
         )
         storage_capex = self._global_capex(
@@ -77,6 +87,7 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
         unit_type_idx: dict,
         non_lbs_unit_idxs: set,
+        multipliers: dict[int, float] | None = None,
     ) -> LinearExpression | float:
         """
         Total investment cost for global (non-lbs) technologies for all years
@@ -100,16 +111,19 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
             ut_idx = unit_type_idx[u_idx]
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
-
+            mul = multipliers[ut_idx] if multipliers is not None else 1.0
             for s_idx in y_idxs.ord:
-                unit_capex += self.global_capex_per_unit_per_year(
-                    capex=capex,
-                    cap_plus=cap_plus,
-                    disc_rate=disc_rate,
-                    lt=lt,
-                    s_idx=s_idx,
-                    u_idx=u_idx,
-                    y_idxs=y_idxs,
+                unit_capex += (
+                    self.global_capex_per_unit_per_year(
+                        capex=capex,
+                        cap_plus=cap_plus,
+                        disc_rate=disc_rate,
+                        lt=lt,
+                        s_idx=s_idx,
+                        u_idx=u_idx,
+                        y_idxs=y_idxs,
+                    )
+                    * mul
                 )
         return unit_capex
 
@@ -161,6 +175,7 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         tcap_plus: Variable,
         unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
         aggr_map: dict[..., set],
+        multipliers: dict[int, float] | None = None,
     ) -> LinearExpression | float:
         """
         Total investment cost for local (lbs) technologies for all years
@@ -182,18 +197,22 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         unit_type_capex = 0.0
         for aggr_idx, ut_idxs in aggr_map.items():
             for ut_idx in ut_idxs:
+                mul = multipliers[ut_idx] if multipliers is not None else 1.0
                 capex = unit_type_param.capex[ut_idx]
                 lt = unit_type_param.lt[ut_idx]
                 for s_idx in y_idxs.ord:
-                    unit_type_capex += self.local_capex_per_unit_per_year(
-                        capex=capex,
-                        tcap_plus=tcap_plus,
-                        disc_rate=disc_rate,
-                        lt=lt,
-                        s_idx=s_idx,
-                        ut_idx=ut_idx,
-                        aggr_idx=aggr_idx,
-                        y_idxs=y_idxs,
+                    unit_type_capex += (
+                        self.local_capex_per_unit_per_year(
+                            capex=capex,
+                            tcap_plus=tcap_plus,
+                            disc_rate=disc_rate,
+                            lt=lt,
+                            s_idx=s_idx,
+                            ut_idx=ut_idx,
+                            aggr_idx=aggr_idx,
+                            y_idxs=y_idxs,
+                        )
+                        * mul
                     )
         return unit_type_capex
 

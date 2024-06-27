@@ -21,7 +21,7 @@ import pytest
 from pyzefir.model.network import Network
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -111,7 +111,7 @@ def test_local_supplementary_capacity_upper_bound_constraints(
         },
     ),
 
-    opt_config = create_default_opf_config(np.arange(100), np.arange(N_YEARS))
+    opt_config = create_default_opt_config(np.arange(100), np.arange(N_YEARS))
     engine = run_opt_engine(network, opt_config)
     res_frac = engine.results.fractions_results.frac["aggr_ee"]
     assert np.allclose(res_frac["lbs_ee"].iloc[:, 0], np.array([1, 0, 0, 0, 0]))

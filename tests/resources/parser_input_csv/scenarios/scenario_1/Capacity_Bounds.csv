@@ -1,0 +1,3 @@
+name,left_technology_name,sense,right_technology_name,left_coeff
+capa_bounds_gens,BOILER_COAL_LKT2,LEQ,SMALL_PV_LKT2,0.7
+capa_bounds_gen_stor,POWER_PLANT_COAL_KSE,EQ,SMALL_HEAT_STORAGE_LKT3,

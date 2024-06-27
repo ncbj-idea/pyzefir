@@ -26,7 +26,7 @@ from tests.unit.optimization.linopy.test_model.test_generator.utils import (
     minimal_unit_cap,
 )
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -104,7 +104,7 @@ def test_capacity_evolution_with_constant_demand(
         year_sample=year_sample,
     )
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
 
     heat_plant_cap = engine.results.generators_results.cap[
@@ -234,7 +234,7 @@ def test_capacity_evolution_with_variable_demand(
         year_sample=year_sample,
     )
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
 
     heat_plant_cap = engine.results.generators_results.cap[

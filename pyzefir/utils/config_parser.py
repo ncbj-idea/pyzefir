@@ -55,7 +55,7 @@ class ConfigParams:
     """indices of hours forming hour sample [if not provided, full hour index will be used]"""
     discount_rate: np.ndarray | None
     """vector containing discount year for consecutive years [if not provided, zero discount rate is assumed]"""
-    network_config: dict[str, Any] | None = None
+    network_config: dict[str, Any]
     """network configuration"""
     money_scale: float = 1.0
     """ numeric scale parameter """
@@ -74,6 +74,12 @@ class ConfigParams:
     """ logging level """
     solver_settings: dict[str, dict[str, Any]] = field(default_factory=dict)
     """ additional settings that can be passed to the solver """
+    n_years_aggregation: int = 1
+    """ number of years to aggregate in the optimization """
+    year_aggregates: np.ndarray | None = None
+    """ indices of years to aggregate """
+    aggregation_method: str | None = None
+    """ method of aggregation """
     xlsx_results: bool = False
     """ dump results into additional xlsx files (outside the default CSV files)"""
 
@@ -91,6 +97,33 @@ class ConfigParams:
         validate_solver_name(self.solver)
         validate_structure_create(
             self.n_hours, self.n_years, self.structure_creator_input_path
+        )
+        validate_network_config(self.network_config)
+
+
+def validate_network_config(network_config: dict[str, Any]) -> None:
+
+    if not isinstance(network_config["binary_fraction"], bool):
+        raise ConfigException("given binary_fraction parameter must be a boolean")
+
+    if not isinstance(network_config["ens_penalty_cost"], float):
+        raise ConfigException("given ens_penalty_cost must be a float")
+
+    if network_config["generator_capacity_cost"] not in ["netto", "brutto"]:
+        raise ConfigException(
+            f"given value of a generator_capacity_cost {network_config['generator_capacity_cost']} "
+            f"is different than allowed values netto or brutto."
+        )
+
+
+def validate_generator_capacity_cost(generator_capacity_cost: str) -> None:
+    """
+    Validate if given value of generator_capacity_cost is correct.
+    """
+    if generator_capacity_cost not in ["netto", "brutto"]:
+        raise ConfigException(
+            f"given value of a generator_capacity_cost {generator_capacity_cost} is different than allowed values "
+            f"netto or brutto."
         )
 
 
@@ -191,6 +224,14 @@ def validate_solver_name(solver_name: str | None) -> None:
         )
 
 
+def validate_n_years_aggregation(n_years_aggregation: int) -> None:
+    """Validate if n_years_aggregation is positive integer."""
+    if n_years_aggregation <= 0:
+        raise ConfigException(
+            f"n_years_aggregation should be positive integer, but given: {n_years_aggregation}"
+        )
+
+
 def load_vector_from_csv(path: Path, param_name: str) -> np.ndarray:
     """Load 1 dimensional dataset (as 1D NumPy array) from given path."""
     validate_file_path(path, param_name)
@@ -219,6 +260,9 @@ class ConfigLoader:
             "use_hourly_scale": _opt,
             "solver": _opt,
             "ens_penalty_cost": _opt,
+            "generator_capacity_cost": _opt,
+            "n_years_aggregation": _opt,
+            "aggregation_method": _opt,
         },
         "create": {"n_years": _opt, "n_hours": _opt, "input_path": _opt},
         "debug": {
@@ -363,6 +407,19 @@ class ConfigLoader:
             xlsx_results=self.config.getboolean(
                 "output", "xlsx_results", fallback=False
             ),
+            n_years_aggregation=(
+                int(n_years_aggregation)
+                if (
+                    n_years_aggregation := self.config.get(
+                        "optimization", "n_years_aggregation", fallback=None
+                    )
+                )
+                is not None
+                else 1
+            ),
+            aggregation_method=self.config.get(
+                "optimization", "aggregation_method", fallback="last"
+            ),
         )
 
     def _get_log_level(self) -> int:
@@ -374,21 +431,16 @@ class ConfigLoader:
     def _load_network_config(self) -> dict[str, Any]:
         network_config: dict[str, Any] = {}
         if "optimization" not in self.config.sections():
-            return network_config
+            self.config.add_section("optimization")
         optimization_section = self.config["optimization"]
-        network_config["binary_fraction"] = (
-            optimization_section.getboolean("binary_fraction")
-            if "binary_fraction" in optimization_section
-            else False
+        network_config["binary_fraction"] = optimization_section.getboolean(
+            "binary_fraction", fallback=False
         )
-        if (
-            numeric_tolerance := optimization_section.getfloat(
-                "numeric_tolerance", fallback=None
-            )
-        ) is not None:
-            network_config["numeric_tolerance"] = numeric_tolerance
         network_config["ens_penalty_cost"] = optimization_section.getfloat(
             "ens_penalty_cost", fallback=np.nan
+        )
+        network_config["generator_capacity_cost"] = optimization_section.get(
+            "generator_capacity_cost", fallback="brutto"
         )
         return network_config
 

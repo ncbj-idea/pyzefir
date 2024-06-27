@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -31,8 +31,8 @@ from pyzefir.model.network_validator import (
     BaseCapacityValidator,
     BaseTotalEmissionValidation,
     DsrBusesOutValidation,
+    GeneratorCapacityCostValidator,
     NetworkElementsValidation,
-    NetworkGenerationFraction,
     NetworkValidator,
     PowerReserveValidation,
     RelativeEmissionLimitsValidation,
@@ -360,163 +360,6 @@ def test_base_capacity_values(
 
 
 @pytest.mark.parametrize(
-    "min_gen_frac, max_gen_frac, exception_msg",
-    (
-        pytest.param(
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.1},
-            },
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 1.2},
-            },
-            "Max generation fraction <1.2> for energy type <ELECTRICITY>, tags "
-            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
-            id="Max generation fraction for tags",
-        ),
-        pytest.param(
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.1},
-            },
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): np.nan},
-            },
-            "Max generation fraction <nan> for energy type <ELECTRICITY>, tags "
-            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
-            id="Max generation fraction nan",
-        ),
-        pytest.param(
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 1.1},
-            },
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.9},
-            },
-            "Min generation fraction <1.1> for energy type <ELECTRICITY>, tags "
-            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
-            id="Min generation fraction for tags",
-        ),
-        pytest.param(
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): np.nan},
-            },
-            {
-                "ELECTRICITY": {("ee_tag", "ee_tag2"): 0.9},
-            },
-            "Min generation fraction <nan> for energy type <ELECTRICITY>, tags "
-            "<('ee_tag', 'ee_tag2')> must be a number greater than zero and smaller than one ",
-            id="Min generation fraction nan",
-        ),
-        pytest.param(
-            {
-                "gravity": {("ee_tag", "ee_tag2"): 0.1},
-            },
-            {
-                "gravity": {("ee_tag", "ee_tag2"): 0.9},
-            },
-            "Incorrect energy type <gravity> for tags <('ee_tag', 'ee_tag2')>",
-            id="Incorrect energy type",
-        ),
-    ),
-)
-def test_network_generation_fraction_validation(
-    min_gen_frac: dict[str, dict[tuple[str, str], float]],
-    max_gen_frac: dict[str, dict[tuple[str, str], float]],
-    exception_msg: str,
-) -> None:
-    base_total_emission = {CO2_EMISSION: np.nan, PM10_EMISSION: np.nan}
-    relative_emission_limits = {
-        CO2_EMISSION: pd.Series([np.nan] * 4),
-        PM10_EMISSION: pd.Series([np.nan] * 4),
-    }
-    network = Network(
-        network_constants=NetworkConstants(
-            n_years=4,
-            n_hours=24,
-            relative_emission_limits=relative_emission_limits,
-            base_total_emission=base_total_emission,
-            power_reserves={"ELECTRICITY": {"example_tag": 0.5, "example_tag2": 0.9}},
-            min_generation_fraction=min_gen_frac,
-            max_generation_fraction=max_gen_frac,
-        ),
-        energy_types=[ELECTRICITY, HEATING],
-        emission_types=[CO2_EMISSION, PM10_EMISSION],
-    )
-    exception_list: list[NetworkValidatorException] = []
-    NetworkGenerationFraction.validate(network, exception_list=exception_list)
-    assert len(exception_list)
-    assert str(exception_list[0]) == exception_msg
-
-
-@pytest.mark.parametrize(
-    "generator_tags, exception_msg",
-    (
-        pytest.param(
-            {
-                "HEAT_PUMP_LKT2": {"tags": ["example_tag2"]},
-            },
-            "Subtag <example_tag2> is not a proper subset of the tag set <example_tag>",
-            id="number of tags = number of subtags",
-        ),
-        pytest.param(
-            {
-                "HEAT_PUMP_LKT2": {"tags": ["example_tag", "example_tag2"]},
-                "CHP_COAL_HS1_KSE": {"tags": ["example_tag2"]},
-            },
-            "Subtag <example_tag2> is not a proper subset of the tag set <example_tag>",
-            id="number of tags = number of subtags",
-        ),
-    ),
-)
-def test_validate_proper_subtags(
-    network: Network, generator_tags: dict[str, list[str]], exception_msg: str
-) -> None:
-    set_network_elements_parameters(getattr(network, "generators"), generator_tags)
-
-    exception_list: list[NetworkValidatorException] = []
-    NetworkGenerationFraction.validate(network, exception_list=exception_list)
-    assert len(exception_list)
-    assert str(exception_list[0]) == exception_msg
-
-
-@pytest.mark.parametrize(
-    "generators, storages, exception_msg",
-    (
-        pytest.param(
-            {
-                "HEAT_PLANT_GAS_HS2": {"buses": {"KSE"}, "tags": ["example_tag"]},
-            },
-            {},
-            "Energy type for generators of the tag: example_tag for <HEAT_PLANT_GAS_HS2> "
-            "do not match energy type in Generation Fraction",
-            id="invalid storage energy type",
-        ),
-        pytest.param(
-            {},
-            {
-                "BATTERY_EE_LKT3": {"tags": ["example_tag"]},
-            },
-            "Energy type for storages of the tag: example_tag for <BATTERY_EE_LKT3> "
-            "do not match energy type in Generation Fraction",
-            id="invalid storage energy type",
-        ),
-    ),
-)
-def test_validate_tag_energy_types(
-    network: Network,
-    generators: dict[str, dict[str, set[str] | list[str]]],
-    storages: dict[str, dict[str, list[str] | list[str]]],
-    exception_msg: str,
-) -> None:
-    set_network_elements_parameters(getattr(network, "generators"), generators)
-    set_network_elements_parameters(getattr(network, "storages"), storages)
-
-    exception_list: list[NetworkValidatorException] = []
-    NetworkGenerationFraction.validate(network, exception_list=exception_list)
-    assert len(exception_list)
-    assert str(exception_list[0]) == exception_msg
-
-
-@pytest.mark.parametrize(
     "power_reserves, exception_list",
     (
         pytest.param(
@@ -687,3 +530,42 @@ def test_dsr_buses_out_validation(
     network.buses[bus].dsr_type = "test_dsr"
     actual_exception_list: list[NetworkValidatorException] = []
     DsrBusesOutValidation.validate(network, actual_exception_list)
+
+
+@pytest.mark.parametrize(
+    ("generator_capacity_cost", "exception_list"),
+    (
+        ("brutto", []),
+        (
+            "netto",
+            [
+                NetworkValidatorException(
+                    "generator type 'CHP_BIOMASS' have more than one energy "
+                    "type defined, but generator_capacity_cost parameter is set to 'netto'; "
+                    "if you want to have generator types with more than one energy type, please "
+                    "set generator_capacity_cost to 'brutto'"
+                ),
+                NetworkValidatorException(
+                    "generator type 'CHP_COAL' have more than one energy "
+                    "type defined, but generator_capacity_cost "
+                    "parameter is set to 'netto'; if you want to "
+                    "have generator types with more than one energy type, please set generator_capacity_cost "
+                    "to 'brutto'"
+                ),
+            ],
+        ),
+    ),
+)
+def test_generator_capacity_cost_validation(
+    network: Network,
+    generator_capacity_cost: str,
+    exception_list: list[NetworkValidatorException],
+) -> None:
+    new_network_constants_kwargs = asdict(network.constants)
+    new_network_constants_kwargs.update(
+        {"generator_capacity_cost": generator_capacity_cost}
+    )
+    network.constants = NetworkConstants(**new_network_constants_kwargs)
+    actual_exception_list: list[NetworkValidatorException] = []
+    GeneratorCapacityCostValidator.validate(network, actual_exception_list)
+    assert_same_exception_list(actual_exception_list, exception_list)

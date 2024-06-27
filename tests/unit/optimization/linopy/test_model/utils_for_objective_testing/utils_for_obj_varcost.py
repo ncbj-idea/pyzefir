@@ -31,6 +31,32 @@ def objective_varcost(
         _generator_var_cost(indices, parameters, results, gen_idx).sum()
         for gen_idx in indices.GEN.ord
         if parameters.gen.fuel[gen_idx] is not None
+    ) + sum(
+        _transmission_var_cost(indices, parameters, results, line_idx).sum()
+        for line_idx in indices.LINE.ord
+    )
+
+
+def _transmission_var_cost(
+    indices: Indices,
+    parameters: OptimizationParameters,
+    results: Results,
+    line_idx: int,
+) -> np.ndarray:
+    line_map = indices.LINE.mapping
+    hourly_scale = parameters.scenario_parameters.hourly_scale
+
+    return np.asarray(
+        [
+            (
+                results.lines_results.flow[line_map[line_idx]][year]
+                * parameters.tf.fee[parameters.line.tf[line_idx]]
+            ).sum()
+            * hourly_scale
+            * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()[year]
+            for year in results.lines_results.flow[line_map[line_idx]].columns
+            if line_idx in parameters.line.tf
+        ]
     )
 
 
@@ -44,7 +70,10 @@ def _generator_var_cost(
         indices, parameters, results, fuel_idx, gen_idx, hourly_scale
     )
 
-    return np.asarray(fuel_consumption * cost)
+    return (
+        np.asarray(fuel_consumption * cost)
+        * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
+    )
 
 
 def _fuel_consumption(

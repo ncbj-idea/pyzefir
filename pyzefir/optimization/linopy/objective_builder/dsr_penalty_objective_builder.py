@@ -31,7 +31,9 @@ class DsrPenaltyObjectiveBuilder(ObjectiveBuilder):
             bus_parameters = self.parameters.bus
             result: LinearExpression = 0.0
             for bus_idx, dsr_idx in bus_parameters.dsr_type.items():
-                result += shift_minus.isel(bus=bus_idx).sum() * penalization[dsr_idx]
+                result += (
+                    shift_minus.isel(bus=bus_idx) * self.indices.years_aggregation_array
+                ).sum() * penalization[dsr_idx]
             _logger.info("DSR penalty objective: Done")
             return result.sum()
         _logger.warning("No specified DSR type, returning default expression.")

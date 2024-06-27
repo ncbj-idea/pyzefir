@@ -23,7 +23,7 @@ from pyzefir.model.utils import NetworkConstants
 from pyzefir.utils.functions import invert_dict_of_sets
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -171,7 +171,7 @@ def test_reserves(
         },
     ),
 
-    opt_config = create_default_opf_config(hour_sample, np.arange(N_YEARS))
+    opt_config = create_default_opt_config(hour_sample, np.arange(N_YEARS))
     engine = run_opt_engine(network, opt_config)
 
     power_reserves = engine.parameters.scenario_parameters.power_reserves

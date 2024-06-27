@@ -25,7 +25,7 @@ from pyzefir.optimization.linopy.model import OptimizationError
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.names import EE, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -153,7 +153,7 @@ def test_generator_capacity_constraints(
     generators_params: dict[str, Any],
     excepted_capacity: dict[str, list[float]],
 ) -> None:
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.arange(5),
         year_sample=np.arange(N_YEARS),
     )
@@ -203,7 +203,7 @@ def test_generator_capacity_bad_constraints(
     network: Network,
     generators_params: dict[str, Any],
 ) -> None:
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.arange(5),
         year_sample=np.arange(N_YEARS),
     )

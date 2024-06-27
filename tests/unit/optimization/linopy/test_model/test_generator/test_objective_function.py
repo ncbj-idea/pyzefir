@@ -22,7 +22,7 @@ from pyzefir.model.network import Network
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import CO2, EE, GRID, HEAT, HS, PM10
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -906,7 +906,10 @@ from tests.utils import get_resources
                 "pp_coal": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.2, PM10: 0.0},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.ones(N_YEARS) * 0.2),
+                        PM10: pd.Series(np.zeros(N_YEARS)),
+                    },
                 },
             },
             {f"pp_coal_{GRID}": {"emission_fee": {"CO2_EMF"}}},
@@ -962,7 +965,10 @@ from tests.utils import get_resources
                 "pp_coal": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.2, PM10: 0.0},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.ones(N_YEARS) * 0.2),
+                        PM10: pd.Series(np.zeros(N_YEARS)),
+                    },
                 },
             },
             {f"pp_coal_{GRID}": {"emission_fee": {"CO2_EMF"}}},
@@ -1014,12 +1020,18 @@ from tests.utils import get_resources
                 "heat_plant_biomass": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.0, PM10: 0.3},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.zeros(N_YEARS)),
+                        PM10: pd.Series(np.ones(N_YEARS) * 0.3),
+                    },
                 },
                 "pp_coal": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.2, PM10: 0.0},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.ones(N_YEARS) * 0.2),
+                        PM10: pd.Series(np.zeros(N_YEARS)),
+                    },
                 },
             },
             {
@@ -1100,12 +1112,18 @@ from tests.utils import get_resources
                 "heat_plant_biomass": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.0, PM10: 0.3},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.zeros(N_YEARS)),
+                        PM10: pd.Series(np.ones(N_YEARS) * 0.3),
+                    },
                 },
                 "pp_coal": {
                     "capex": pd.Series(np.zeros(N_YEARS)),
                     "opex": pd.Series(np.zeros(N_YEARS)),
-                    "emission_reduction": {CO2: 0.2, PM10: 0.0},
+                    "emission_reduction": {
+                        CO2: pd.Series(np.ones(N_YEARS) * 0.2),
+                        PM10: pd.Series(np.zeros(N_YEARS)),
+                    },
                 },
             },
             {
@@ -1127,7 +1145,7 @@ from tests.utils import get_resources
                 "CO2_EMF": {"price": pd.Series(data=[100.0] * N_YEARS)},
                 "PM10_EMF": {"price": pd.Series(data=[50.0] * N_YEARS)},
             },
-            (  # CO2
+            (
                 (
                     pd.read_csv(
                         get_resources("test_network_assets") / "ee_profile.csv",
@@ -1204,7 +1222,7 @@ def test_objective_value(
 
     # test if enabling ens nothing happen if no change in demand / generation
 
-    opt_config = create_default_opf_config(**opt_config_params)
+    opt_config = create_default_opt_config(**opt_config_params)
     opt_config.ens = ens
     engine = run_opt_engine(network, opt_config)
 
@@ -1260,10 +1278,10 @@ def test_discount_rate(
     set_network_elements_parameters(network.fuels, fuels_params)
     set_network_elements_parameters(network.generator_types, generator_type_params)
 
-    opt_config_with_discount = create_default_opf_config(**opt_config_params)
+    opt_config_with_discount = create_default_opt_config(**opt_config_params)
     discounted_results = run_opt_engine(network, opt_config_with_discount).results
 
-    opt_config_no_discount = create_default_opf_config(
+    opt_config_no_discount = create_default_opt_config(
         **(opt_config_params | {"discount_rate": np.zeros(N_YEARS)})
     )
     no_discount_results = run_opt_engine(network, opt_config_no_discount).results
@@ -1334,10 +1352,10 @@ def test_hourly_scale_factor(
             day_values,
         )
 
-    opt_config_base = create_default_opf_config(
+    opt_config_base = create_default_opt_config(
         hour_sample=base_hour_sample, year_sample=np.arange(1)
     )
-    opt_config_extended = create_default_opf_config(
+    opt_config_extended = create_default_opt_config(
         hour_sample=extended_hour_sample, year_sample=np.arange(1)
     )
     engine_base = run_opt_engine(network, opt_config_base)

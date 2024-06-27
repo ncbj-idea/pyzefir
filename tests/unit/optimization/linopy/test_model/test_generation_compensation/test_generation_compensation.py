@@ -26,7 +26,7 @@ from pyzefir.optimization.linopy.preprocessing.opt_parameters import (
 from pyzefir.optimization.results import Results
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -148,7 +148,7 @@ def test_generation_compensation(
             {gen_type: {"generation_compensation": compensation}},
         ),
 
-    opt_config = create_default_opf_config(hour_sample, np.arange(N_YEARS))
+    opt_config = create_default_opt_config(hour_sample, np.arange(N_YEARS))
     engine = run_opt_engine(network, opt_config)
 
     _test_objective(engine.indices, engine.parameters, engine.results)

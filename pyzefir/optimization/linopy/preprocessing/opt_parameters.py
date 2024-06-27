@@ -22,6 +22,9 @@ from pyzefir.optimization.linopy.preprocessing.parameters.aggregated_consumer_pa
 from pyzefir.optimization.linopy.preprocessing.parameters.bus_parameters import (
     BusParameters,
 )
+from pyzefir.optimization.linopy.preprocessing.parameters.capacity_bound_parameters import (
+    CapacityBoundParameters,
+)
 from pyzefir.optimization.linopy.preprocessing.parameters.capacity_factor_parameters import (
     CapacityFactorParameters,
 )
@@ -36,6 +39,9 @@ from pyzefir.optimization.linopy.preprocessing.parameters.emission_fee_parameter
 )
 from pyzefir.optimization.linopy.preprocessing.parameters.fuel_parameters import (
     FuelParameters,
+)
+from pyzefir.optimization.linopy.preprocessing.parameters.generation_fraction_parameters import (
+    GenerationFractionParameters,
 )
 from pyzefir.optimization.linopy.preprocessing.parameters.generator_parameters import (
     GeneratorParameters,
@@ -62,7 +68,6 @@ from pyzefir.optimization.linopy.preprocessing.parameters.transmission_fee_param
     TransmissionFeeParameters,
 )
 from pyzefir.optimization.opt_config import OptConfig
-from pyzefir.utils.functions import tag_str_to_idx
 
 
 class OptimizationParameters:
@@ -127,14 +132,9 @@ class OptimizationParameters:
                 for key, series in network.constants.relative_emission_limits.items()
             },
             base_total_emission=network.constants.base_total_emission,
-            min_generation_fraction=tag_str_to_idx(
-                network.constants.min_generation_fraction, indices.TAGS.inverse
-            ),
-            max_generation_fraction=tag_str_to_idx(
-                network.constants.max_generation_fraction, indices.TAGS.inverse
-            ),
             power_reserves=network.constants.power_reserves,
             ens_penalty_cost=network.constants.ens_penalty_cost,
+            generator_capacity_cost=opt_config.generator_capacity_cost,
         )
         self.emf: EmissionFeeParameters = EmissionFeeParameters(
             network.emission_fees, indices, scale=opt_config.money_scale
@@ -148,3 +148,9 @@ class OptimizationParameters:
             network.dsr, indices, scale=opt_config.money_scale
         )
         """DSR parameters"""
+        self.capacity_bounds: CapacityBoundParameters = CapacityBoundParameters(
+            network.capacity_bounds, indices, network.generators
+        )
+        """capacity bound parameters"""
+        self.gf = GenerationFractionParameters(network.generation_fractions, indices)
+        """ Generation fractions parameters"""

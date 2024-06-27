@@ -35,7 +35,10 @@ def objective_generation_compensation(
     unit_map = indices.GEN.mapping
     expr = 0.0
     for gen_idx, tgen_idx in gen_to_type_dict.items():
-        compensation = parameters.tgen.generation_compensation[tgen_idx]
+        compensation = (
+            parameters.tgen.generation_compensation[tgen_idx]
+            * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
+        )
         generation = np.asarray(
             results.generators_results.gen[unit_map[gen_idx]].sum(axis=0)
         )

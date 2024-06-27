@@ -33,6 +33,7 @@ from pyzefir.structure_creator.structure_and_initial_state.preprocess_handlers i
 )
 from pyzefir.structure_creator.structure_and_initial_state.structure_element_creators import (
     BusStructureCreator,
+    CapacityBoundsCreator,
     GeneratorStructureCreator,
     InitStateCreator,
     LbsStructureCreator,
@@ -47,9 +48,9 @@ class StructureCreator:
     @staticmethod
     def create_structure_and_initial(
         input_structure: InputStructureData, output_path: Path
-    ) -> None:
+    ) -> pd.DataFrame:
         _logger.debug("Creating StructureData and InitialStateData objects ...")
-        structure, init = StructureCreator._create_structure_data(
+        structure, init, capacity_bounds_df = StructureCreator._create_structure_data(
             input_structure=input_structure
         )
         _logger.debug("Saving structure.xlsx ...")
@@ -64,11 +65,12 @@ class StructureCreator:
             output_path=output_path,
             filename="initial_state.xlsx",
         )
+        return capacity_bounds_df
 
     @staticmethod
     def _create_structure_data(
         input_structure: InputStructureData,
-    ) -> tuple[StructureData, InitialStateData]:
+    ) -> tuple[StructureData, InitialStateData, pd.DataFrame]:
         _logger.debug("Creating initial combined local and global dataframes  ...")
         local_lbs_config_df, global_subsystem_config_df = (
             StructureCreator._preprocess_input_data(
@@ -77,6 +79,7 @@ class StructureCreator:
         )
         structure_data = StructureData()
         initial_state_data = InitialStateData()
+        capacity_bounds_dfs_list: list[pd.DataFrame] = []
         _logger.debug(
             "Creating static structure (independent of individual elements)  ..."
         )
@@ -103,6 +106,7 @@ class StructureCreator:
             ),
             global_subsystem_config_df=global_subsystem_config_df,
             aggregate_df=input_structure.aggregates,
+            capacity_bounds_dfs_list=capacity_bounds_dfs_list,
         )
         _logger.debug("Creating global structure data  ...")
         StructureGlobalCreator._create_global_structure_data(
@@ -110,7 +114,10 @@ class StructureCreator:
             initial_state_data=initial_state_data,
             global_subsystem_config_df=global_subsystem_config_df,
         )
-        return structure_data, initial_state_data
+
+        capacity_bounds_df = pd.concat(capacity_bounds_dfs_list)
+
+        return structure_data, initial_state_data, capacity_bounds_df
 
     @staticmethod
     def _preprocess_input_data(
@@ -176,6 +183,7 @@ class StructureLocalCreator:
         lbs_to_subsystem_df: pd.DataFrame,
         global_subsystem_config_df: pd.DataFrame,
         aggregate_df: pd.DataFrame,
+        capacity_bounds_dfs_list: list[pd.DataFrame],
     ) -> None:
         lbs_to_aggr_df = lbs_to_aggr_df.set_index("aggregate_id")
         aggr_config = {
@@ -247,6 +255,9 @@ class StructureLocalCreator:
                     filtered_local_lbs_config_df
                 )
             )
+            capacity_bounds_df = CapacityBoundsCreator.create_capacity_bounds_df(
+                filtered_local_lbs_config_df
+            )
             structure_data.Buses.append(local_bus_df)
             structure_data.Generators.append(local_gen_df)
             structure_data.Storages.append(local_stor_df)
@@ -264,6 +275,7 @@ class StructureLocalCreator:
             structure_data.Generator_Binding.append(generator_binding_df)
 
             initial_state_data.Technology.append(init_technology_df)
+            capacity_bounds_dfs_list.append(capacity_bounds_df)
 
     @staticmethod
     def _adjust_lbs_config(

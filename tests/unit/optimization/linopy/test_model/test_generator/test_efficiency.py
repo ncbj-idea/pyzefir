@@ -21,7 +21,7 @@ import pytest
 from pyzefir.model.network import Network
 from tests.unit.optimization.linopy.names import EE, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
@@ -64,7 +64,7 @@ def test_efficiency_series(
             "heat_plant_biomass": {"efficiency": efficiency_heat},
         },
     )
-    opt_config = create_default_opf_config(
+    opt_config = create_default_opt_config(
         hour_sample=np.array([0, 1, 2, 3, 4]), year_sample=np.array([0, 1])
     )
     run_opt_engine(network, opt_config)

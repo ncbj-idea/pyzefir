@@ -27,6 +27,7 @@ from pyzefir.optimization.linopy.preprocessing.parameters.generator_type_paramet
 from pyzefir.optimization.linopy.preprocessing.parameters.storage_type_parameters import (
     StorageTypeParameters,
 )
+from pyzefir.optimization.linopy.utils import get_generator_types_capacity_multipliers
 from pyzefir.optimization.results import Results
 from pyzefir.utils.functions import get_dict_vals
 
@@ -50,6 +51,10 @@ def local_capex(
         tcap_plus=results.generators_results.tcap_plus,
         unit_type_param=parameters.tgen,
         aggr_map=indices.aggr_tgen_map,
+        multipliers=get_generator_types_capacity_multipliers(
+            parameters.scenario_parameters.generator_capacity_cost,
+            parameters.tgen,
+        ),
     )
     storage_capex = _local_capex(
         indices=indices,
@@ -75,6 +80,10 @@ def global_capex(
         non_lbs_unit_idxs=get_dict_vals(parameters.bus.generators).difference(
             get_dict_vals(indices.aggr_gen_map)
         ),
+        multipliers=get_generator_types_capacity_multipliers(
+            parameters.scenario_parameters.generator_capacity_cost,
+            parameters.tgen,
+        ),
     )
     storage_capex = _global_capex(
         indices=indices,
@@ -98,12 +107,14 @@ def _global_capex(
     unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
     unit_type_idx: dict,
     non_lbs_unit_idxs: set,
+    multipliers: dict[int, float] | None = None,
 ) -> float:
     disc_rate = discount_rate(parameters.scenario_parameters.discount_rate)
     y_idxs = indices.Y
     unit_capex = 0.0
     for u_idx in non_lbs_unit_idxs:
         ut_idx = unit_type_idx[u_idx]
+        mul = multipliers[ut_idx] if multipliers is not None else 1.0
         capex = unit_type_param.capex[ut_idx]
         lt = unit_type_param.lt[ut_idx]
 
@@ -118,6 +129,7 @@ def _global_capex(
                 u_idx=u_idx,
                 y_idxs=y_idxs,
             )
+            * mul
             for s_idx in y_idxs.ord
         )
     return unit_capex
@@ -151,28 +163,33 @@ def _local_capex(
     tcap_plus: dict[str, dict[str, pd.DataFrame]],
     unit_type_param: GeneratorTypeParameters | StorageTypeParameters,
     aggr_map: dict[..., set],
+    multipliers: dict[int, float] | None = None,
 ) -> float:
     disc_rate = discount_rate(parameters.scenario_parameters.discount_rate)
     y_idxs = indices.Y
     unit_type_capex = 0.0
     for aggr_idx, ut_idxs in aggr_map.items():
         for ut_idx in ut_idxs:
+            mul = multipliers[ut_idx] if multipliers is not None else 1.0
             capex = unit_type_param.capex[ut_idx]
             lt = unit_type_param.lt[ut_idx]
             ut_name = unit_indices.mapping[ut_idx]
-            unit_type_capex += sum(
-                local_capex_per_unit_per_year(
-                    indices=indices,
-                    capex=capex,
-                    tcap_plus=tcap_plus,
-                    disc_rate=disc_rate,
-                    lt=lt,
-                    s_idx=s_idx,
-                    ut_name=ut_name,
-                    aggr_idx=aggr_idx,
-                    y_idxs=y_idxs,
+            unit_type_capex += (
+                sum(
+                    local_capex_per_unit_per_year(
+                        indices=indices,
+                        capex=capex,
+                        tcap_plus=tcap_plus,
+                        disc_rate=disc_rate,
+                        lt=lt,
+                        s_idx=s_idx,
+                        ut_name=ut_name,
+                        aggr_idx=aggr_idx,
+                        y_idxs=y_idxs,
+                    )
+                    for s_idx in y_idxs.ord
                 )
-                for s_idx in y_idxs.ord
+                * mul
             )
     return unit_type_capex
 

@@ -51,6 +51,8 @@ class OptConfig:
         use_hourly_scale: bool = True,
         solver_name: str | None = None,
         solver_settings: dict[str, dict[str, Any]] | None = None,
+        generator_capacity_cost: str = "brutto",
+        year_aggregates: ndarray | None = None,
     ):
         self.hours: ndarray = hours if isinstance(hours, ndarray) else arange(hours)
         """ sequence of all hours in a year """
@@ -85,7 +87,12 @@ class OptConfig:
         self.solver_settings: dict[str, dict[str, Any]] = (
             solver_settings if solver_settings else {}
         )
+        self.generator_capacity_cost = generator_capacity_cost
         """ settings for the solvers """
+        self.generator_capacity_cost = generator_capacity_cost
+        """ generator capacity cost parameter, netto as default"""
+        self.year_aggregates: ndarray | None = year_aggregates
+        """ aggregation of years """
         self.validate()
 
     def validate(self) -> None:
@@ -125,6 +132,11 @@ class OptConfig:
         if not np.all(diff(self.year_sample) == 1) or self.year_sample[0] != 0:
             exception_list.append(
                 OptConfigError("year sample must be consecutive starting from 0")
+            )
+
+        if self.generator_capacity_cost not in ["brutto", "netto"]:
+            exception_list.append(
+                OptConfigError("generator capacity cost should be 'brutto' or 'netto'")
             )
 
         if exception_list:

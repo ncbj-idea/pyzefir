@@ -59,10 +59,6 @@ class GeneratorParameters(ModelParameters):
             generators, generator_types, indices.GEN, "energy_types"
         )
         """ generator energy types """
-        self.eff = self.get_frame_data_prop_from_element(
-            generators, generator_types, indices.GEN, indices.H, "efficiency"
-        )
-        """ generator efficiency: (et -> Vector[h])- efficiency of energy in a given hour h"""
         self.conv_rate = self.get_frame_data_prop_from_element(
             generators, generator_types, indices.GEN, indices.H, "conversion_rate"
         )

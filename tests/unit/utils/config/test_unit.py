@@ -16,6 +16,7 @@
 
 import re
 from pathlib import Path
+from typing import Any
 
 import linopy
 import numpy as np
@@ -30,6 +31,7 @@ from pyzefir.utils.config_parser import (
     validate_dir_path,
     validate_file_path,
     validate_input_format,
+    validate_network_config,
     validate_sol_dump_path,
     validate_solver_name,
 )
@@ -141,6 +143,41 @@ def test_validate_input_format_invalid_data(input_format: str) -> None:
     msg = f"provided input_format {input_format} is different than valid formats: csv, xlsx"
     with pytest.raises(ConfigException, match=msg):
         validate_input_format(input_format)
+
+
+@pytest.mark.parametrize(
+    ("network_config", "msg"),
+    (
+        (
+            dict(
+                generator_capacity_cost="Netto",
+                binary_fraction=False,
+                ens_penalty_cost=np.nan,
+            ),
+            "given value of a generator_capacity_cost Netto is different than allowed values "
+            "netto or brutto.",
+        ),
+        (
+            dict(
+                generator_capacity_cost="netto",
+                binary_fraction=1.0,
+                ens_penalty_cost=np.nan,
+            ),
+            "given binary_fraction parameter must be a boolean",
+        ),
+        (
+            dict(
+                generator_capacity_cost="netto",
+                binary_fraction=False,
+                ens_penalty_cost=False,
+            ),
+            "given ens_penalty_cost must be a float",
+        ),
+    ),
+)
+def test_validate_network_config(network_config: dict[str, Any], msg: str) -> None:
+    with pytest.raises(ConfigException, match=msg):
+        validate_network_config(network_config)
 
 
 @pytest.mark.parametrize("input_format", ("csv", "xlsx"))

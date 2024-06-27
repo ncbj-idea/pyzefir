@@ -24,7 +24,7 @@ from pyzefir.optimization.model import OptimizationStatus
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, HEAT
 from tests.unit.optimization.linopy.test_model.utils import (
-    create_default_opf_config,
+    create_default_opt_config,
     run_opt_engine,
 )
 
@@ -56,7 +56,7 @@ def test_line_flows_and_transmission_loss(
     heating_system_connection.transmission_loss = transmission_loss
     grid_connection.transmission_loss = transmission_loss
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)
     energy_usage = aggr.yearly_energy_usage
 
@@ -191,7 +191,7 @@ def test_line_capacity(
     network.aggregated_consumers["aggr"].yearly_energy_usage["heat"] *= 1e6
     network.aggregated_consumers["aggr"].yearly_energy_usage["electricity"] *= 1e6
 
-    opt_config = create_default_opf_config(hour_sample, year_sample)
+    opt_config = create_default_opt_config(hour_sample, year_sample)
     opt_config.ens = ens
     engine = run_opt_engine(network, opt_config)
 

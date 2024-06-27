@@ -73,10 +73,18 @@ class GeneratorTypeParameters(ModelParameters):
             "build_time",
         )
         """ generator type build time """
-        self.ramp = self.fetch_element_prop(
-            generator_types, indices.TGEN, "ramp", sample=indices.Y.ii
+        self.ramp_down = self.fetch_element_prop(
+            generator_types,
+            indices.TGEN,
+            "ramp_down",
         )
-        """change in generation from one hour to the next"""
+        """change in generation from one hour to the next (lower bound)"""
+        self.ramp_up = self.fetch_element_prop(
+            generator_types,
+            indices.TGEN,
+            "ramp_up",
+        )
+        """change in generation from one hour to the next (upper bound)"""
         self.tags = self.get_set_prop_from_element(
             generator_types, "tags", indices.TGEN, indices.T_TAGS
         )
@@ -90,7 +98,17 @@ class GeneratorTypeParameters(ModelParameters):
         self.power_utilization = self.fetch_element_prop(
             generator_types, indices.TGEN, "power_utilization", sample=indices.H.ii
         )
-        """ power utilization factor """
+        self.minimal_power_utilization = self.fetch_element_prop(
+            generator_types,
+            indices.TGEN,
+            "minimal_power_utilization",
+            sample=indices.H.ii,
+        )
+        """ minimal power utilization factor """
+        self.eff = self.get_frame_data_prop_from_element_type(
+            generator_types, indices.TGEN, "efficiency", sample=indices.H.ii
+        )
+        """ generator efficiency: (et -> Vector[h])- efficiency of energy in a given hour h"""
         self.generation_compensation = self.scale(
             self.fetch_element_prop(
                 generator_types,

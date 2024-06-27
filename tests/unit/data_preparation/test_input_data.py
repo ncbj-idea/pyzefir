@@ -64,7 +64,7 @@ def test_load_scenario_data(
         assert isinstance(scenario_data, ScenarioData)
 
         for field in fields(scenario_data):
-            if field.name != "fractions":
+            if field.name not in ["fractions", "yearly_emission_reduction"]:
                 actual_value = getattr(scenario_data, field.name)
                 check_excel_file(
                     expected_excel=mock_read_excel,

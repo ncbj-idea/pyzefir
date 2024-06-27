@@ -31,6 +31,7 @@ from pyzefir.model.network_elements import (
     DemandChunk,
     DemandProfile,
     Fuel,
+    GenerationFraction,
     Generator,
     GeneratorType,
     Line,
@@ -39,6 +40,7 @@ from pyzefir.model.network_elements import (
     StorageType,
     TransmissionFee,
 )
+from pyzefir.model.network_elements.capacity_bound import CapacityBound
 from pyzefir.model.network_elements.dsr import DSR
 from pyzefir.model.network_elements.emission_fee import EmissionFee
 from pyzefir.model.utils import NetworkConstants
@@ -46,6 +48,7 @@ from pyzefir.parser.elements_parsers.aggregated_consumer_parser import (
     AggregatedConsumerParser,
 )
 from pyzefir.parser.elements_parsers.bus_parser import BusParser
+from pyzefir.parser.elements_parsers.capacity_bound_parser import CapacityBoundParser
 from pyzefir.parser.elements_parsers.capacity_factor_parser import CapacityFactorParser
 from pyzefir.parser.elements_parsers.demand_chunk_parser import DemandChunkParser
 from pyzefir.parser.elements_parsers.demand_profile_parser import DemandProfileParser
@@ -58,6 +61,9 @@ from pyzefir.parser.elements_parsers.energy_source_unit_parser import (
     EnergySourceUnitParser,
 )
 from pyzefir.parser.elements_parsers.fuel_parser import FuelParser
+from pyzefir.parser.elements_parsers.generation_fraction_parser import (
+    GenerationFractionParser,
+)
 from pyzefir.parser.elements_parsers.line_parser import LineParser
 from pyzefir.parser.elements_parsers.local_balancing_stack_parser import (
     LocalBalancingStackParser,
@@ -98,7 +104,11 @@ class NetworkCreator:
         transmission_fees = NetworkCreator._create_transmission_fees(df_dict)
         emission_fees = NetworkCreator._create_emission_fees(df_dict)
         demand_chunks = NetworkCreator._create_demand_chunks(df_dict)
+        generation_fractions = NetworkCreator._create_generation_fraction(
+            df_dict, network_constants
+        )
         dsr = NetworkCreator._create_dsr(df_dict)
+        capacity_bounds = NetworkCreator._create_capacity_bounds(df_dict)
         _logger.info("Network creation: Done")
 
         return NetworkCreator._create_network(
@@ -120,6 +130,8 @@ class NetworkCreator:
             emission_fees,
             demand_chunks,
             dsr,
+            capacity_bounds,
+            generation_fractions,
         )
 
     @staticmethod
@@ -142,6 +154,8 @@ class NetworkCreator:
         emission_fees: tuple[EmissionFee, ...],
         demand_chunks: tuple[DemandChunk, ...],
         dsr: tuple[DSR, ...],
+        capacity_bounds: tuple[CapacityBound, ...],
+        generation_fractions: tuple[GenerationFraction, ...],
     ) -> Network:
         network = Network(
             network_constants=network_constants,
@@ -165,6 +179,8 @@ class NetworkCreator:
             (demand_profiles, network.add_demand_profile),
             (aggregated_consumers, network.add_aggregated_consumer),
             (demand_chunks, network.add_demand_chunk),
+            (capacity_bounds, network.add_capacity_bound),
+            (generation_fractions, network.add_generation_fraction),
         ]
         for elements, add_method in objects_and_methods_list:
             for element in elements:
@@ -206,21 +222,6 @@ class NetworkCreator:
             .pivot_table(columns="name", dropna=False)
             .to_dict("index")["base_total_emission"]
         )
-        generation_fractions_df = df_dict[DataCategories.SCENARIO][
-            DataSubCategories.GENERATION_FRACTION
-        ]
-        min_generation_fr, max_generation_fr = dict(), dict()
-        for energy_type in generation_fractions_df["energy_type"].values:
-            per_en_type_df = generation_fractions_df[
-                generation_fractions_df["energy_type"] == energy_type
-            ]
-            tags = (per_en_type_df["tag"].iloc[0], per_en_type_df["subtag"].iloc[0])
-            min_generation_fr.update(
-                {energy_type: {tags: per_en_type_df["min_generation_fraction"].iloc[0]}}
-            )
-            max_generation_fr.update(
-                {energy_type: {tags: per_en_type_df["max_generation_fraction"].iloc[0]}}
-            )
         power_reserves = (
             df_dict[DataCategories.STRUCTURE][DataSubCategories.POWER_RESERVE]
             .pivot_table(
@@ -242,8 +243,6 @@ class NetworkCreator:
         }
         constants_dict = {k.lower(): v for k, v in constants_dict.items()}
         config_dict = config_dict if config_dict else dict()
-        constants_dict["min_generation_fraction"] = min_generation_fr
-        constants_dict["max_generation_fraction"] = max_generation_fr
         _logger.info("Create network constants: Done")
         return NetworkConstants(**constants_dict | config_dict)
 
@@ -455,6 +454,12 @@ class NetworkCreator:
             generation_compensation=df_dict[DataCategories.SCENARIO][
                 DataSubCategories.GENERATION_COMPENSATION
             ],
+            yearly_emission_reduction=df_dict[DataCategories.SCENARIO][
+                DataSubCategories.YEARLY_EMISSION_REDUCTION
+            ],
+            generators_minimal_power_utilization=df_dict[DataCategories.GENERATOR][
+                DataSubCategories.MINIMAL_POWER_UTILIZATION
+            ],
         ).create()
         _logger.info("Creating energy source types: Done")
         return generator_types, storage_types
@@ -478,3 +483,26 @@ class NetworkCreator:
         ).create()
         _logger.info("Creating dsr: Done")
         return dsr
+
+    @classmethod
+    def _create_capacity_bounds(
+        cls, df_dict: dict[str, dict[str, pd.DataFrame]]
+    ) -> tuple[CapacityBound, ...]:
+        capacity_bounds = CapacityBoundParser(
+            df_dict[DataCategories.SCENARIO][DataSubCategories.CAPACITY_BOUNDS]
+        ).create()
+        _logger.info("Creating capacity bounds: Done")
+        return capacity_bounds
+
+    @classmethod
+    def _create_generation_fraction(
+        cls,
+        df_dict: dict[str, dict[str, pd.DataFrame]],
+        network_constants: NetworkConstants,
+    ) -> tuple[GenerationFraction, ...]:
+        generation_fractions = GenerationFractionParser(
+            df_dict[DataCategories.SCENARIO][DataSubCategories.GENERATION_FRACTION],
+            network_constants.n_years,
+        ).create()
+        _logger.info("Creating generation fractions: Done")
+        return generation_fractions

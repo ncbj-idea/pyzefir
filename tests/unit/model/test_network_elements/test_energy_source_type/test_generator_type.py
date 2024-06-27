@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -29,22 +30,29 @@ from pyzefir.model.network_elements.energy_source_types.generator_type import (
 from pyzefir.model.network_elements.energy_sources.generator import Generator
 from pyzefir.model.network_elements.fuel import Fuel
 from tests.unit.defaults import (
+    CO2_EMISSION,
     DEFAULT_HOURS,
     DEFAULT_YEARS,
     ELECTRICITY,
     HEATING,
     default_generator_type,
+    default_generator_type_netto,
     default_network_constants,
+    default_network_constants_netto_cost,
     get_default_generator_type,
 )
 from tests.unit.model.test_network_elements.helpers import assert_same_exception_list
 
 
 @pytest.fixture
-def network() -> Network:
+def network(request: pytest.FixtureRequest) -> Network:
+    if request.node.get_closest_marker("netto_cost"):
+        network_constants = default_network_constants_netto_cost
+    else:
+        network_constants = default_network_constants
     network = Network(
         energy_types=[ELECTRICITY, HEATING],
-        network_constants=default_network_constants,
+        network_constants=network_constants,
         emission_types=["CO2", "PM10"],
     )
     coal = Fuel(
@@ -75,14 +83,47 @@ def network() -> Network:
     return network
 
 
+def test_capacity_bound_validation(network: Network) -> None:
+    gen_type = get_default_generator_type(
+        series_length=default_network_constants.n_years,
+    )
+
+    with patch.object(gen_type, "_validate_fuels") as mock_validate_fuels, patch.object(
+        gen_type, "_validate_capacity_factor"
+    ) as mock_validate_capacity_factor, patch.object(
+        gen_type, "_validate_efficiency"
+    ) as mock_validate_efficiency, patch.object(
+        gen_type, "_validate_emission_reduction"
+    ) as mock_validate_emission_reduction, patch.object(
+        gen_type, "_validate_conversion_rate"
+    ) as mock_validate_conversion_rate, patch.object(
+        gen_type, "_validate_power_utilization_boundaries"
+    ) as mock_validate_power_utilization, patch.object(
+        gen_type, "_validate_generation_compensation"
+    ) as mock_validate_generation_compensation, patch.object(
+        gen_type, "_validate_ramp"
+    ) as mock_validate_ramp:
+
+        gen_type.validate(network)
+
+        mock_validate_fuels.assert_called_once_with([], network)
+        mock_validate_capacity_factor.assert_called_once_with([], network)
+        mock_validate_efficiency.assert_called_once_with([], network)
+        mock_validate_emission_reduction.assert_called_once_with([], network)
+        mock_validate_conversion_rate.assert_called_once_with([], network)
+        mock_validate_power_utilization.assert_called_once_with(network, [])
+        mock_validate_generation_compensation.assert_called_once_with([])
+        mock_validate_ramp.assert_called_once_with([])
+
+
 @pytest.mark.parametrize(
     "gen_type, exception_list",
     [
         (
             get_default_generator_type(
-                series_length=default_network_constants.n_years, ramp="sadasd"
+                series_length=default_network_constants.n_years, ramp_down="sadasd"
             ),
-            [NetworkValidatorException("Ramp value must be float or empty.")],
+            [NetworkValidatorException("ramp_down value must be float or empty.")],
         ),
         (
             get_default_generator_type(
@@ -103,11 +144,11 @@ def network() -> Network:
             get_default_generator_type(
                 series_length=default_network_constants.n_years,
                 name="gen_type_cap_fuel",
-                ramp=1,
+                ramp_up=1,
             ),
             [
                 NetworkValidatorException(
-                    "Ramp value must be greater than 0 and less than 1, but it is 1"
+                    "ramp_up value must be greater than 0 and less than 1, but it is 1"
                 ),
             ],
         ),
@@ -190,7 +231,7 @@ def test_capacity_factor_validators(
 @pytest.mark.parametrize(
     "gen_type, exception_list",
     [
-        (
+        pytest.param(
             GeneratorType(
                 **default_generator_type
                 | {
@@ -206,13 +247,35 @@ def test_capacity_factor_validators(
                     "['ELECTRICITY', 'HEATING']"
                 )
             ],
+            id="Energy types not in network",
         ),
-        (
+        pytest.param(
             GeneratorType(
                 **default_generator_type
                 | {"name": "gen_type_no_eff", "efficiency": None}
             ),
             [NetworkValidatorException("Efficiency cannot be None.")],
+            id="efficiency is None",
+        ),
+        pytest.param(
+            GeneratorType(
+                **default_generator_type_netto
+                | {
+                    "name": "gen_type_netto",
+                    "efficiency": pd.DataFrame(
+                        {"ELECTRICITY": [0.9], "HEATING": [0.6]}
+                    ),
+                }
+            ),
+            [
+                NetworkValidatorException(
+                    "In generator type: gen_type_netto generator capacity cost is set to netto which required "
+                    "efficiency only for one energy type: {'ELECTRICITY'} but efficiency has been defined for "
+                    "['ELECTRICITY', 'HEATING']"
+                )
+            ],
+            marks=pytest.mark.netto_cost,
+            id="Capacity cost netto but 2 energy types provided",
         ),
     ],
 )
@@ -229,19 +292,29 @@ def test_efficiency_validators(
 @pytest.mark.parametrize(
     "gen_type, exception_list",
     [
-        (
+        pytest.param(
             GeneratorType(
                 **default_generator_type
-                | {"name": "gen_type_no_e_r", "emission_reduction": None}
+                | {
+                    "name": "gen_type_no_e_r",
+                    "emission_reduction": "Emission_reduction",
+                }
             ),
-            [NetworkValidatorException("Emission reduction cannot be None.")],
+            [
+                NetworkValidatorException(
+                    "Emission reduction must be type: dict[str, pd.Series] but it's: <class 'str'>."
+                )
+            ],
+            id="type not dict[str, pd.Series]",
         ),
-        (
+        pytest.param(
             GeneratorType(
                 **default_generator_type
                 | {
                     "name": "gen_type_non_existed_e_r",
-                    "emission_reduction": {"DUMMY_E_R": 0.9},
+                    "emission_reduction": {
+                        "DUMMY_E_R": pd.Series([0.9] * DEFAULT_YEARS)
+                    },
                 }
             ),
             [
@@ -250,6 +323,22 @@ def test_efficiency_validators(
                     "emission types: ['CO2', 'PM10']"
                 )
             ],
+            id="Emission type not in network emission types",
+        ),
+        pytest.param(
+            GeneratorType(
+                **default_generator_type
+                | {
+                    "name": "gen_type_non_existed_e_r",
+                    "emission_reduction": {CO2_EMISSION: pd.Series([0.9] * 2)},
+                }
+            ),
+            [
+                NetworkValidatorException(
+                    "gen_type_non_existed_e_r Emission reduction must have 4 values"
+                )
+            ],
+            id="Emission type not in n_years range",
         ),
     ],
 )
@@ -333,7 +422,7 @@ def test_conversion_rate_validators(
             },
             [
                 NetworkValidatorException(
-                    "Power utilization values must be greater "
+                    "power_utilization values must be greater "
                     f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS))} it is not"
                 )
             ],
@@ -348,11 +437,85 @@ def test_conversion_rate_validators(
             },
             [
                 NetworkValidatorException(
-                    "Power utilization values must be greater "
+                    "power_utilization values must be greater "
                     f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS-2))} it is not"
                 )
             ],
             id="incorrect_mixed_power_utilization_values",
+        ),
+        pytest.param(
+            {
+                "minimal_power_utilization": pd.Series(
+                    data=[0.2] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                )
+            },
+            [],
+            id="minimal_power_utilization_correct",
+        ),
+        pytest.param(
+            {
+                "minimal_power_utilization": 0.2,
+            },
+            [
+                NetworkValidatorException(
+                    "minimal_power_utilization must be a pandas Series, but float given"
+                )
+            ],
+            id="minimal_power_utilization_float",
+        ),
+        pytest.param(
+            {
+                "minimal_power_utilization": pd.Series(
+                    data=[-1.0] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+            },
+            [
+                NetworkValidatorException(
+                    "minimal_power_utilization values must be greater "
+                    f"or equal 0, but for hours: {list(np.arange(DEFAULT_HOURS))} it is not"
+                )
+            ],
+            id="incorrect_minimal_power_utilization_values",
+        ),
+        pytest.param(
+            {
+                "minimal_power_utilization": pd.Series(
+                    data=[0.8] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+                "power_utilization": pd.Series(
+                    data=[0.4] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+            },
+            [
+                NetworkValidatorException(
+                    "Power utilization values must be greater than minimal power utilization values, but for "
+                    f"hours {list(np.arange(DEFAULT_HOURS))} they are not"
+                )
+            ],
+            id="all_values_minimal_greater_than_normal",
+        ),
+        pytest.param(
+            {
+                "minimal_power_utilization": pd.Series(
+                    data=[0.5] * DEFAULT_HOURS,
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+                "power_utilization": pd.Series(
+                    data=[0.7] * (DEFAULT_HOURS - 2) + [0.3, 0.3],
+                    index=np.arange(DEFAULT_HOURS),
+                ),
+            },
+            [
+                NetworkValidatorException(
+                    "Power utilization values must be greater than minimal power utilization values, but for "
+                    "hours [22, 23] they are not"
+                )
+            ],
+            id="last_2_values_minimal_greater_than_normal",
         ),
     ],
 )
@@ -363,7 +526,7 @@ def test_power_utilization(
 ) -> None:
     gen_type = GeneratorType(**default_generator_type | params)
     actual_exception_list: list[NetworkValidatorException] = []
-    gen_type._validate_power_utilization(network, actual_exception_list)
+    gen_type._validate_power_utilization_boundaries(network, actual_exception_list)
     assert_same_exception_list(actual_exception_list, exception_list)
 
 
@@ -428,4 +591,45 @@ def test_generation_compensation(
     gen_type = get_default_generator_type(series_length=DEFAULT_YEARS)
     gen_type.generation_compensation = compensation
     gen_type._validate_generation_compensation(actual_exception_list)
+    assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@pytest.mark.parametrize(
+    "ramp_down, ramp_up, exception_list",
+    [
+        pytest.param(0.2, 0.5, [], id="happy_path_both_float"),
+        pytest.param(np.nan, np.nan, [], id="happy_path_both_nan"),
+        pytest.param(
+            "0.2",
+            [0.3],
+            [
+                NetworkValidatorException("ramp_down value must be float or empty."),
+                NetworkValidatorException("ramp_up value must be float or empty."),
+            ],
+            id="down_str_up_list",
+        ),
+        pytest.param(
+            np.nan,
+            1.05,
+            [
+                NetworkValidatorException(
+                    "ramp_up value must be greater than 0 and less than 1, but it is 1.05"
+                )
+            ],
+            id="up_above_value",
+        ),
+    ],
+)
+def test_generator_type_validation_ramp(
+    ramp_up: Any,
+    ramp_down: Any,
+    exception_list: list[NetworkValidatorException],
+) -> None:
+    actual_exception_list: list[NetworkValidatorException] = []
+    gen_type = get_default_generator_type(
+        series_length=default_network_constants.n_years,
+        ramp_down=ramp_down,
+        ramp_up=ramp_up,
+    )
+    gen_type._validate_ramp(actual_exception_list)
     assert_same_exception_list(actual_exception_list, exception_list)

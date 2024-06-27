@@ -1,16 +1,22 @@
 # CHANGELOG
 
-## [0.4.22] - 2024.05.21
+## [0.4.30] - 2024-06-27
 ### Added
+- Added optional parameter generator_capacity_cost in config file; if set to 'netto', capex and opex is calculated from installed power, if set to 'brutto', capex is calculated from "brutto" power (power in fuel); by default generator_capacity_cost is set to 'brutto'. Note: power (in both: model input and model output) is still “brutto” power (in fuel, not installed power).
+- Function for aggregating years. The level of aggregation can be set using the "n_years_aggregation" parameter in the config file. Method for calculating values for aggregates can be set using the "aggregation_method" parameter.
+- Added new feature - capacity bound. It allows user to add a constraint of the type P_A <= P_B, where P_A and P_B is a capacity of two generators or storages. It can be added via the Network class (Network.capacity_bounds) or by specifying Capacity Bounds tab in the excel containing scenario data. Capacity Bound sheet should contain 4 columns: left_tech, sense, right_tech and (optional) left_coeff. Columns left_tech and right_tech are references to technology names specified in sheets: structure / Generators or structure / Storages. Column sense can have two values EQ or LEQ, which means (equal) or (less equal). Last column, left_coeff can be left empty, by default is set to 1.0, it contains the coefficient. For each row, the following constraint is added to the model: CAP_{left_tech} * coeff <sense> CAP_{right_tech}, where <sense> can be = or <=.
+- Added feature that allows user to specify the type of generation fraction constraint. There are two types: ‘yearly’ or ‘hourly’. If set to ‘yearly’, fraction is computed for whole year, if it is set to ‘hourly', constraint for generation_fraction is added for each hour.
 
-- Cycle_len as optional parameter
-- Loggers to structure_creator
-- Validator for input files to structure_creator
-- Generator compensation attribute to GeneratorType
 
 ### Fixed
-- Ens bug fix
-- Add type casting within CSV parsing
+- The calculation of the objective function now takes into account the weight for each individual year.
+
+### Changed
+- The guroby pi solver package has been upgraded to version 11 from version 10
+- In scenario excel there is a new sheet ‘Yearly Emission Reduction’, which allows user to define different values of emission_reduction parameter for any generator_type and any year. This feature is helpful if, for example, you are modelling a small area that is connected to grid, and you want to assume, that in years average emission per kWh will change.
+- Introduction of a parameter analogous to the "power utilization" parameter used to determine the same limitation in the model, only with the opposite inequality sign. This parameter is intended to force the minimum (percentage) use of power (in fuel) of a given type of generator over time.
+- Split ramp parameter into two (independent) parameters: ramp_up & ramp_down. If ramp_up is specified for a given generator_type, the following constraint is added (for each generator of that type): gen[h+1] - gen[h] <= P_{installed} * ramp_up. If ramp_down is specified, analogously: gen[h] - gen[h+1] <= P_{installed} * ramp_down is added.
+- Generation fraction parameters implementation change - added class GenerationFraction(NetworkElement), in Network class there is a new field generation_fractions.
 
 
 ## [0.4.1] - 2024-03-14
