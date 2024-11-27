@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [0.4.31] - 2024-11-27
+
+### Fixed
+- Fix in power reserves tag validation
+
 ## [0.4.30] - 2024-06-27
 ### Added
 - Added optional parameter generator_capacity_cost in config file; if set to 'netto', capex and opex is calculated from installed power, if set to 'brutto', capex is calculated from "brutto" power (power in fuel); by default generator_capacity_cost is set to 'brutto'. Note: power (in both: model input and model output) is still “brutto” power (in fuel, not installed power).

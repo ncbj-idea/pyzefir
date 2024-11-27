@@ -180,7 +180,7 @@ class PowerReserveValidation(BasicValidator):
                 for tag in network.generators[str(gen_name)].tags
             ]
         )
-        if diff := sorted(power_reserve_tags.symmetric_difference(gen_tags)):
+        if diff := sorted(power_reserve_tags.difference(gen_tags)):
             exception_str = (
                 f"All tags assigned to a given power reserve must be defined and contain only generators,"
                 f" but tags {diff} do not assign to generators, were missed or extra added."

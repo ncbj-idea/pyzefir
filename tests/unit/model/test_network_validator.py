@@ -369,19 +369,19 @@ def test_base_capacity_values(
             [
                 NetworkValidatorException(
                     "All tags assigned to a given power reserve must be defined and contain only generators, "
-                    "but tags ['example_tag2', 'example_tag3'] do not assign to generators, were missed or extra added."
+                    "but tags ['example_tag3'] do not assign to generators, were missed or extra added."
                 )
             ],
             id="Extra tag",
         ),
         pytest.param(
             {
-                "HEAT": {"example_tag": 0.7},
+                "HEAT": {"example_tag4": 0.7},
             },
             [
                 NetworkValidatorException(
                     "All tags assigned to a given power reserve must be defined and contain only generators, "
-                    "but tags ['example_tag2'] do not assign to generators, were missed or extra added."
+                    "but tags ['example_tag4'] do not assign to generators, were missed or extra added."
                 )
             ],
             id="Missing tag",
@@ -411,15 +411,15 @@ def test_base_capacity_values(
         ),
         pytest.param(
             {
-                "HEAT": {"example_tag2": 0.5},
+                "NUCLEAR_POWER": {"example_tag2": 0.5},
             },
             [
                 NetworkValidatorException(
-                    "All tags assigned to a given power reserve must be defined and contain only generators, "
-                    "but tags ['example_tag'] do not assign to generators, were missed or extra added."
+                    "Generator: CHP_COAL_HS1_KSE included in the tag: example_tag2 assigned to a given power reserve "
+                    "does not obtain the type of energy: NUCLEAR_POWER that is assigned to the given power reserve."
                 )
             ],
-            id="Missing energy type in the reserve definition",
+            id="Missing energy type",
         ),
     ),
 )
