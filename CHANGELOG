@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [0.4.32] - 2024-12-03
+
+### Fixed
+- Update xarray dependency to 2024.6.0
+
 ## [0.4.31] - 2024-11-27
 
 ### Fixed
