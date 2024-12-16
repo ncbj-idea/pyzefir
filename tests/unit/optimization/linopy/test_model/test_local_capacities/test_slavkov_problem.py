@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -62,20 +46,24 @@ def test_min_max_nom_dev(
     """
     set_network_elements_parameters(
         network.generators,
-        {"local_coal_heat_plant": {"min_device_nom_power": min_device_nom_power}},
+        {
+            "local_coal_heat_plant": {
+                "min_device_nom_power": min_device_nom_power,
+                "max_device_nom_power": max_device_nom_power,
+            }
+        },
     )
+
     set_network_elements_parameters(
         network.generators,
-        {"local_coal_heat_plant": {"max_device_nom_power": max_device_nom_power}},
+        {
+            "local_coal_heat_plant2": {
+                "min_device_nom_power": min_device_nom_power,
+                "max_device_nom_power": max_device_nom_power,
+            }
+        },
     )
-    set_network_elements_parameters(
-        network.generators,
-        {"local_coal_heat_plant2": {"min_device_nom_power": min_device_nom_power}},
-    )
-    set_network_elements_parameters(
-        network.generators,
-        {"local_coal_heat_plant2": {"max_device_nom_power": max_device_nom_power}},
-    )
+
     set_network_elements_parameters(
         network.aggregated_consumers,
         {
@@ -99,11 +87,11 @@ def test_min_max_nom_dev(
     )
     set_network_elements_parameters(
         network.generator_types,
-        {"local_coal_heat_plant": {"capex": np.array([4000, 3800, 3700, 3500, 3300])}},
+        {"local_coal_heat_plant": {"opex": np.array([4000, 3800, 3700, 3500, 3300])}},
     )
     set_network_elements_parameters(
         network.generator_types,
-        {"local_coal_heat_plant2": {"capex": np.array([5200, 4900, 4800, 4500, 4400])}},
+        {"local_coal_heat_plant2": {"opex": np.array([5200, 4900, 4800, 4500, 4400])}},
     )
     opt_config = create_default_opt_config(hour_sample, year_sample)
     engine = run_opt_engine(network, opt_config)

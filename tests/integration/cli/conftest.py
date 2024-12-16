@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import configparser
 import os
 import shutil
@@ -108,6 +92,46 @@ def config_parser_with_xlsx(
                 "opt_logs_path": str(output_path / "file.log"),
                 "csv_dump_path": str(csv_dump_path),
                 "xlsx_results": True,
+            },
+            "parameters": {
+                "hour_sample": str(parameters_path / "hour_sample.csv"),
+                "year_sample": str(parameters_path / "year_sample.csv"),
+                "discount_rate": str(parameters_path / "discount_rate_not_creator.csv"),
+            },
+            "optimization": {
+                "binary_fraction": False,
+                "money_scale": 100.0,
+                "ens_penalty_cost": 0,
+                "use_hourly_scale": True,
+                "solver": solver,
+            },
+            "debug": {
+                "format_network_exceptions": False,
+            },
+        }
+    )
+    return config
+
+
+@pytest.fixture
+def config_parser_with_feather(
+    output_path: Path, csv_dump_path: Path, solver: str
+) -> configparser.ConfigParser:
+    """Simple configuration file for pipeline test run."""
+    config = configparser.ConfigParser()
+    config.read_dict(
+        {
+            "input": {
+                "input_path": str(input_path),
+                "input_format": "xlsx",
+                "scenario": "scenario_1",
+            },
+            "output": {
+                "output_path": str(output_path),
+                "sol_dump_path": str(output_path / "file.sol"),
+                "opt_logs_path": str(output_path / "file.log"),
+                "csv_dump_path": str(csv_dump_path),
+                "feather_results": True,
             },
             "parameters": {
                 "hour_sample": str(parameters_path / "hour_sample.csv"),
@@ -227,6 +251,12 @@ def config_ini_path(config_parser: configparser.ConfigParser) -> Path:
 @pytest.fixture
 def output_path() -> Path:
     """Temporary output directory."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def sol_dump_path(output_path: Path) -> Path:
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
 

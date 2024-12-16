@@ -25,7 +25,22 @@ _logger = logging.getLogger(__name__)
 
 
 class FractionConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    Class for building fraction constraints within a model.
+
+    This class is responsible for constructing constraints that manages the
+    behavior of fractions related to local balancing stacks (LBS) in aggregated
+    consumers. It ensures that the fractions satisfy various conditions, such
+    as base values, upper bounds, and total involvement.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Builds constraints including:
+        - base fraction constraints
+        - fraction upper bound constraints
+        - lbs involvement in consumer aggregates constraints
+        """
         _logger.info("Fraction constraints builder is working...")
         self.build_base_fraction_constraint()
         self.build_fraction_upper_bound_constraint()
@@ -33,7 +48,13 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
         _logger.info("Fraction constraints builder is finished!")
 
     def build_base_fraction_constraint(self) -> None:
-        """Fixing fractions value in year y=0 of each local balancing stack in each aggregated consumer."""
+        """
+        Establishes the base fraction values for year y=0 across all
+        local balancing stacks in each aggregated consumer.
+
+        This method uses the base fraction data from the parameters to set the
+        initial values of the fractions for the first year in the model.
+        """
         base_fraction = xr.DataArray(
             data=self.parameters.aggr.fr_base,
             coords=[self.indices.AGGR.ord, self.indices.LBS.ii],
@@ -47,8 +68,11 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
 
     def build_fraction_upper_bound_constraint(self) -> None:
         """
-        If given local balancing stack lbs is available for a given aggregated consumer aggr, then frac[aggr, lbs] <= 1,
-        otherwise frac[aggr, lbs] <= 0.
+        Implements upper bound constraints on fractions based on local balancing stack availability.
+
+        If a local balancing stack is available for a given aggregated consumer,
+        the fraction for that stack must not exceed 1. If it is not available,
+        the fraction must be 0.
         """
         lbs_indicator = xr.DataArray(
             data=self.parameters.aggr.lbs_indicator,
@@ -63,8 +87,12 @@ class FractionConstraintsBuilder(PartialConstraintsBuilder):
 
     def build_lbs_involvement_in_consumer_aggregates_constraint(self) -> None:
         """
-        Sum of all fractions of all local balancing stacks in a given aggregated consumer must be equal to 1 in every
-        year.
+        Ensures that the sum of fractions from all local balancing stacks
+        in each aggregated consumer equals 1 for every year.
+
+        This constraint enforces that the total fraction allocation from all
+        LBSs must collectively equal 1, maintaining the integrity of the
+        fraction distribution among the consumers.
         """
         self.model.add_constraints(
             self.variables.frac.fraction.sum("lbs") == 1.0,

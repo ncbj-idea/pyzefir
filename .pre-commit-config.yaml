@@ -14,14 +14,3 @@ repos:
       hooks:
           - id: isort
             args: ["--profile", "black"]
-    - repo: https://github.com/Lucas-C/pre-commit-hooks
-      rev: v1.5.5
-      hooks:
-          - id: insert-license
-            files: \.py$
-            args:
-                - --use-current-year
-                - --allow-past-years
-                - --license-filepath
-                - >-
-                  pyzefir/license_header.txt

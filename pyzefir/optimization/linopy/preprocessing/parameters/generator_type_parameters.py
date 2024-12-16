@@ -23,7 +23,13 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class GeneratorTypeParameters(ModelParameters):
-    """Generator Type parameters"""
+    """
+    Class representing the generator type parameters for energy generation systems.
+
+    This class encapsulates various parameters related to different types of generators, such as their
+    capacity limits, operational costs, and efficiencies. It facilitates the modeling of generator
+    characteristics and behaviors in energy system simulations.
+    """
 
     def __init__(
         self,
@@ -31,6 +37,14 @@ class GeneratorTypeParameters(ModelParameters):
         indices: Indices,
         scale: float = 1.0,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - generator_types (NetworkElementsDict): The dictionary of generator types in the network.
+            - indices (Indices): The indices used to map generator type properties.
+            - scale (float, optional): A scaling factor for certain parameters. Defaults to 1.0.
+        """
         self.max_capacity = self.fetch_element_prop(
             generator_types, indices.TGEN, "max_capacity", sample=indices.Y.ii
         )
@@ -85,15 +99,25 @@ class GeneratorTypeParameters(ModelParameters):
             "ramp_up",
         )
         """change in generation from one hour to the next (upper bound)"""
+
+        self.disable_dump_energy = self.fetch_element_prop(
+            generator_types,
+            indices.TGEN,
+            "disable_dump_energy",
+        )
+        """disable dump energy"""
         self.tags = self.get_set_prop_from_element(
             generator_types, "tags", indices.TGEN, indices.T_TAGS
         )
         """ generator type tags """
-        self.energy_curtailment_cost = self.fetch_element_prop(
-            generator_types,
-            indices.TGEN,
-            "energy_curtailment_cost",
-            sample=indices.Y.ii,
+        self.energy_curtailment_cost = self.scale(
+            self.fetch_element_prop(
+                generator_types,
+                indices.TGEN,
+                "energy_curtailment_cost",
+                sample=indices.Y.ii,
+            ),
+            scale,
         )
         self.power_utilization = self.fetch_element_prop(
             generator_types, indices.TGEN, "power_utilization", sample=indices.H.ii

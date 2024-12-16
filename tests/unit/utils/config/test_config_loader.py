@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import re
 from pathlib import Path
 
@@ -134,6 +118,22 @@ def test_complete_config_file(
     assert np.all(loaded_params.discount_rate == [0.05, 0.07, 0.1, 0.06, 0.03])
 
 
+def test_valid_feather_input_format(
+    tmp_path: Path, mock_input_directory: Path, mock_output_directory: Path
+) -> None:
+    config_file = create_test_config_file(
+        input_dict={
+            "input_path": str(mock_input_directory),
+            "scenario": "scenario",
+            "input_format": "feather",
+        },
+        output_dict={"output_path": str(mock_output_directory)},
+    )
+    dump_test_config_file(config_file, tmp_path / "config.ini")
+    config = ConfigLoader(tmp_path / "config.ini").load()
+    assert config.input_format == "feather"
+
+
 @pytest.mark.parametrize(
     ("hour_sample", "year_sample", "discount_rate", "error_msg"),
     [
@@ -219,7 +219,7 @@ def test_invalid_input_format(
     dump_test_config_file(config_file, tmp_path / "config.ini")
     with pytest.raises(
         ConfigException,
-        match="provided input_format aaa is different than valid formats: csv, xlsx",
+        match="provided input_format aaa is different than valid formats: csv, xlsx or feather",
     ):
         ConfigLoader(tmp_path / "config.ini").load()
 

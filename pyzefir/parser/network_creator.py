@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from typing import Any
 
@@ -77,11 +62,34 @@ _logger = logging.getLogger(__name__)
 
 
 class NetworkCreator:
+    """
+    A class for creating a network from various input data frames.
+
+    The NetworkCreator class provides methods to build a comprehensive energy network model.
+    It processes input data to extract various components of the network, including constants,
+    energy sources, demand profiles, and more. This class also validates the created network to ensure
+    all elements are correctly integrated.
+    """
+
     @staticmethod
     def create(
         df_dict: dict[str, dict[str, pd.DataFrame]],
         config_dict: dict[str, Any] | None = None,
     ) -> Network:
+        """
+        Create a network using provided data frames and configuration.
+
+        This method orchestrates the network creation process by calling various helper methods
+        to create network components from the input data. It validates the created components
+        and raises exceptions if any errors occur during the process.
+
+        Args:
+            - df_dict: A dictionary containing data categorized for network creation.
+            - config_dict: A dictionary containing configuration parameters (optional).
+
+        Returns:
+            - Network: A fully constructed Network object.
+        """
         _logger.info("Creating network...")
         network_constants = NetworkCreator._create_network_constants(
             df_dict, config_dict
@@ -157,6 +165,38 @@ class NetworkCreator:
         capacity_bounds: tuple[CapacityBound, ...],
         generation_fractions: tuple[GenerationFraction, ...],
     ) -> Network:
+        """
+        Construct the network from its components.
+
+        This method assembles various components into a complete network object and performs
+        validation checks on the elements being added. If any issues are encountered, they are
+        collected and raised as exceptions.
+
+        Args:
+            - network_constants (NetworkConstants): Constants required for the network.
+            - energy_types (list[str]): A list of energy types used in the network.
+            - emission_types (list[str]): A list of emission types used in the network.
+            - fuels (tuple[Fuel, ...]): Tuple of Fuel objects.
+            - capacity_factors (tuple[CapacityFactor, ...]): Tuple of CapacityFactor objects.
+            - buses (tuple[Bus, ...]): Tuple of Bus objects.
+            - generators (tuple[Generator, ...]): Tuple of Generator objects.
+            - storages (tuple[Storage, ...]): Tuple of Storage objects.
+            - lines (tuple[Line, ...]): Tuple of Line objects.
+            - local_balancing_stacks (tuple[LocalBalancingStack, ...]): Tuple of LocalBalancingStack objects.
+            - aggregated_consumers (tuple[AggregatedConsumer, ...]): Tuple of AggregatedConsumer objects.
+            - generator_types (tuple[GeneratorType, ...]): Tuple of GeneratorType objects.
+            - storage_types (tuple[StorageType, ...]): Tuple of StorageType objects.
+            - demand_profiles (tuple[DemandProfile, ...]): Tuple of DemandProfile objects.
+            - transmission_fees (tuple[TransmissionFee, ...]): Tuple of TransmissionFee objects.
+            - emission_fees (tuple[EmissionFee, ...]): Tuple of EmissionFee objects.
+            - demand_chunks (tuple[DemandChunk, ...]): Tuple of DemandChunk objects.
+            - dsr (tuple[DSR, ...]): Tuple of DSR objects.
+            - capacity_bounds (tuple[CapacityBound, ...]): Tuple of CapacityBound objects.
+            - generation_fractions (tuple[GenerationFraction, ...]): Tuple of GenerationFraction objects.
+
+        Returns:
+            - Network: A fully constructed Network object.
+        """
         network = Network(
             network_constants=network_constants,
             energy_types=energy_types,
@@ -201,6 +241,22 @@ class NetworkCreator:
         df_dict: dict[str, dict[str, pd.DataFrame]],
         config_dict: dict[str, Any] | None = None,
     ) -> NetworkConstants:
+        """
+        Generate network constants from the input data.
+
+        This method extracts and processes various constants needed for the network from the
+        input data frames, including relative emission limits and power reserves. It compiles
+        all constants into a dictionary and returns it as a NetworkConstants object.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+            - config_dict (dict[str, Any] | None): A dictionary containing configuration parameters.
+
+        Returns:
+            - NetworkConstants: A NetworkConstants object containing the extracted constants.
+        """
+        config_dict = config_dict if config_dict else dict()
         constants_df = df_dict[DataCategories.SCENARIO][DataSubCategories.CONSTANTS]
         constants_dict = constants_df.pivot_table(columns="constants_name").to_dict(
             "index"
@@ -241,15 +297,60 @@ class NetworkCreator:
             }
             for key, value in power_reserves.items()
         }
+        constants_dict["ens_energy_penalization"] = (
+            NetworkCreator._create_ens_energy_penalization(
+                df_dict[DataCategories.SCENARIO][DataSubCategories.ENS_PENALIZATION],
+                df_dict[DataCategories.STRUCTURE][DataSubCategories.ENERGY_TYPES],
+                config_dict.get("ens_penalty_cost", 0.0),
+            )
+        )
         constants_dict = {k.lower(): v for k, v in constants_dict.items()}
-        config_dict = config_dict if config_dict else dict()
         _logger.info("Create network constants: Done")
         return NetworkConstants(**constants_dict | config_dict)
+
+    @staticmethod
+    def _create_ens_energy_penalization(
+        ens_penalization: pd.DataFrame,
+        energy_types_df: pd.DataFrame,
+        penalty_cost: float,
+    ) -> dict[str, float]:
+        """
+        Create EnsEnergyPenalization objects from the input data.
+
+        Args:
+            - ens_energy_penalization_df (pd.DataFrame): Data frame containing energy penalization data.
+
+        Returns:
+            - list[EnsEnergyPenalization]: A list of EnsEnergyPenalization objects created from the data.
+        """
+        ens_energy_penalization_dict = ens_penalization.set_index("energy_type")[
+            "penalization"
+        ].to_dict()
+        return {
+            et: (
+                ens_energy_penalization_dict[et]
+                if et in ens_energy_penalization_dict
+                and not pd.isna(ens_energy_penalization_dict[et])
+                and ens_energy_penalization_dict[et] >= 0.0
+                else penalty_cost
+            )
+            for et in energy_types_df["name"].to_list()
+        }
 
     @staticmethod
     def _create_demand_profiles(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[DemandProfile, ...]:
+        """
+        Create DemandProfile objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[DemandProfile, ...]: A tuple of DemandProfile objects created from the data.
+        """
         demand_profiles = DemandProfileParser(
             df_dict[DataCategories.DEMAND],
         ).create()
@@ -258,6 +359,16 @@ class NetworkCreator:
 
     @staticmethod
     def _create_buses(df_dict: dict[str, dict[str, pd.DataFrame]]) -> tuple[Bus, ...]:
+        """
+        Create Bus objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[Bus, ...]: A tuple of Bus objects created from the data.
+        """
         buses = BusParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.BUSES],
         ).create()
@@ -268,6 +379,16 @@ class NetworkCreator:
     def _create_transmission_fees(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[TransmissionFee, ...]:
+        """
+        Create TransmissionFee objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[TransmissionFee, ...]: A tuple of TransmissionFee objects created from the data.
+        """
         transmission_fees = TransmissionFeeParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.TRANSMISSION_FEES],
         ).create()
@@ -278,6 +399,16 @@ class NetworkCreator:
     def _create_emission_fees(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[EmissionFee, ...]:
+        """
+        Create EmissionFee objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[EmissionFee, ...]: A tuple of EmissionFee objects created from the data.
+        """
         emission_fees = EmissionFeeParser(
             df_dict[DataCategories.STRUCTURE][
                 DataSubCategories.EMISSION_FEES_EMISSION_TYPES
@@ -289,6 +420,16 @@ class NetworkCreator:
 
     @staticmethod
     def _create_lines(df_dict: dict[str, dict[str, pd.DataFrame]]) -> tuple[Line, ...]:
+        """
+        Create Line objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[Line, ...]: A tuple of Line objects created from the data.
+        """
         lines = LineParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.LINES]
         ).create()
@@ -300,6 +441,18 @@ class NetworkCreator:
         df_dict: dict[str, dict[str, pd.DataFrame]],
         network_constants: NetworkConstants,
     ) -> tuple[tuple[Generator, ...], tuple[Storage, ...]]:
+        """
+        Create energy source units from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+            - network_constants (NetworkConstants): Constants required for creating energy source units.
+
+        Returns:
+            - tuple[tuple[Generator, ...], tuple[Storage, ...]]: A tuple containing two tuples:
+              one for generators and one for storages.
+        """
         generators, storages = EnergySourceUnitParser(
             df_generators=df_dict[DataCategories.STRUCTURE][
                 DataSubCategories.GENERATORS
@@ -342,6 +495,16 @@ class NetworkCreator:
     def _create_emission_types(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> list[str]:
+        """
+        Extract emission types from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - list[str]: A list of emission types extracted from the data.
+        """
         emission_df = df_dict[DataCategories.STRUCTURE][
             DataSubCategories.EMISSION_TYPES
         ]
@@ -350,6 +513,16 @@ class NetworkCreator:
 
     @staticmethod
     def _create_energy_types(df_dict: dict[str, dict[str, pd.DataFrame]]) -> list[str]:
+        """
+        Extract energy types from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - list[str]: A list of energy types extracted from the data.
+        """
         energy_df = df_dict[DataCategories.STRUCTURE][DataSubCategories.ENERGY_TYPES]
         _logger.info("Creating energy types: Done")
         return list(energy_df["name"])
@@ -358,6 +531,16 @@ class NetworkCreator:
     def _create_local_balancing_stacks(
         df_dict: dict[str, dict[str, pd.DataFrame]],
     ) -> tuple[LocalBalancingStack, ...]:
+        """
+        Create LocalBalancingStack objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[LocalBalancingStack, ...]: A tuple of LocalBalancingStack objects created from the data.
+        """
         stacks = LocalBalancingStackParser(
             df_dict[DataCategories.STRUCTURE][
                 DataSubCategories.TECHNOLOGYSTACKS_BUSES_OUT
@@ -372,6 +555,16 @@ class NetworkCreator:
     def _create_aggregated_consumers(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[AggregatedConsumer, ...]:
+        """
+        Create AggregatedConsumer objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[AggregatedConsumer, ...]: A tuple of AggregatedConsumer objects created from the data.
+        """
         aggregated_consumers = AggregatedConsumerParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.AGGREGATES],
             df_dict[DataCategories.STRUCTURE][
@@ -390,6 +583,16 @@ class NetworkCreator:
 
     @staticmethod
     def _create_fuels(df_dict: dict[str, dict[str, pd.DataFrame]]) -> tuple[Fuel, ...]:
+        """
+        Create Fuel objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[Fuel, ...]: A tuple of Fuel objects created from the data.
+        """
         fuels = FuelParser(
             df_dict[DataCategories.FUELS][DataSubCategories.EMISSION_PER_UNIT],
             df_dict[DataCategories.FUELS][DataSubCategories.ENERGY_PER_UNIT],
@@ -403,6 +606,16 @@ class NetworkCreator:
     def _create_capacity_factors(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[CapacityFactor, ...]:
+        """
+        Create CapacityFactor objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[CapacityFactor, ...]: A tuple of CapacityFactor objects created from the data.
+        """
         capacity_factors = CapacityFactorParser(
             df_dict[DataCategories.CAPACITY_FACTORS][DataSubCategories.PROFILES]
         ).create()
@@ -414,6 +627,18 @@ class NetworkCreator:
         df_dict: dict[str, dict[str, pd.DataFrame]],
         network_constants: NetworkConstants,
     ) -> tuple[tuple[GeneratorType, ...], tuple[StorageType, ...]]:
+        """
+        Create energy source types from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+            - network_constants (NetworkConstants): Constants required for creating energy source types.
+
+        Returns:
+            - tuple[tuple[GeneratorType, ...], tuple[StorageType, ...]]: A tuple containing two tuples:
+              one for generator types and one for storage types.
+        """
         generator_types, storage_types = EnergySourceTypeParser(
             cost_parameters_df=df_dict[DataCategories.SCENARIO][
                 DataSubCategories.COST_PARAMETERS
@@ -460,6 +685,9 @@ class NetworkCreator:
             generators_minimal_power_utilization=df_dict[DataCategories.GENERATOR][
                 DataSubCategories.MINIMAL_POWER_UTILIZATION
             ],
+            storage_calculation_settings=df_dict[DataCategories.STORAGE][
+                DataSubCategories.STORAGE_CALCULATION_SETTINGS
+            ],
         ).create()
         _logger.info("Creating energy source types: Done")
         return generator_types, storage_types
@@ -468,6 +696,16 @@ class NetworkCreator:
     def _create_demand_chunks(
         df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[DemandChunk, ...]:
+        """
+        Create DemandChunk objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[DemandChunk, ...]: A tuple of DemandChunk objects created from the data.
+        """
         demand_chunks = DemandChunkParser(
             df_dict[DataCategories.DEMAND_CHUNKS]
         ).create()
@@ -478,6 +716,16 @@ class NetworkCreator:
     def _create_dsr(
         cls, df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[DSR, ...]:
+        """
+        Create DSR objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[DSR, ...]: A tuple of DSR objects created from the data.
+        """
         dsr = DSRParser(
             df_dict[DataCategories.STRUCTURE][DataSubCategories.DSR]
         ).create()
@@ -488,6 +736,16 @@ class NetworkCreator:
     def _create_capacity_bounds(
         cls, df_dict: dict[str, dict[str, pd.DataFrame]]
     ) -> tuple[CapacityBound, ...]:
+        """
+        Create CapacityBound objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+
+        Returns:
+            - tuple[CapacityBound, ...]: A tuple of CapacityBound objects created from the data.
+        """
         capacity_bounds = CapacityBoundParser(
             df_dict[DataCategories.SCENARIO][DataSubCategories.CAPACITY_BOUNDS]
         ).create()
@@ -500,6 +758,17 @@ class NetworkCreator:
         df_dict: dict[str, dict[str, pd.DataFrame]],
         network_constants: NetworkConstants,
     ) -> tuple[GenerationFraction, ...]:
+        """
+        Create GenerationFraction objects from the input data.
+
+        Args:
+            - df_dict (dict[str, dict[str, pd.DataFrame]]): A dictionary containing data categorized
+                for network creation.
+            - network_constants (NetworkConstants): Constants required for creating generation fractions.
+
+        Returns:
+            - tuple[GenerationFraction, ...]: A tuple of GenerationFraction objects created from the data.
+        """
         generation_fractions = GenerationFractionParser(
             df_dict[DataCategories.SCENARIO][DataSubCategories.GENERATION_FRACTION],
             network_constants.n_years,

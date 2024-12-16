@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import re
 from pathlib import Path
 from typing import Any
@@ -31,6 +15,7 @@ from pyzefir.utils.config_parser import (
     validate_dir_path,
     validate_file_path,
     validate_input_format,
+    validate_n_years_aggregation,
     validate_network_config,
     validate_sol_dump_path,
     validate_solver_name,
@@ -271,3 +256,13 @@ def test_validate_solver_name_invalid(solver_name: str) -> None:
     )
     with pytest.raises(ConfigException, match=msg):
         validate_solver_name(solver_name)
+
+
+@pytest.mark.parametrize("n_year_value", [-120, 0])
+def test_validate_n_years_aggregation(n_year_value: int) -> None:
+    """Test if n_year_value will raise ConfigException for invalid input."""
+    msg = re.escape(
+        f"n_years_aggregation should be positive integer, but given: {n_year_value}"
+    )
+    with pytest.raises(ConfigException, match=msg):
+        validate_n_years_aggregation(n_year_value)

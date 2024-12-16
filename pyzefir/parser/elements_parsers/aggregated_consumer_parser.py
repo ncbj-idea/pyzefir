@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from collections import defaultdict
 
 import numpy as np
@@ -25,6 +9,16 @@ from pyzefir.parser.utils import sanitize_dataset_name
 
 
 class AggregatedConsumerParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of AggregatedConsumer.
+
+    This class handles the aggregation of various data sources, including
+    consumer counts, energy usage, stack fractions, and yearly energy demands,
+    to create detailed AggregatedConsumer instances. It uses input data in
+    the form of pandas DataFrames and processes them to generate the necessary
+    parameters for each consumer over multiple years.
+    """
+
     def __init__(
         self,
         aggregated_consumer_df: pd.DataFrame,
@@ -35,6 +29,18 @@ class AggregatedConsumerParser(AbstractElementParser):
         number_of_years: int,
         n_consumers: pd.DataFrame,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - aggregated_consumer_df (pd.DataFrame): DataFrame containing information about aggregated consumers.
+            - stack_df (pd.DataFrame): DataFrame representing the technology stack data.
+            - stack_fraction_df (pd.DataFrame): DataFrame for stack fractions related to different consumers.
+            - yearly_energy_usage_df (pd.DataFrame): DataFrame with yearly energy usage per consumer.
+            - fraction_df (pd.DataFrame): DataFrame containing fraction information for each consumer.
+            - number_of_years (int): The number of years over which the consumers' data is aggregated.
+            - n_consumers (pd.DataFrame): DataFrame detailing the number of consumers per year.
+        """
         self.stack_fraction_df = stack_fraction_df
         self.stack_df = stack_df
         self.aggregated_consumer_df = aggregated_consumer_df
@@ -44,6 +50,17 @@ class AggregatedConsumerParser(AbstractElementParser):
         self.n_consumers = n_consumers
 
     def create(self) -> tuple[AggregatedConsumer, ...]:
+        """
+        Creates and returns a tuple of AggregatedConsumer instances.
+
+        This method processes several DataFrames to generate the necessary parameters
+        for creating AggregatedConsumer objects. It aggregates the number of consumers,
+        stack fractions, yearly energy usage, and various fraction data to provide
+        detailed information for each consumer across the specified number of years.
+
+        Returns:
+            - tuple[AggregatedConsumer, ...]: A tuple containing the created AggregatedConsumer instances.
+        """
         n_consumers = self._create_consumers(self.n_consumers, self._years)
         fraction = self._create_fractions(self.stack_df, self.fraction_df, self._years)
         stack_base_fractions = self._create_stack_base_fractions(
@@ -70,6 +87,16 @@ class AggregatedConsumerParser(AbstractElementParser):
     def _create_consumers(
         consumers_df: pd.DataFrame, n_years: int
     ) -> dict[str, pd.Series]:
+        """
+        Creates a dictionary mapping each consumer's name to a series of consumer counts over the years.
+
+        Args:
+            - consumers_df (pd.DataFrame): DataFrame containing consumer counts by year.
+            - n_years (int): The number of years to span in the consumer data.
+
+        Returns:
+            - dict[str, pd.Series]: A dictionary mapping consumer names to their yearly consumer count series.
+        """
         return (
             consumers_df.set_index("year_idx").reindex(range(n_years)).to_dict("series")
         )
@@ -78,7 +105,18 @@ class AggregatedConsumerParser(AbstractElementParser):
     def _create_fractions(
         stack_df: pd.DataFrame, fraction_df: pd.DataFrame, years: int
     ) -> dict[str, dict[str, dict[str, pd.Series]]]:
-        """Creates aggregate_fraction dict for every AggregatedConsumer"""
+        """
+        Creates a dictionary of fraction data for each technology stack and aggregate.
+
+        Args:
+            - stack_df (pd.DataFrame): DataFrame containing technology stack data.
+            - fraction_df (pd.DataFrame): DataFrame containing fraction attributes.
+            - years (int): The number of years to span in the fraction data.
+
+        Returns:
+            - dict[str, dict[str, dict[str, pd.Series]]]: Nested dictionary of fraction attributes
+                for each technology stack.
+        """
         fractions_df = stack_df.merge(fraction_df, how="left")
         fractions_dict: dict[str, dict[str, dict[str, pd.Series]]] = dict()
         grouped = fractions_df.groupby(["technology_stack", "aggregate"])
@@ -110,7 +148,16 @@ class AggregatedConsumerParser(AbstractElementParser):
         stacks_fractions_df: pd.DataFrame,
         stacks_df: pd.DataFrame,
     ) -> dict[str, dict[str, float]]:
-        """Creates stack_base_fraction dict for every AggregatedConsumer"""
+        """
+        Creates a dictionary of base stack fractions for each aggregate.
+
+        Args:
+            - stacks_fractions_df (pd.DataFrame): DataFrame containing stack fractions.
+            - stacks_df (pd.DataFrame): DataFrame representing technology stacks.
+
+        Returns:
+            - dict[str, dict[str, float]]: Dictionary mapping technology stacks and aggregates to base fractions.
+        """
         stacks_fractions_df = stacks_fractions_df.copy(deep=True)
         stacks_df = stacks_df.copy(deep=True)
 
@@ -134,6 +181,15 @@ class AggregatedConsumerParser(AbstractElementParser):
     def _create_yearly_energy_usage(
         yearly_demand_df: pd.DataFrame,
     ) -> dict[str, dict[str, pd.Series]]:
+        """
+        Creates a dictionary of yearly energy usage for each aggregate and energy type.
+
+        Args:
+            - yearly_demand_df (pd.DataFrame): DataFrame containing yearly energy usage data.
+
+        Returns:
+            - dict[str, dict[str, pd.Series]]: Dictionary mapping aggregates and energy types to yearly energy usage.
+        """
         yearly_demand_df = yearly_demand_df.copy(deep=True)
         result: defaultdict[str, dict[str, pd.Series]] = defaultdict(dict)
         grouped = yearly_demand_df.groupby(["aggregate", "energy_type"])
@@ -151,6 +207,22 @@ class AggregatedConsumerParser(AbstractElementParser):
         n_consumers: dict[str, pd.Series],
         n_years: int,
     ) -> AggregatedConsumer:
+        """
+        Creates an AggregatedConsumer instance from the provided data.
+
+        Args:
+            - df_row (pd.Series): The row of data representing a consumer.
+            - stack_base_fractions (dict[str, dict[str, float]]): Dictionary of base fractions
+                for each technology stack.
+            - yearly_energy_usage (dict[str, dict[str, pd.Series]]): Dictionary of yearly energy usage by
+                aggregate and energy type.
+            - fraction (dict[str, dict[str, dict[str, pd.Series]]]): Dictionary of fraction data by technology stack.
+            - n_consumers (dict[str, pd.Series]): Dictionary of consumer counts by year.
+            - n_years (int): The number of years to span in the data.
+
+        Returns:
+            - AggregatedConsumer: An instance of AggregatedConsumer containing the processed data.
+        """
         return AggregatedConsumer(
             name=str(df_row["name"]),
             demand_profile=str(sanitize_dataset_name(df_row["demand_type"])),

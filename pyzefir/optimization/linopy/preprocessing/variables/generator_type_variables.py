@@ -25,9 +25,25 @@ from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
 
 
 class GeneratorTypeVariables(VariableGroup):
-    """GeneratorType variables"""
+    """
+    Class representing the generator type variables.
+
+    This class encapsulates the variables related to generator types within the
+    energy network. It includes capacity variables, both for the generator type
+    itself and for changes in capacity over time (increases and decreases).
+    These variables are essential for modeling the behavior and constraints of
+    different generator types across multiple years.
+    """
 
     def __init__(self, model: Model, indices: Indices) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - model (Model): The optimization model to which the variables will be added.
+            - indices (Indices): The indices used for mapping aggregated generators
+              and years.
+        """
         indexes = list(
             {
                 (aggr_idx, aggr_gen_type_idx, year_idx)

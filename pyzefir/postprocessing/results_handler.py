@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from abc import ABC, abstractmethod
 from enum import StrEnum, auto
 from pathlib import Path
@@ -35,7 +19,13 @@ class GeneralResultDirectory(StrEnum):
 
 
 class Exporter(ABC):
-    """An interface for exporting data and parsing exportable results."""
+    """
+    An interface for exporting data and parsing exportable results.
+
+    This abstract class defines the necessary methods for exporting different formats of
+    data and determining the status of the results groups. Implementing classes must provide
+    concrete implementations of the export methods to handle specific export formats.
+    """
 
     @staticmethod
     def is_results_group_empty(result: ExportableResultsGroup) -> bool:
@@ -60,20 +50,57 @@ class Exporter(ABC):
 
 
 class ResultsHandler:
+    """
+    Handles exporting of results using a specified exporter.
+
+    This class is responsible for managing the export of results by delegating the actual
+    export functionality to an instance of an exporter class. It provides a flexible way to
+    switch between different export formats by changing the exporter.
+    """
+
     def __init__(self, exporter: Exporter) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - exporter (Exporter): An instance of a class that implements the Exporter interface.
+        """
         self._exporter = exporter
 
     @property
     def exporter(self) -> Exporter:
+        """
+        Gets the current exporter.
+
+        Returns:
+            - Exporter: The current exporter instance.
+        """
         return self._exporter
 
     @exporter.setter
     def exporter(self, new_exporter: Exporter) -> None:
+        """
+        Sets a new exporter instance.
+
+        Args:
+            - new_exporter (Exporter): The new exporter instance to set.
+        """
         self._exporter = new_exporter
 
     def export_results(
         self, export_root_path: Path, results: ExportableResults
     ) -> None:
+        """
+        Exports the results to the specified root path.
+
+        This method iterates over the predefined result groups and uses the current exporter
+        to export each group's results. Additionally, it exports the objective result to the
+        specified path.
+
+        Args:
+            - export_root_path (Path): The root path for exporting the results.
+            - results (ExportableResults): The results object containing the data to export.
+        """
         for group in GeneralResultDirectory:
             self.exporter.export_group_results(
                 export_root_path / group, getattr(results, group)

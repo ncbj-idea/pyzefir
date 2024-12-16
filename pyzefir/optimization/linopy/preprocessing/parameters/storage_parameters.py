@@ -17,18 +17,40 @@
 from dataclasses import dataclass
 
 from pyzefir.model.network import NetworkElementsDict
+from pyzefir.model.network_elements import DemandChunk, Storage, StorageType
 from pyzefir.optimization.linopy.preprocessing.indices import Indices
 from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
+from pyzefir.optimization.linopy.preprocessing.parameters.utils import (
+    get_demand_chunk_unit_indices,
+)
 
 
 @dataclass
 class StorageParameters(ModelParameters):
+    """
+    Class representing the storage parameters.
+
+    This class encapsulates the parameters related to energy storage systems,
+    including their capacities, efficiencies, and other characteristics. It is
+    essential for modeling how storage units interact with energy generation and demand.
+    """
+
     def __init__(
         self,
-        storages: NetworkElementsDict,
-        storage_types: NetworkElementsDict,
+        storages: NetworkElementsDict[Storage],
+        storage_types: NetworkElementsDict[StorageType],
+        demand_chunks: NetworkElementsDict[DemandChunk],
         indices: Indices,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - storages (NetworkElementsDict[Storage]): The storage units in the network.
+            - storage_types (NetworkElementsDict[StorageType]): The types of storage available.
+            - demand_chunks (NetworkElementsDict[DemandChunk]): Demand chunk data for managing demand.
+            - indices (Indices): The indices used for mapping various parameters.
+        """
         self.base_cap = self.fetch_element_prop(storages, indices.STOR, "unit_base_cap")
         """ storage base capacity """
         self.et = self.fetch_energy_source_type_prop(
@@ -86,3 +108,7 @@ class StorageParameters(ModelParameters):
             storages, "tags", indices.STOR, indices.TAGS
         )
         """ storage tags """
+        self.demand_chunks = get_demand_chunk_unit_indices(
+            indices, storages, indices.STOR, demand_chunks
+        )
+        """ mapping storage_idx -> dem_chunk_idx """

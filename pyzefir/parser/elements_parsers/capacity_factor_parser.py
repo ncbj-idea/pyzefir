@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements import CapacityFactor
@@ -21,13 +5,40 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class CapacityFactorParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of CapacityFactor.
+
+    This class takes a DataFrame containing capacity factor data and processes
+    it to generate CapacityFactor instances. Each column in the DataFrame represents
+    a different capacity factor profile, and these are used to create CapacityFactor
+    objects, which include the name and profile data for each factor.
+    """
+
     def __init__(
         self,
         capacity_factors_df: pd.DataFrame,
     ):
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - capacity_factors_df (pd.DataFrame): DataFrame containing capacity factor profiles
+              for various technologies.
+        """
         self.capacity_factors_df = capacity_factors_df.copy(deep=True)
 
     def create(self) -> tuple[CapacityFactor, ...]:
+        """
+        Creates and returns a tuple of CapacityFactor instances.
+
+        This method processes the capacity factor DataFrame by setting the index
+        to "hour_idx" and extracting each column as a CapacityFactor object. Each
+        column is used to create a CapacityFactor instance, where the column name
+        serves as the name and the data as the profile.
+
+        Returns:
+            - tuple[CapacityFactor, ...]: A tuple containing the created CapacityFactor instances.
+        """
         self.capacity_factors_df.set_index("hour_idx", inplace=True, drop=True)
 
         capacity_factors = []

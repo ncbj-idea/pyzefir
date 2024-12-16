@@ -1,22 +1,6 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pytest
-from linopy import Model
+from linopy import Model, Variable
 
 from pyzefir.model.network import Network
 from pyzefir.model.network_elements import DemandChunk
@@ -73,15 +57,17 @@ def test_demand_chunks_variables(
     indices = Indices(complete_network, opt_config)
     model = Model()
 
-    variables = OptimizationVariables(model, indices, opt_config)
-    gen_variables = variables.gen
-    gen_storages = variables.stor
-    ets, yy, hh = (
-        len(complete_network.energy_types),
-        len(opt_config.year_sample),
-        len(opt_config.hour_sample),
+    variables = OptimizationVariables(model, complete_network, indices, opt_config)
+    validate_demand_chunk_variable(variables.gen.gen_dch, indices)
+    validate_demand_chunk_variable(variables.stor.gen_dch, indices)
+
+
+def validate_demand_chunk_variable(
+    demand_chunk_vars_dict: dict[int, dict[int, Variable]], indices: Indices
+) -> None:
+    assert set(demand_chunk_vars_dict) == set(indices.DEMCH.ord)
+    assert all(
+        var.shape == (len(indices.H), len(indices.Y))
+        for var_dict in demand_chunk_vars_dict.values()
+        for var in var_dict.values()
     )
-    dmch = len(complete_network.demand_chunks)
-    n_gen, n_stor = len(complete_network.generators), len(complete_network.storages)
-    assert gen_variables.gen_dch.shape == (ets, dmch, n_gen, hh, yy)
-    assert gen_storages.gen_dch.shape == (dmch, n_stor, hh, yy)

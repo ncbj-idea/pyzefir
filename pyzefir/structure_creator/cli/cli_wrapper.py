@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from pathlib import Path
 
@@ -37,6 +21,20 @@ def create_structure(
     n_hours: int,
     n_years: int,
 ) -> None:
+    """
+    Loads input data, creates capacity bounds, and generates a scenario.
+
+    This function reads the input data from the specified path, creates the capacity
+    bounds, and sets up the initial structure. It then creates a scenario using the
+    provided scenario data, saving the results to the output path.
+
+    Args:
+        - input_path (str | Path): The path to the input data for the scenario.
+        - output_path (str | Path): The path where the results will be saved.
+        - scenario_name (str): The name of the scenario to be created.
+        - n_hours (int): The number of hours to be considered in the scenario.
+        - n_years (int): The number of years to be considered in the scenario.
+    """
     _logger.info("Loading input data...")
     input_data = InputData.load_input_data(
         input_path=Path(input_path),
@@ -113,6 +111,21 @@ def run_structure_creator_cli(
     n_years: int,
     logger_level: str,
 ) -> None:
+    """
+    Command-line interface (CLI) for running the structure creator.
+
+    This CLI function sets up logging based on the given logger level, loads input data,
+    and triggers the structure creation process. It then creates the scenario and saves
+    the results to the output path.
+
+    Args:
+        - input_path (str | Path): The path to the input data required by the creator.
+        - output_path (str | Path): The path where the results will be saved.
+        - scenario_name (str): The name of the scenario to be created.
+        - n_hours (int): The number of hours to be considered (default is 8760).
+        - n_years (int): The number of years to be considered (default is 20).
+        - logger_level (str): The logging level for the process (default is "INFO").
+    """
     if (log_level := LOG_LEVEL_MAPPING.get(logger_level.lower())) is not None:
         setup_logging(level=log_level)
     else:

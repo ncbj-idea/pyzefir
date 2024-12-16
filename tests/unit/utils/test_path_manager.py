@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from pathlib import Path
 from typing import Type
 from unittest import mock
@@ -144,7 +128,13 @@ def test_get_datasets_from_categories_wrong_categories(data_category: str) -> No
 @pytest.mark.parametrize(
     "data_category, expected_datasets",
     (
-        (DataCategories.STORAGE, [DataSubCategories.PARAMETERS]),
+        (
+            DataCategories.STORAGE,
+            [
+                DataSubCategories.PARAMETERS,
+                DataSubCategories.STORAGE_CALCULATION_SETTINGS,
+            ],
+        ),
         (DataCategories.STRUCTURE, [DataSubCategories.STORAGES]),
         ("non-existent", []),
         (None, []),

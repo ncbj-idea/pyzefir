@@ -16,7 +16,7 @@
 
 import abc
 from dataclasses import InitVar, dataclass, field
-from typing import Final
+from typing import Final, Literal
 
 import numpy as np
 import pandas as pd
@@ -83,7 +83,10 @@ from pyzefir.optimization.linopy.preprocessing.variables.storage_type_variables 
 from pyzefir.optimization.linopy.preprocessing.variables.storage_variables import (
     StorageVariables,
 )
-from pyzefir.optimization.linopy.utils import get_generator_types_capacity_multipliers
+from pyzefir.optimization.linopy.utils import (
+    calculate_storage_adjusted_generation,
+    get_generator_types_capacity_multipliers,
+)
 from pyzefir.utils.functions import get_dict_vals
 
 HOUR_LABEL: Final[str] = "Hour"
@@ -95,7 +98,12 @@ ENERGY_TYPE_LABEL: Final[str] = "Energy Type"
 
 
 class ResultsGroup(abc.ABC):
-    """A base class for fetching and organizing variables used in result groups.
+    """
+    A base class for fetching and organizing variables used in result groups.
+
+    This class provides methods to retrieve and format results from a set of optimization
+    variables into structured Pandas DataFrames. It serves as a foundational structure for
+    implementing specific result handling strategies.
 
     Methods:
         fetch_2D_variable(index: IndexingSet, variable: MVar) -> dict[str, pd.DataFrame]:
@@ -111,6 +119,17 @@ class ResultsGroup(abc.ABC):
         row_index: IndexingSet | None = None,
         column_index: IndexingSet | None = None,
     ) -> pd.DataFrame:
+        """
+        Renames the axes of the given DataFrame based on the provided row and column indices.
+
+        Args:
+            - df (pd.DataFrame): The DataFrame whose axes are to be renamed.
+            - row_index (IndexingSet | None): Optional. The indexing set used for renaming rows.
+            - column_index (IndexingSet | None): Optional. The indexing set used for renaming columns.
+
+        Returns:
+            - pd.DataFrame: The DataFrame with renamed axes.
+        """
         if row_index is not None:
             df = df.rename(row_index.mapping, axis=0)
         if column_index is not None:
@@ -124,6 +143,25 @@ class ResultsGroup(abc.ABC):
         column_name: str,
         index_name: str = YEAR_LABEL,
     ) -> pd.DataFrame:
+        """
+        Converts a dictionary of 1D Pandas DataFrames into a single Pandas DataFrame.
+
+        Each entry in the dictionary should contain a DataFrame with one column. This method
+        concatenates these DataFrames horizontally and returns a single DataFrame with the
+        specified column and index names.
+
+        Args:
+            - data (dict[str, pd.DataFrame]): A dictionary mapping names to 1D DataFrames.
+            - column_name (str): The name to assign to the columns of the resulting DataFrame.
+            - index_name (str, optional): The name to assign to the index of the resulting DataFrame.
+                                          Defaults to YEAR_LABEL.
+
+        Returns:
+            - pd.DataFrame: A single DataFrame containing all input DataFrames concatenated.
+
+        Raises:
+            - ValueError: If any of the DataFrames in the dictionary is not 1D.
+        """
         # if data dictionary is empty, then we cannot use pd.concat
         if not data:
             return pd.DataFrame()
@@ -146,6 +184,28 @@ class ResultsGroup(abc.ABC):
         index_name: str = HOUR_LABEL,
         column_name: str = YEAR_LABEL,
     ) -> dict[str, pd.DataFrame]:
+        """
+        Converts a dictionary of 2D Pandas DataFrames into a new dictionary with named axes.
+
+        This method ensures that each DataFrame in the dictionary has more than one column,
+        assigning the specified index and column names to the resulting DataFrames.
+
+        Args:
+            - data (dict[str, pd.DataFrame]): A dictionary mapping names to 2D DataFrames.
+            - index_name (str, optional): The name to assign to the index of each resulting DataFrame.
+                Defaults to HOUR_LABEL.
+            - column_name (str, optional): The name to assign to the columns of each resulting DataFrame.
+                Defaults to YEAR_LABEL.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping names to DataFrames with renamed axes.
+
+        Raises:
+            - ValueError: If any of the DataFrames in the dictionary does not meet the dimensionality requirement.
+
+        Example:
+            >>> processed_data = self.dict_of_2d_array_to_pandas(data_dict)
+        """
         for key in data:
             if len(data[key].shape) != 2 or data[key].shape[1] == 1:
                 raise ValueError(
@@ -167,6 +227,25 @@ class ResultsGroup(abc.ABC):
         column_name: str = YEAR_LABEL,
         energy_type_label: str = ENERGY_TYPE_LABEL,
     ) -> dict[str, pd.DataFrame]:
+        """
+        Converts a nested dictionary structure of DataFrames into a flat dictionary of DataFrames.
+
+        The method concatenates DataFrames within the inner dictionaries and renames the resulting
+        DataFrames to include energy type and index names. This allows for structured access to results.
+
+        Args:
+            - data (dict[str, dict[str, pd.DataFrame]]): A dictionary mapping outer keys to
+                inner dictionaries of DataFrames.
+            - index_name (str, optional): The name to assign to the index of each resulting DataFrame.
+                Defaults to HOUR_LABEL.
+            - column_name (str, optional): The name to assign to the columns of each resulting DataFrame.
+                Defaults to YEAR_LABEL.
+            - energy_type_label (str, optional): The name to assign to the energy type index.
+                Defaults to ENERGY_TYPE_LABEL.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping outer keys to DataFrames with renamed axes.
+        """
         ret = dict()
         for key, value_dict in data.items():
             df = pd.concat(value_dict).reset_index(
@@ -191,6 +270,25 @@ class ResultsGroup(abc.ABC):
         u_idx: int,
         y_idxs: IndexingSet,
     ) -> float:
+        """
+        Calculates the global capital expenditure (CAPEX) per unit per year.
+
+        This method computes the amortized global CAPEX over the specified lifespan of a unit,
+        applying the provided discount rate and capital cost. The results are summed over the
+        specified years.
+
+        Args:
+            - capex (np.ndarray): An array of capital expenditures for each year.
+            - cap_plus (xr.DataArray): An array containing additional capital costs per unit.
+            - disc_rate (np.ndarray): An array of discount rates for each year.
+            - lt (int): The lifespan of the unit in years.
+            - s_idx (int): The index of the specific year being calculated.
+            - u_idx (int): The index of the unit for which CAPEX is being calculated.
+            - y_idxs (IndexingSet): The set of indices representing years.
+
+        Returns:
+            - float: The total global CAPEX per unit per year for the specified unit.
+        """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
             lt=lt, yy=y_idxs
         )
@@ -217,6 +315,25 @@ class ResultsGroup(abc.ABC):
         aggr_idx: int,
         y_idxs: IndexingSet,
     ) -> float:
+        """
+        Calculates the local capital expenditure (CAPEX) per unit per year.
+
+        Similar to the global CAPEX calculation, this method computes the amortized local CAPEX
+        for a given unit type over its lifespan, considering local costs and discount rates.
+
+        Args:
+            - capex (np.ndarray): An array of capital expenditures for each year.
+            - tcap_plus (xr.DataArray): An array containing additional local capital costs per unit.
+            - disc_rate (np.ndarray): An array of discount rates for each year.
+            - lt (int): The lifespan of the unit in years.
+            - s_idx (int): The index of the specific year being calculated.
+            - ut_idx (int): The index of the unit type for which CAPEX is being calculated.
+            - aggr_idx (int): The index of the aggregated unit being considered.
+            - y_idxs (IndexingSet): The set of indices representing years.
+
+        Returns:
+            - float: The total local CAPEX per unit per year for the specified unit type.
+        """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
             lt=lt, yy=y_idxs
         )
@@ -245,6 +362,29 @@ class ResultsGroup(abc.ABC):
         cap_plus: Variable,
         multipliers: dict[int, float] | None = None,
     ) -> dict[str, pd.DataFrame]:
+        """
+        Calculates the global capital expenditure (CAPEX) for multiple units over a set of years.
+
+        This method computes CAPEX for non-aggregated units based on their type, applying the
+        respective discount rates, multipliers, and capital costs. Results are structured
+        into a dictionary of Pandas DataFrames.
+
+        Args:
+            - discount_rate (np.ndarray): An array of discount rates for each year.
+            - bus_unit_mapping (dict[int, set[int]]): A mapping of bus indices to corresponding unit indices.
+            - unit_index (IndexingSet): The indexing set representing unit indices.
+            - aggr_unit_map (dict[int, set[int]]): A mapping of aggregated units to their constituent units.
+            - indices (Indices): An object containing various indices including years.
+            - unit_type_map (dict[int, int]): A mapping from unit indices to their type indices.
+            - unit_type_param (GeneratorTypeParameters | StorageTypeParameters): Parameters related to unit types.
+            - money_scale (float): A scaling factor for the monetary values.
+            - cap_plus (Variable): A variable representing additional capital costs.
+            - multipliers (dict[int, float] | None): Optional. A mapping of unit indices to their multipliers.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping unit names to DataFrames representing
+                                      the annual CAPEX for each unit.
+        """
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
         non_lbs_unit_idxs: dict[int, int] = {
             unit_idx: unit_type_map[unit_idx]
@@ -292,6 +432,27 @@ class ResultsGroup(abc.ABC):
         gen_mapping: bidict,
         multipliers: dict[int, float] | None = None,
     ) -> dict[str, pd.DataFrame]:
+        """
+        Calculates the local capital expenditure (CAPEX) for aggregated units over a set of years.
+
+        This method computes CAPEX for aggregated unit types, applying the respective discount rates,
+        multipliers, and capital costs. The results are organized into a dictionary of DataFrames.
+
+        Args:
+            - discount_rate (np.ndarray): An array of discount rates for each year.
+            - tcap_plus (Variable): A variable representing additional local capital costs.
+            - indices (Indices): An object containing various indices including years.
+            - unit_type_param (GeneratorTypeParameters | StorageTypeParameters): Parameters related to unit types.
+            - money_scale (float): A scaling factor for the monetary values.
+            - unit_type_map (dict[int, int]): A mapping from unit indices to their type indices.
+            - aggr_unit_map (dict[int, set[int]]): A mapping of aggregated units to their constituent units.
+            - gen_mapping (bidict): A bidirectional mapping of unit indices to their corresponding generator names.
+            - multipliers (dict[int, float] | None): Optional. A mapping of unit indices to their multipliers.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping aggregated unit names to DataFrames representing
+                                      the annual CAPEX for each aggregated unit.
+        """
         disc_rate = ExpressionHandler.discount_rate(discount_rate)
         year_idxs = indices.Y
         aggr_ut_idxs = {
@@ -336,7 +497,14 @@ class ResultsGroup(abc.ABC):
 
 @dataclass
 class GeneratorsResults(ResultsGroup):
-    """Generators results"""
+    """
+    A class for processing and organizing generator-related results in energy models.
+
+    This class retrieves and formats results from various generator variables, including generation,
+    capacity, and capital expenditure (CAPEX) data. It provides methods to process and structure these
+    results into organized Pandas DataFrames, facilitating analysis and reporting of generator performance
+    within energy system models.
+    """
 
     variable_group: InitVar[GeneratorVariables]
     """Initial value hint for the GeneratorVariables object"""
@@ -357,10 +525,10 @@ class GeneratorsResults(ResultsGroup):
     """ generation (exportable) """
     gen_et: dict[str, dict[str, pd.DataFrame]] = field(init=False)
     """ generation per energy type (exportable) """
-    gen_dch: dict[str, dict[str, dict[str, pd.DataFrame]]] = field(init=False)
+    gen_dch: dict[str, dict[str, pd.DataFrame]] = field(init=False)
     """ generation per energy type for demand chunks (non-exportable) """
-    dump: dict[str, pd.DataFrame] = field(init=False)
-    """ dumped energy (exportable) """
+    gen_reserve_et: dict[str, dict[str, dict[str, pd.DataFrame]]] = field(init=False)
+    """ generation for reserves """
     dump_et: dict[str, dict[str, pd.DataFrame]] = field(init=False)
     """ dumped energy per energy type (exportable) """
     cap: dict[str, pd.DataFrame] = field(init=False)
@@ -387,10 +555,13 @@ class GeneratorsResults(ResultsGroup):
         indices: Indices,
     ) -> None:
         self.gen = self.process_gen(variable_group)
-        self.gen_et = self.process_gen_et(variable_group)
-        self.gen_dch = self.process_gen_dch(variable_group)
-        self.dump = self.process_dump(variable_group)
-        self.dump_et = self.process_dump_et(variable_group)
+        self.gen_et = self.process_h_y_var(variable_group.gen_et, indices)
+        self.dump_et = self.process_h_y_var(variable_group.dump_et, indices)
+        self.gen_dch = process_gen_dch(variable_group.gen_dch, indices, "gen")
+        self.gen_reserve_et = process_gen_reserve_et(
+            variable_group.gen_reserve_et,
+            indices,
+        )
         self.cap = self.process_cap(variable_group)
         self.cap_plus = self.fetch_d_dataframe(
             dimension=1,
@@ -484,6 +655,15 @@ class GeneratorsResults(ResultsGroup):
 
     @staticmethod
     def process_gen(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
+        """
+        Processes generation data from the variable group into a dictionary of DataFrames.
+
+        Args:
+            - variable_group (GeneratorVariables): The object containing generator variables.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping generator names to their respective generation DataFrames.
+        """
         return {
             gen_name: df.reset_index(["gen"], drop=True).unstack().droplevel(0, axis=1)
             for gen_name, df in variable_group.gen.solution.to_dataframe().groupby(
@@ -492,69 +672,50 @@ class GeneratorsResults(ResultsGroup):
         }
 
     @staticmethod
-    def process_gen_et(
-        variable_group: GeneratorVariables,
+    def process_h_y_var(
+        var: dict[int, dict[str, Variable]],
+        indices: Indices,
     ) -> dict[str, dict[str, pd.DataFrame]]:
-        return {
-            gen_name: {
-                energy_type: et_df.reset_index(["gen", "et"], drop=True)
-                .unstack()
-                .droplevel(0, axis=1)
-                for energy_type, et_df in gen_df.groupby("et")
-            }
-            for gen_name, gen_df in variable_group.gen_et.solution.to_dataframe().groupby(
-                "gen"
-            )
-        }
+        """
+        Processes generation data categorized by energy types into a structured format.
 
-    @staticmethod
-    def process_gen_dch(
-        variable_group: GeneratorVariables,
-    ) -> dict[str, dict[str, dict[str, pd.DataFrame]]]:
-        return {
-            gen_name: {
-                energy_type: {
-                    demand_chunk: dch_df.reset_index(["gen", "et", "demch"], drop=True)
-                    .unstack()
-                    .droplevel(0, axis=1)
-                    for demand_chunk, dch_df in et_df.groupby("gen")
-                }
-                for energy_type, et_df in gen_df.groupby("demch")
-            }
-            for gen_name, gen_df in variable_group.gen_dch.solution.to_dataframe().groupby(
-                "et"
-            )
-        }
+        Args:
+            - var (dict[int, dict[str, Variable]]): A dictionary of variables indexed by generator index,
+              with energy types as keys.
+            - indices (Indices): The object containing indexing information for mapping.
 
-    @staticmethod
-    def process_dump(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
-        return {
-            gen_name: dump_df.reset_index(["gen"], drop=True)
-            .unstack()
-            .droplevel(0, axis=1)
-            for gen_name, dump_df in variable_group.dump.solution.to_dataframe().groupby(
-                "gen"
-            )
-        }
-
-    @staticmethod
-    def process_dump_et(
-        variable_group: GeneratorVariables,
-    ) -> dict[str, dict[str, pd.DataFrame]]:
-        return {
-            gen_name: {
-                energy_type: et_df.reset_index(["gen", "et"], drop=True)
-                .unstack()
-                .droplevel(0, axis=1)
-                for energy_type, et_df in gen_df.groupby("et")
-            }
-            for gen_name, gen_df in variable_group.dump_et.solution.to_dataframe().groupby(
-                "gen"
-            )
-        }
+        Returns:
+            - dict[str, dict[str, pd.DataFrame]]: A nested dictionary where each generator name maps to
+              another dictionary mapping energy types to DataFrames.
+        """
+        result: dict[str, dict[str, pd.DataFrame]] = dict()
+        for gen_idx, data in var.items():
+            gen_name = indices.GEN.mapping[gen_idx]
+            result[gen_name] = dict()
+            for energy_type in indices.ET.ii:
+                if energy_type in data:
+                    gen_et = (
+                        data[energy_type]
+                        .solution.to_dataframe()
+                        .unstack()
+                        .droplevel(0, axis=1)
+                    )
+                else:
+                    gen_et = empty_generation_dataframe(indices)
+                result[gen_name][energy_type] = gen_et
+        return result
 
     @staticmethod
     def process_cap(variable_group: GeneratorVariables) -> dict[str, pd.DataFrame]:
+        """
+        Processes capacity data from the variable group into a dictionary of DataFrames.
+
+        Args:
+            - variable_group (GeneratorVariables): The object containing generator variables.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping generator names to their respective capacity DataFrames.
+        """
         return {
             gen_name: cap_df.reset_index(["gen"], drop=True).rename(
                 columns={"solution": "cap"}
@@ -573,17 +734,21 @@ class GeneratorsResults(ResultsGroup):
         column_index: IndexingSet,
         filter_map: dict[int, set] | set | None = None,
     ) -> dict[str, pd.DataFrame]:
-        """Fetches a 1D variable from a DataFrame and returns a dictionary mapping names to 1D Pandas DataFrames.
+        """
+        Fetches a variable from a DataFrame and returns a dictionary mapping names to Pandas DataFrames.
 
         Args:
-            index (IndexingSet): The indexing set for the variable.
-            variable (pd.DataFrame): The DataFrame containing the 1D variable to fetch.
-            row_index (IndexingSet): The indexing set for the variable's rows.
-            column_index (IndexingSet | None): The indexing set for the variable's columns.
-            filter_map (Dict | Set | None): dict of sets or set indices to filter from index mapping.
+            - dimension (int): The dimension of the variable to fetch (1 or 2).
+            - index (IndexingSet): The indexing set for the variable.
+            - variable (pd.DataFrame): The DataFrame containing the variable to fetch.
+            - row_index (IndexingSet): The indexing set for the variable's rows.
+            - column_index (IndexingSet | None): The indexing set for the variable's columns.
+            - filter_map (dict[int, set] | set | None): Optional; dict of sets or set indices to filter from
+                the index mapping.
 
         Returns:
-            Dict[str, pd.DataFrame]: A dictionary mapping names to 1D Pandas DataFrames.
+            - dict[str, pd.DataFrame]: A dictionary mapping names to Pandas DataFrames containing the fetched
+                variable data.
         """
         match filter_map:
             case dict():
@@ -627,19 +792,22 @@ class GeneratorsResults(ResultsGroup):
         index_map: dict[int, set],
         column_index: IndexingSet,
     ) -> dict[str, dict[str, pd.DataFrame]]:
-        """Fetches a 2D t_variable and returns a dictionary mapping names to 1D Pandas DataFrames.
+        """
+        Fetches a technology variable and returns a dictionary mapping names to Pandas DataFrames.
 
         Args:
-
-        aggr_index (IndexingSet): aggregate index
-        t_index (IndexingSet): technology type index
-        variable (Var): technology type variable
-        row_index (IndexingSet): The indexing set for the variable's rows.
-        column_index (IndexingSet): The indexing set for the variable's columns.
-        index_map (dict): technology types for a given aggregate.
+            - dimension (int): The dimension of the variable to fetch (1 or 2).
+            - aggr_index (IndexingSet): The aggregate index mapping for the variables.
+            - t_index (IndexingSet): The technology type index mapping.
+            - variable (pd.DataFrame): The DataFrame containing the technology variable data.
+            - row_index (IndexingSet): The indexing set for the variable's rows.
+            - index_map (dict[int, set]): A dictionary mapping aggregate indices to their corresponding technology
+              type indices.
+            - column_index (IndexingSet): The indexing set for the variable's columns.
 
         Returns:
-            dict[str, dict[str, pd.DataFrame]]: A dictionary mapping aggr names, t_names into 1D Pandas DataFrames.
+            - dict[str, dict[str, pd.DataFrame]]: A nested dictionary where each aggregate name maps to another
+              dictionary mapping technology type names to DataFrames containing the fetched data.
         """
         result_dict: dict[str, dict[str, pd.DataFrame]] = dict()
         for aggr_idx, aggr_name in aggr_index.mapping.items():
@@ -670,9 +838,18 @@ class GeneratorsResults(ResultsGroup):
         return result_dict
 
     def to_exportable(self) -> ExportableGeneratorsResults:
+        """
+        Converts processed generator results into a format suitable for export.
+
+        This method organizes the internal data structures into a coherent format, specifically
+        an instance of ExportableGeneratorsResults, for reporting or further analysis.
+
+        Returns:
+            - ExportableGeneratorsResults: An object containing organized generator results ready for export.
+        """
         return ExportableGeneratorsResults(
             generation=self.dict_of_2d_array_to_pandas(self.gen),
-            dump_energy=self.dict_of_2d_array_to_pandas(self.dump),
+            # dump_energy=self.dict_of_2d_array_to_pandas(self.dump),
             capacity=self.dict_of_1d_array_to_pandas(
                 self.cap, column_name=GENERATOR_LABEL
             ),
@@ -691,7 +868,14 @@ class GeneratorsResults(ResultsGroup):
 
 @dataclass
 class StoragesResults(ResultsGroup):
-    """Storages results"""
+    """
+    A class for fetching and organizing storage results.
+
+    This class processes and organizes various results related to energy storage systems,
+    including generation, load, state of charge, capacity, and capital expenditures. It
+    structures the data into easily accessible Pandas DataFrames, facilitating further
+    analysis and reporting.
+    """
 
     variable_group: InitVar[StorageVariables]
     """Initial value hint for the StorageVariables object"""
@@ -739,25 +923,12 @@ class StoragesResults(ResultsGroup):
         scenario_parameters: ScenarioParameters,
         indices: Indices,
     ) -> None:
-        self.gen = {
-            stor_name: df.reset_index(["stor"], drop=True)
-            .unstack()
-            .droplevel(0, axis=1)
-            for stor_name, df in variable_group.gen.solution.to_dataframe().groupby(
-                "stor"
-            )
-        }
-        self.gen_dch = {
-            stor_name: {
-                energy_type: demch_df.reset_index(["stor", "demch"], drop=True)
-                .unstack()
-                .droplevel(0, axis=1)
-                for energy_type, demch_df in stor_df.groupby("stor")
-            }
-            for stor_name, stor_df in variable_group.gen_dch.solution.to_dataframe().groupby(
-                "demch"
-            )
-        }
+        self.gen = calculate_storage_adjusted_generation(
+            generation_result_df=variable_group.gen.solution.to_dataframe(),
+            storages_generation_efficiency=parameters.gen_eff,
+            storages_idxs=indices.STOR.mapping,
+        )
+        self.gen_dch = process_gen_dch(variable_group.gen_dch, indices, "stor")
         self.load = {
             stor_name: df.reset_index(["stor"], drop=True)
             .unstack()
@@ -812,6 +983,15 @@ class StoragesResults(ResultsGroup):
         )
 
     def to_exportable(self) -> ExportableStorageResults:
+        """
+        Converts processed storage results into a format suitable for export.
+
+        This method organizes the internal data structures into a coherent format, specifically
+        an instance of ExportableStorageResults, for reporting or further analysis.
+
+        Returns:
+            - ExportableStorageResults: An object containing organized storage results ready for export.
+        """
         return ExportableStorageResults(
             generation=self.dict_of_2d_array_to_pandas(self.gen),
             load=self.dict_of_2d_array_to_pandas(self.load),
@@ -828,7 +1008,13 @@ class StoragesResults(ResultsGroup):
 
 @dataclass
 class LinesResults(ResultsGroup):
-    """Lines results"""
+    """
+    A class for fetching and organizing results related to lines.
+
+    This class processes and organizes results associated with line flows in an energy
+    system, structuring them into accessible Pandas DataFrames. It serves to facilitate
+    analysis and reporting of optimal line flow results.
+    """
 
     variable_group: InitVar[LineVariables]
     """Initial value hint for the LineVariable object"""
@@ -849,6 +1035,12 @@ class LinesResults(ResultsGroup):
         }
 
     def to_exportable(self) -> ExportableLinesResults:
+        """
+        Converts processed line results into a format suitable for export.
+
+        Returns:
+            - ExportableLinesResults: An object containing organized line flow results ready for export.
+        """
         return ExportableLinesResults(
             flow=self.dict_of_2d_array_to_pandas(
                 self.flow, index_name=HOUR_LABEL, column_name=YEAR_LABEL
@@ -858,7 +1050,13 @@ class LinesResults(ResultsGroup):
 
 @dataclass
 class FractionsResults(ResultsGroup):
-    """Fraction results"""
+    """
+    A class for fetching and organizing fraction results.
+
+    This class processes and organizes results related to the fraction of local balancing stacks
+    in aggregated consumers, structuring them into accessible Pandas DataFrames. It serves to
+    facilitate analysis and reporting of fraction results across different consumer categories.
+    """
 
     variable_group: InitVar[FractionVariables]
     """Initial value hint for the FractionVariables object"""
@@ -884,6 +1082,12 @@ class FractionsResults(ResultsGroup):
         }
 
     def to_exportable(self) -> ExportableFractionsResults:
+        """
+        Converts processed fraction results into a format suitable for export.
+
+        Returns:
+            - ExportableFractionsResults: An object containing organized fraction results ready for export.
+        """
         return ExportableFractionsResults(
             fraction={
                 aggr: self.dict_of_1d_array_to_pandas(
@@ -896,13 +1100,18 @@ class FractionsResults(ResultsGroup):
 
 @dataclass
 class BusResults(ResultsGroup):
-    """Bus results"""
+    """
+    A class for fetching and organizing bus results.
+
+    This class processes and organizes results related to the energy generation and shifts
+    at each bus, structuring them into accessible Pandas DataFrames. It serves to facilitate
+    analysis and reporting of bus-related results across various components of the energy system.
+    """
 
     variable_group: InitVar[BusVariables]
     """Initial value hint for the GeneratorVariables object"""
     indices: InitVar[Indices]
     """Initial value hint for the Indices object"""
-
     bus_ens: dict[str, pd.DataFrame] = field(init=False)
     """ ens generator per bus """
 
@@ -913,20 +1122,47 @@ class BusResults(ResultsGroup):
                 "bus"
             )
         }
-        self.shift_plus = {
-            bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
-            for bus_name, df in variable_group.shift_plus.solution.to_dataframe().groupby(
-                "bus"
-            )
-        }
-        self.shift_minus = {
-            bus_name: df.reset_index(["bus"], drop=True).unstack().droplevel(0, axis=1)
-            for bus_name, df in variable_group.shift_minus.solution.to_dataframe().groupby(
-                "bus"
-            )
-        }
+        self.shift_plus = self.process_shift_variable(
+            variable_group.shift_plus, indices
+        )
+        self.shift_minus = self.process_shift_variable(
+            variable_group.shift_minus, indices
+        )
+
+    @staticmethod
+    def process_shift_variable(
+        var: dict[int, Variable], indices: Indices
+    ) -> dict[str, pd.DataFrame]:
+        """
+        Processes shift variable data into structured Pandas DataFrames.
+
+        This method collects and organizes shift variable data from the provided input object
+        into structured formats for further analysis.
+
+        Args:
+            - var (dict[int, Variable]): The dictionary containing shift variable data.
+            - indices (Indices): The object containing indexing information.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary mapping bus names to their respective shift DataFrames.
+        """
+        result: dict[str, pd.DataFrame] = dict()
+        for bus_idx in indices.BUS.ord:
+            bus_name = indices.BUS.mapping[bus_idx]
+            if bus_idx not in var:
+                df = empty_generation_dataframe(indices)
+            else:
+                df = var[bus_idx].solution.to_dataframe().unstack().droplevel(0, axis=1)
+            result[bus_name] = df
+        return result
 
     def to_exportable(self) -> ExportableBusResults:
+        """
+        Converts processed bus results into a format suitable for export.
+
+        Returns:
+            - ExportableBusResults: An object containing organized bus results ready for export.
+        """
         return ExportableBusResults(
             generation_ens=self.dict_of_2d_array_to_pandas(self.bus_ens),
             shift_plus=self.dict_of_2d_array_to_pandas(self.shift_plus),
@@ -936,7 +1172,14 @@ class BusResults(ResultsGroup):
 
 @dataclass
 class Results:
-    """Results of an optimization."""
+    """
+    Results of an optimization.
+
+    This class aggregates and organizes the results obtained from an optimization process,
+    including optimal values for various components like generators, storages, lines, fractions,
+    and buses. It serves as a central repository for results, enabling easy access and export
+    for reporting and analysis.
+    """
 
     variables: InitVar[OptimizationVariables]
     """Initial value hint for the OptimizationVariables object"""
@@ -959,6 +1202,12 @@ class Results:
     """ bus variables optimal values (exportable) """
 
     def to_exportable(self) -> ExportableResults:
+        """
+        Converts processed optimization results into a format suitable for export.
+
+        Returns:
+            - ExportableResults: An object containing organized optimization results ready for export.
+        """
         return ExportableResults(
             objective_value=pd.Series(
                 self.objective_value, name="Objective_func_value"
@@ -1001,3 +1250,118 @@ class Results:
             variable_group=variables.frac, indices=indices
         )
         self.bus_results = BusResults(variable_group=variables.bus, indices=indices)
+
+
+def process_gen_dch(
+    gen_dch_var: dict[int, Variable],
+    indices: Indices,
+    energy_source_class: Literal["gen", "stor"],
+) -> dict[str, dict[str, pd.DataFrame]]:
+    """
+    Processes generation data for demand chunks.
+
+    This function organizes generation data from a set of demand chunk variables,
+    grouping them by generation source (either generator or storage) and demand chunk.
+    It returns a structured dictionary of Pandas DataFrames for further analysis.
+
+    Args:
+        - gen_dch_var (dict[int, Variable]): A dictionary mapping demand chunk indices
+          to their corresponding generation variables.
+        - indices (Indices): An object containing index mappings for generation and storage.
+        - energy_source_class (Literal["gen", "stor"]): A string indicating the type of energy
+          source to process. Must be either "gen" for generators or "stor" for storages.
+
+    Returns:
+        - dict[str, dict[str, pd.DataFrame]]: A nested dictionary where the outer keys
+          represent generation source names, and the inner keys represent demand chunk names.
+          Each value is a Pandas DataFrame containing generation data for the corresponding
+          source and demand chunk.
+
+    Raises:
+        - ValueError: If energy_source_class is not "gen" or "stor".
+    """
+    if energy_source_class not in ["gen", "stor"]:
+        raise ValueError(
+            f"energy_source_class {energy_source_class} must be gen or stor"
+        )
+    energy_source_indices = (
+        indices.GEN if energy_source_class == "gen" else indices.STOR
+    )
+    result: dict[str, dict[str, pd.DataFrame]] = dict()
+    for dch_idx in indices.DEMCH.ord:
+        dch_name = indices.DEMCH.mapping[dch_idx]
+        for gen_idx in energy_source_indices.ord:
+            gen_name = energy_source_indices.mapping[gen_idx]
+            if gen_name not in result:
+                result[gen_name] = dict()
+            if gen_idx not in gen_dch_var[dch_idx]:
+                dch_gen = empty_generation_dataframe(indices)
+            else:
+                dch_gen = (
+                    gen_dch_var[dch_idx][gen_idx]
+                    .solution.to_dataframe()
+                    .unstack()
+                    .droplevel(0, axis=1)
+                )
+            result[gen_name][dch_name] = dch_gen
+    return result
+
+
+def process_gen_reserve_et(
+    gen_reserve_et_var: dict,
+    indices: Indices,
+) -> dict[str, dict[str, dict[str, pd.DataFrame]]]:
+    """
+    Processes generation data for reserves.
+
+    This function organizes generation data from a set of generation for reserves.
+    It returns a structured dictionary of Pandas DataFrames for further analysis.
+
+    Args:
+        - gen_reserve_et (dict[int, Variable]): A dictionary mapping gen_reserve_et indices
+          to their corresponding generation variables.
+        - indices (Indices): An object containing index mappings for generation and storage.
+        - energy_source_class (Literal["gen", "stor"]): A string indicating the type of energy
+          source to process. Must be either "gen" for generators or "stor" for storages.
+
+    Returns:
+        - dict[str, dict[str, dict[str, pd.DataFrame]]]: A nested dictionary where the outer keys
+          represent generation tag names, source names, and the inner keys represent demand chunk names.
+
+    """
+    result: dict[str, dict[str, dict[str, pd.DataFrame]]] = dict()
+    for tag_idx in gen_reserve_et_var:
+        tag_name = indices.TAGS.mapping[tag_idx]
+        if tag_name not in result:
+            result[tag_name] = dict()
+        for gen_idx in gen_reserve_et_var[tag_idx]:
+            gen_name = indices.GEN.mapping[gen_idx]
+            if gen_name not in result[tag_name]:
+                result[tag_name][gen_name] = dict()
+                for et, v in gen_reserve_et_var[tag_idx][gen_idx].items():
+                    result[tag_name][gen_name][et] = (
+                        v.solution.to_dataframe().unstack().droplevel(0, axis=1)
+                    )
+    return result
+
+
+def empty_generation_dataframe(indices: Indices) -> pd.DataFrame:
+    """
+    Creates an empty generation DataFrame with specified dimensions.
+
+    Args:
+        - indices (Indices): An object containing index mappings for hours and years.
+
+    Returns:
+        - pd.DataFrame: An empty DataFrame with shape (number of hours, number of years),
+            where the index represents hours and the columns represent years. The DataFrame
+            is filled with zeros, indicating no generation data.
+    """
+    result = pd.DataFrame(
+        data=np.zeros((len(indices.H), len(indices.Y))),
+        columns=indices.Y.ii,
+        index=indices.H.ii,
+    )
+    result.columns.name = "year"
+    result.index.name = "hour"
+    return result

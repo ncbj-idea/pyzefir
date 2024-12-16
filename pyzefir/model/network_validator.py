@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from abc import ABC, abstractmethod
 from typing import Type
@@ -40,8 +25,10 @@ class BasicValidator(ABC):
 
 
 class NetworkValidator:
-    def __init__(self, network: Network) -> None:
+
+    def __init__(self, network: Network, raise_exceptions: bool = True) -> None:
         self.network = network
+        self.raise_exceptions = raise_exceptions
 
     def validate(self) -> None:
         _logger.info("Validating network structure...")
@@ -61,9 +48,13 @@ class NetworkValidator:
             validator.validate(self.network, exception_list)
         if exception_list:
             _logger.debug("Got error validating the network: %s", exception_list)
-            raise NetworkValidatorExceptionGroup(
-                "Following errors found during network validation: ", exception_list
-            )
+            if self.raise_exceptions:
+                raise NetworkValidatorExceptionGroup(
+                    "Following errors found during network validation: ", exception_list
+                )
+            else:
+                for exception in exception_list:
+                    _logger.error(str(exception))
 
 
 class DsrBusesOutValidation(BasicValidator):

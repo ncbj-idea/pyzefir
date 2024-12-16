@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from copy import deepcopy
 from typing import Callable
 
@@ -23,8 +7,10 @@ import pytest
 
 from pyzefir.model.network import Network
 from pyzefir.model.network_elements import (
+    DSR,
     AggregatedConsumer,
     Bus,
+    DemandChunk,
     DemandProfile,
     Generator,
     Line,
@@ -56,19 +42,145 @@ def lbs_bus_name(lbs_idx: int, energy_type: str) -> str:
 
 
 @pytest.fixture
-def global_generators() -> dict[str, Generator]:
+def generator_factory() -> Callable[..., Generator]:
+    """Wrapper for Generator initialization (with default values provided)"""
+    default_capacity_limits = pd.Series(np.ones(N_YEARS) * np.nan)
+
+    def _create_generator(
+        name: str,
+        bus: str,
+        energy_source_type: str | None = None,
+        unit_base_cap: float = 10.0,
+        emission_fee: set[str] | None = None,
+        generator_binding: str | None = None,
+        unit_min_capacity: pd.Series = default_capacity_limits,
+        unit_max_capacity: pd.Series = default_capacity_limits,
+        unit_min_capacity_increase: pd.Series = default_capacity_limits,
+        unit_max_capacity_increase: pd.Series = default_capacity_limits,
+        min_device_nom_power: float | None = None,
+        max_device_nom_power: float | None = None,
+        tags: list[str] | None = None,
+    ) -> Generator:
+        return Generator(
+            name=name,
+            energy_source_type=energy_source_type or "",
+            bus=bus,
+            emission_fee=emission_fee or {},
+            generator_binding=generator_binding,
+            unit_base_cap=unit_base_cap,
+            unit_min_capacity=unit_min_capacity,
+            unit_max_capacity=unit_max_capacity,
+            unit_min_capacity_increase=unit_min_capacity_increase,
+            unit_max_capacity_increase=unit_max_capacity_increase,
+            min_device_nom_power=min_device_nom_power,
+            max_device_nom_power=max_device_nom_power,
+            tags=tags or [],
+        )
+
+    return _create_generator
+
+
+@pytest.fixture
+def storage_factory() -> Callable[..., Storage]:
+    """Wrapper for Storage initialization (with default values provided)"""
+    default_capacity_limits = pd.Series(np.ones(N_YEARS) * np.nan)
+
+    def _create_storage(
+        name: str,
+        bus: str,
+        energy_source_type: str | None = None,
+        unit_base_cap: float = 10.0,
+        unit_min_capacity: pd.Series = default_capacity_limits,
+        unit_max_capacity: pd.Series = default_capacity_limits,
+        unit_min_capacity_increase: pd.Series = default_capacity_limits,
+        unit_max_capacity_increase: pd.Series = default_capacity_limits,
+        min_device_nom_power: float | None = None,
+        max_device_nom_power: float | None = None,
+        tags: list[str] | None = None,
+    ) -> Storage:
+        return Storage(
+            name=name,
+            energy_source_type=energy_source_type or "",
+            bus=bus,
+            unit_base_cap=unit_base_cap,
+            unit_min_capacity=unit_min_capacity,
+            unit_max_capacity=unit_max_capacity,
+            unit_min_capacity_increase=unit_min_capacity_increase,
+            unit_max_capacity_increase=unit_max_capacity_increase,
+            min_device_nom_power=min_device_nom_power,
+            max_device_nom_power=max_device_nom_power,
+            tags=tags or [],
+        )
+
+    return _create_storage
+
+
+@pytest.fixture
+def demand_chunk_factory() -> Callable[..., DemandChunk]:
+    """Wrapper for DemandChunk initialization (with default values provided)"""
+
+    def _create_demand_chunk(
+        name: str,
+        tag: str,
+        energy_type: str,
+        n_years: int | None = None,
+        n_hours: int | None = None,
+        periods: np.ndarray | None = None,
+        demand: np.ndarray | None = None,
+    ) -> DemandChunk:
+        n_years = n_years or N_YEARS
+        n_hours = n_hours or N_HOURS
+        default_periods = np.array([[0, n_hours - 1]])
+        default_demand = np.array([[10 for _ in range(n_years)]])
+        return DemandChunk(
+            name=name,
+            tag=tag,
+            energy_type=energy_type,
+            periods=periods or default_periods,
+            demand=demand or default_demand,
+        )
+
+    return _create_demand_chunk
+
+
+@pytest.fixture
+def dsr_factory() -> Callable[..., DSR]:
+    """Wrapper for DSR initialization (with default values provided)"""
+
+    def _create_dsr(
+        name: str,
+        compensation_factor: float = 1.0,
+        balancing_period_len: int = 24,
+        penalization: float = 1.0,
+        penalization_plus: float = 0.0,
+        relative_shift_limit: float | None = None,
+        abs_shift_limit: float | None = None,
+    ) -> DSR:
+        return DSR(
+            name=name,
+            compensation_factor=compensation_factor,
+            balancing_period_len=balancing_period_len,
+            penalization_minus=penalization,
+            penalization_plus=penalization_plus,
+            relative_shift_limit=relative_shift_limit,
+            abs_shift_limit=abs_shift_limit,
+        )
+
+    return _create_dsr
+
+
+@pytest.fixture
+def global_generators(
+    generator_factory: Callable[..., Generator]
+) -> dict[str, Generator]:
     return {
-        f"heat_pump_{GRID}_{HS}": Generator(
+        f"heat_pump_{GRID}_{HS}": generator_factory(
             name=f"heat_pump_{GRID}_{HS}",
             energy_source_type="heat_pump",
             unit_base_cap=30,
             bus={HS, GRID},
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"chp_coal_{GRID}_{HS}": Generator(
+        f"chp_coal_{GRID}_{HS}": generator_factory(
             name=f"chp_coal_{GRID}_{HS}",
             energy_source_type="chp_coal",
             unit_base_cap=50,
@@ -76,11 +188,8 @@ def global_generators() -> dict[str, Generator]:
             unit_max_capacity_increase=pd.Series(
                 [np.nan] + np.linspace(1, 1.8, N_YEARS - 1).tolist()
             ),
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"pp_coal_{GRID}": Generator(
+        f"pp_coal_{GRID}": generator_factory(
             name=f"pp_coal_{GRID}",
             energy_source_type="pp_coal",
             unit_base_cap=50,
@@ -90,23 +199,16 @@ def global_generators() -> dict[str, Generator]:
             unit_max_capacity_increase=pd.Series(
                 [np.nan] + np.linspace(1, 1.8, N_YEARS - 1).tolist()
             ),
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"pp_gas_{GRID}": Generator(
+        f"pp_gas_{GRID}": generator_factory(
             name=f"pp_gas_{GRID}",
             energy_source_type="pp_gas",
             unit_base_cap=40,
             bus=GRID,
             min_device_nom_power=2.3,
             max_device_nom_power=5.6,
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"heat_plant_coal_{HS}": Generator(
+        f"heat_plant_coal_{HS}": generator_factory(
             name=f"heat_plant_coal_{HS}",
             energy_source_type="heat_plant_coal",
             unit_base_cap=30,
@@ -114,80 +216,61 @@ def global_generators() -> dict[str, Generator]:
             unit_min_capacity_increase=pd.Series(
                 [np.nan] + np.linspace(1, 3, N_YEARS - 1).tolist()
             ),
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"heat_plant_biomass_{HS}": Generator(
+        f"heat_plant_biomass_{HS}": generator_factory(
             name=f"heat_plant_biomass_{HS}",
             energy_source_type="heat_plant_biomass",
             unit_base_cap=45,
             bus=HS,
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
     }
 
 
 @pytest.fixture
-def global_storages() -> dict[str, Storage]:
+def global_storages(storage_factory: Callable[..., Storage]) -> dict[str, Storage]:
     return {
-        f"heat_storage_{HS}": Storage(
+        f"heat_storage_{HS}": storage_factory(
             name=f"heat_storage_{HS}",
             energy_source_type="heat_storage_type",
             unit_base_cap=15,
             bus=HS,
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
-        f"heat_storage_{HS}_2": Storage(
+        f"heat_storage_{HS}_2": storage_factory(
             name=f"heat_storage_{HS}_2",
             energy_source_type="heat_storage_type",
             unit_base_cap=15,
             bus=HS,
             min_device_nom_power=1.0,
             max_device_nom_power=3.0,
-            unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity=pd.Series([np.nan] * N_YEARS),
-            unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-            unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
         ),
     }
 
 
 @pytest.fixture
-def lbs_generators() -> dict[int, dict[str, Generator]]:
+def lbs_generators(
+    generator_factory: Callable[..., Generator]
+) -> dict[int, dict[str, Generator]]:
     return {
         0: {
-            f"boiler_coal_{lbs_name(0)}": Generator(
+            f"boiler_coal_{lbs_name(0)}": generator_factory(
                 name=f"boiler_coal_{lbs_name(0)}",
                 energy_source_type="boiler_coal",
                 unit_base_cap=25,
                 bus=lbs_bus_name(0, HEAT),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
                 tags=["example_tag"],
             ),
         },
         1: {
-            f"solar_{lbs_name(1)}": Generator(
+            f"solar_{lbs_name(1)}": generator_factory(
                 name=f"solar_{lbs_name(1)}",
                 energy_source_type="solar",
                 unit_base_cap=10,
                 bus=lbs_bus_name(1, HEAT),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
                 tags=["example_sub_tag"],
             ),
-            f"wind_farm_{lbs_name(1)}": Generator(
+            f"wind_farm_{lbs_name(1)}": generator_factory(
                 name=f"wind_farm_{lbs_name(1)}",
                 energy_source_type="wind_farm",
                 unit_base_cap=10,
@@ -196,30 +279,23 @@ def lbs_generators() -> dict[int, dict[str, Generator]]:
                     [np.nan] + np.linspace(10, 20, N_YEARS - 1).tolist()
                 ),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
         },
         2: {
-            f"heat_pump_{lbs_name(2)}": Generator(
+            f"heat_pump_{lbs_name(2)}": generator_factory(
                 name=f"heat_pump_{lbs_name(2)}",
                 energy_source_type="heat_pump",
                 unit_base_cap=30,
                 bus={lbs_bus_name(2, HEAT), lbs_bus_name(2, EE)},
                 unit_max_capacity_increase=pd.Series([np.nan] + [2] * (N_YEARS - 1)),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
-            f"pv_{lbs_name(2)}": Generator(
+            f"pv_{lbs_name(2)}": generator_factory(
                 name=f"pv_{lbs_name(2)}",
                 energy_source_type="pv",
                 unit_base_cap=15,
                 bus=lbs_bus_name(2, EE),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
         },
         3: {},
@@ -227,41 +303,34 @@ def lbs_generators() -> dict[int, dict[str, Generator]]:
 
 
 @pytest.fixture
-def lbs_storages() -> dict[int, dict[str, Storage]]:
+def lbs_storages(
+    storage_factory: Callable[..., Storage]
+) -> dict[int, dict[str, Storage]]:
     return {
         0: {},
         1: {
-            f"heat_storage_{lbs_name(1)}": Storage(
+            f"heat_storage_{lbs_name(1)}": storage_factory(
                 name=f"heat_storage_{lbs_name(1)}",
                 energy_source_type="heat_storage_type",
                 unit_base_cap=15,
                 bus=lbs_bus_name(1, HEAT),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
-            f"ee_storage_{lbs_name(1)}": Storage(
+            f"ee_storage_{lbs_name(1)}": storage_factory(
                 name=f"ee_storage_{lbs_name(1)}",
                 energy_source_type="ee_storage_type",
                 unit_base_cap=12,
                 bus=lbs_bus_name(1, EE),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
         },
         2: {
-            f"heat_storage_{lbs_name(2)}": Storage(
+            f"heat_storage_{lbs_name(2)}": storage_factory(
                 name=f"heat_storage_{lbs_name(2)}",
                 energy_source_type="heat_storage_type",
                 unit_base_cap=10,
                 bus=lbs_bus_name(2, HEAT),
                 unit_max_capacity=pd.Series([np.nan] + [25] * (N_YEARS - 1)),
-                unit_min_capacity=pd.Series([np.nan] * N_YEARS),
-                unit_min_capacity_increase=pd.Series([np.nan] * N_YEARS),
-                unit_max_capacity_increase=pd.Series([np.nan] * N_YEARS),
             ),
         },
         3: {},
@@ -288,7 +357,10 @@ def lbs_factory() -> Callable[[int], LocalBalancingStack]:
                 HEAT: lbs_bus_name(lbs_idx, HEAT),
                 EE: lbs_bus_name(lbs_idx, EE),
             },
-            buses={EE: {"grid", "LBS_0_electricity"}, HEAT: {"hs", "LBS_0_heat"}},
+            buses={
+                EE: {lbs_bus_name(lbs_idx, EE)},
+                HEAT: {lbs_bus_name(lbs_idx, HEAT)},
+            },
         )
 
     return _create_lbs

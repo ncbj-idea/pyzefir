@@ -19,8 +19,10 @@ import pandas as pd
 
 
 def handle_prefix_name(name: str) -> str:
+    """Replace whitespace character with underscore."""
     return f"{name.replace(' ', '_')}_"
 
 
 def join_energy_types(types: pd.Series) -> str:
+    """Join energy type names with a comma."""
     return ", ".join(set(types))

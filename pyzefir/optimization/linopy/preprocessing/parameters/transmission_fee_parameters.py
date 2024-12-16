@@ -23,7 +23,13 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class TransmissionFeeParameters(ModelParameters):
-    """Transmission fee parameters"""
+    """
+    Class representing the transmission fee parameters.
+
+    This class encapsulates the parameters related to transmission fees, including
+    hourly profiles and scaling factors. These parameters are essential for calculating
+    the cost associated with energy transmission across the network.
+    """
 
     def __init__(
         self,
@@ -31,6 +37,14 @@ class TransmissionFeeParameters(ModelParameters):
         indices: Indices,
         scale: float = 1.0,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - transmission_fees (NetworkElementsDict): The transmission fee elements in the network.
+            - indices (Indices): The indices used for mapping various parameters.
+            - scale (float, optional): A scaling factor for the transmission fees. Defaults to 1.0.
+        """
         self.fee = self.fetch_element_prop(
             transmission_fees, indices.TF, "fee", sample=indices.H.ii
         )

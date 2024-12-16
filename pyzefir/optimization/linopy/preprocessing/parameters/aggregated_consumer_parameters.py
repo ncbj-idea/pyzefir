@@ -26,12 +26,30 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class AggregatedConsumerParameters(ModelParameters):
+    """
+    Class representing parameters related to aggregated consumers.
+
+    This class encapsulates various parameters and configurations for managing
+    aggregated consumers in a network model. It computes and stores demand profiles,
+    local balancing stack indicators, and fraction assignments for each aggregated consumer.
+    """
+
     def __init__(
         self,
         aggregated_consumers: NetworkElementsDict,
         demand_profiles: NetworkElementsDict,
         indices: Indices,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict): A dictionary mapping aggregated consumer names to their
+                respective AggregatedConsumer objects.
+            - demand_profiles (NetworkElementsDict): A dictionary mapping demand profile names to their respective
+                DemandProfile objects.
+            - indices (Indices): An object containing indices for aggregators, hours, and years.
+        """
         self.dem = self.get_dem(
             aggregated_consumers, demand_profiles, indices.AGGR, indices.H, indices.Y
         )
@@ -87,6 +105,20 @@ class AggregatedConsumerParameters(ModelParameters):
         aggr_idx: IndexingSet,
         year_idx: IndexingSet,
     ) -> dict[int, ndarray]:
+        """
+        Returns a dict of aggregator ids and corresponding number of consumers.
+
+        The method retrieves the number of consumers for each aggregated consumer
+        for the specified years.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - year_idx (IndexingSet): index of year
+
+        Returns:
+            - dict[int, ndarray]: dict of aggregator ids and n_consumers
+        """
         result: dict[int, ndarray] = dict()
         for aggr_id, name in aggr_idx.mapping.items():
             aggr = aggregated_consumers[name]
@@ -102,6 +134,23 @@ class AggregatedConsumerParameters(ModelParameters):
         hour_idx: IndexingSet,
         year_idx: IndexingSet,
     ) -> dict[int, dict[str, ndarray]]:
+        """
+        Returns demand for every energy type in every aggregator.
+
+        The method computes the demand for each energy type based on the
+        corresponding demand profile and the number of consumers in each
+        aggregated consumer.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - demand_profiles (NetworkElementsDict[DemandProfile]): demand profiles
+            - aggr_idx (IndexingSet): index of aggregator
+            - hour_idx (IndexingSet): index of hour
+            - year_idx (IndexingSet): index of year
+
+        Returns:
+            - dict[int, dict[str, ndarray]]: demand for every energy type for every aggregator
+        """
         result: dict[int, dict[str, ndarray]] = dict()
         for aggr_id, name in aggr_idx.mapping.items():
             aggr = aggregated_consumers[name]
@@ -127,6 +176,20 @@ class AggregatedConsumerParameters(ModelParameters):
         aggr_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> ndarray:
+        """
+        Returns fraction base for specified aggregated consumers and aggregator.
+
+        This method fetches the base fractions of local balancing stacks without
+        using the indicator.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - lbs_idx (IndexingSet): index of local balancing stack
+
+        Returns:
+            - ndarray: requested fraction base
+        """
         return AggregatedConsumerParameters._fetch_fractions(
             aggregated_consumers, aggr_idx, lbs_idx, indicator=False
         )
@@ -137,6 +200,17 @@ class AggregatedConsumerParameters(ModelParameters):
         aggr_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> ndarray:
+        """
+        Returns lbs indicator for specified aggregated consumers and aggregator.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - lbs_idx (IndexingSet): index of local balancing stack
+
+        Returns:
+            - ndarray: requested lbs indicator
+        """
         return AggregatedConsumerParameters._fetch_fractions(
             aggregated_consumers, aggr_idx, lbs_idx, indicator=True
         )
@@ -148,6 +222,18 @@ class AggregatedConsumerParameters(ModelParameters):
         lbs_idx: IndexingSet,
         indicator: bool = False,
     ) -> ndarray:
+        """
+        Returns fractions for specified aggregated consumers and aggregator.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - lbs_idx (IndexingSet): index of local balancing stack
+            - indicator (bool, optional): indicator for base fractions. Defaults to False
+
+        Returns:
+            - ndarray: requested fractions
+        """
         result = []
         for aggr_name in aggr_idx.ii:
             tmp, aggr_base_fractions = (
@@ -173,6 +259,22 @@ class AggregatedConsumerParameters(ModelParameters):
         sample: ndarray,
         fraction_attr: str,
     ) -> dict[int, dict[int, ndarray]]:
+        """
+        Returns fraction assignment for each aggregator.
+
+        The method compiles the fractions for each local balancing stack, either
+        returning the base values or indicators based on the `indicator` flag.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - lbs_idx (IndexingSet): index of local balancing stack
+            - sample (ndarray): sample
+            - fraction_attr (str): fraction attribute
+
+        Returns:
+            - dict[int, dict[int, ndarray]]: fraction assignment
+        """
         result = {}
         for aggr_name, aggr_consumer in aggregated_consumers.items():
             idx_aggr_name = aggr_idx.inverse[str(aggr_name)]

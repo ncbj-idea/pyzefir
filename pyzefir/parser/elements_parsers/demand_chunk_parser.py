@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements import DemandChunk
@@ -22,13 +6,39 @@ from pyzefir.utils.path_manager import DataSubCategories
 
 
 class DemandChunkParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of DemandChunk.
+
+    This class takes a dictionary of DataFrames containing demand chunk configurations
+    and processes them to generate DemandChunk instances. Each demand chunk is constructed
+    from the configuration data and corresponding demand data, ensuring all necessary attributes
+    are set correctly.
+    """
+
     def __init__(
         self,
         demand_chunk_dict: dict[str, pd.DataFrame],
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - demand_chunk_dict (dict[str, pd.DataFrame]): A dictionary mapping demand chunk names
+              to their configuration DataFrames.
+        """
         self.demand_chunk_dict = demand_chunk_dict
 
     def create(self) -> tuple[DemandChunk, ...]:
+        """
+        Creates and returns a tuple of DemandChunk instances.
+
+        This method processes the demand chunk configuration DataFrame to create DemandChunk
+        objects. It extracts the necessary attributes such as name, tag, energy type, periods,
+        and demand data for each demand chunk, assembling them into a tuple for return.
+
+        Returns:
+            - tuple[DemandChunk, ...]: A tuple containing the created DemandChunk instances.
+        """
         demand_chunks: list[DemandChunk] = list()
         for _, demand_chunk_config in self.demand_chunk_dict[
             DataSubCategories.DEMAND_CHUNKS

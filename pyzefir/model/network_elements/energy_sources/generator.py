@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 import logging
@@ -40,7 +24,12 @@ class GeneratorValidatorExceptionGroup(NetworkValidatorExceptionGroup):
 @dataclass(kw_only=True)
 class Generator(EnergySource):
     """
-    A class that represents the Generator element in the network structure
+    Represents a Generator element within the network structure.
+
+    This class extends the EnergySource class to include specific attributes
+    and validation procedures for generators, including emission fees and
+    bus connections. Generators can be attached to multiple buses and
+    have associated energy types and conversion rates.
     """
 
     emission_fee: set[str] = field(default_factory=set)
@@ -63,6 +52,14 @@ class Generator(EnergySource):
     def _validate_buses_energy_types(
         self, exception_list: list[NetworkValidatorException], network: Network
     ) -> None:
+        """
+        Validation procedure checking:
+        - if each bus has a name
+        - if the buses have the same energy type
+
+        Args:
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+        """
         bus_energy_type_dict = defaultdict(list)
         for bus_name in self.buses:
             if (bus := network.buses.get(bus_name)) is not None:
@@ -89,9 +86,9 @@ class Generator(EnergySource):
         - Validates if generator has conversion_rate for energy types
 
         Args:
-            exception_list (NetworkValidatorException): list of raised exceptions.
-            network (Network): network to which self is to be added.
-            generator_type (GeneratorType): GeneratorType object
+            - exception_list (NetworkValidatorException): list of raised exceptions.
+            - network (Network): network to which self is to be added.
+            - generator_type (GeneratorType): GeneratorType object
         """
         should_check_conversion_rate = True
         if not all(isinstance(item, str) for item in self.buses):
@@ -159,10 +156,10 @@ class Generator(EnergySource):
             - Validates if generator_type energy types are compliant with the network
 
         Args:
-            exception_list (list[NetworkValidatorException]): List of exceptions
+            - exception_list (list[NetworkValidatorException]): List of exceptions
                 to which new exceptions will be added
-            network (Network): Network object to which this object belongs
-            generator_type (GeneratorType): GeneratorType object associated with this Generator
+            - network (Network): Network object to which this object belongs
+            - generator_type (GeneratorType): GeneratorType object associated with this Generator
         """
         if generator_type is None:
             exception_list.append(
@@ -196,8 +193,8 @@ class Generator(EnergySource):
         - Validates emission_fee.emission_type are unique for given gen
 
         Args:
-            exception_list (NetworkValidatorException): list of raised exceptions.
-            network (Network): network to which self is to be added.
+            - exception_list (NetworkValidatorException): list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         emission_fee_types: set[str] = set()
         network_emissions = network.emission_fees
@@ -243,10 +240,10 @@ class Generator(EnergySource):
         - _validate_buses
 
         Args:
-            network (Network): Network to which Generator is to be added.
+            - network (Network): Network to which Generator is to be added.
 
         Raises:
-            NetworkValidatorExceptionGroup: If Generator is invalid.
+            - NetworkValidatorExceptionGroup: If Generator is invalid.
         """
         _logger.debug("Validating generator object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []

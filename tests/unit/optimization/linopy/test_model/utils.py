@@ -1,24 +1,9 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from typing import Any
 
 import numpy as np
 
 from pyzefir.model.network import Network, NetworkElementsDict
+from pyzefir.model.utils import NetworkConstants
 from pyzefir.optimization.input_data import OptimizationInputData
 from pyzefir.optimization.linopy.model import LinopyOptimizationModel
 from pyzefir.optimization.opt_config import OptConfig
@@ -53,13 +38,30 @@ def create_default_opt_config(
     )
 
 
-def run_opt_engine(network: Network, opt_config: OptConfig) -> LinopyOptimizationModel:
+def load_ens_directly_to_network_for_tests(
+    network: Network, ens: float = 100.0
+) -> None:
+    """update ens for unit tests"""
+    constants = network.constants.__dict__
+    network.constants = NetworkConstants(
+        **constants
+        | {"ens_energy_penalization": {et: ens for et in network.energy_types}}
+    )
+
+
+def run_opt_engine(
+    network: Network, opt_config: OptConfig, ens: float = 100.0
+) -> LinopyOptimizationModel:
     """
     Run optimization for given network obj and opt_config
     """
+    if not np.isnan(ens):
+        load_ens_directly_to_network_for_tests(network, ens)
     engine = LinopyOptimizationModel()
     engine.build(OptimizationInputData(network, opt_config))
     engine.optimize()
+    np.isnan(ens)
+
     return engine
 
 

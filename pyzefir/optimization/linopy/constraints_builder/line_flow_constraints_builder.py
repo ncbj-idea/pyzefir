@@ -25,15 +25,36 @@ _logger = logging.getLogger(__name__)
 
 
 class LineFlowConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    Class for building line flow constraints in an optimization model.
+
+    This class is responsible for constructing constraints that limit the flow
+    of energy through transmission lines based on their maximum capacities.
+    It ensures that the flow does not exceed the defined maximum limits for
+    each line in the network.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Builds constraints including:
+        - maximum flow constraints
+        """
         _logger.info("Line flow constraints builder is working...")
         self.build_max_flow_constraints()
         _logger.info("Line flow constraints builder is finished!")
 
     def build_max_flow_constraints(self) -> None:
+        """
+        Adds maximum flow constraints for each transmission line.
+
+        For each line, this method ensures that the flow of energy does not exceed
+        the maximum capacity defined for that line. If the maximum capacity is
+        neither NaN nor infinite, a constraint is added to the model to enforce
+        this limit.
+        """
         for line_idx, line_name in self.indices.LINE.mapping.items():
             max_capacity = self.parameters.line.cap[line_idx]
-            if not np.isnan(max_capacity):
+            if not np.isnan(max_capacity) and not np.isinf(max_capacity):
                 self.model.add_constraints(
                     self.variables.line.flow.isel(line=line_idx) <= max_capacity,
                     name=f"{line_name}_LINE_FLOW_UPPER_BOUND_CONSTRAINT",

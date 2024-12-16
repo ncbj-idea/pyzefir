@@ -22,13 +22,39 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class CapacityBoundParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of CapacityBound.
+
+    This class takes a DataFrame that contains information about capacity
+    bounds and processes it to generate CapacityBound instances. It ensures
+    that the attributes, such as technology names, coefficients, and sense,
+    are properly extracted and formatted from the input data.
+    """
+
     def __init__(
         self,
         capacity_bound_df: pd.DataFrame,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - capacity_bound_df (pd.DataFrame): DataFrame containing capacity bound information for parsing.
+        """
         self.capacity_bound_df = capacity_bound_df
 
     def create(self) -> tuple[CapacityBound, ...]:
+        """
+        Creates and returns a tuple of CapacityBound instances.
+
+        This method processes the capacity bound DataFrame, ensuring the
+        "sense" column is capitalized and handles missing coefficient values
+        by assigning them a default value of 1.0. It converts each row into a
+        CapacityBound object.
+
+        Returns:
+            - tuple[CapacityBound, ...]: A tuple containing the created CapacityBound instances.
+        """
         self.capacity_bound_df.loc[:, "sense"] = self.capacity_bound_df[
             "sense"
         ].str.upper()

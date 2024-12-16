@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import pandas as pd
+from bidict import bidict
+
 from pyzefir.optimization.linopy.preprocessing.parameters.generator_parameters import (
     GeneratorParameters,
 )
@@ -30,7 +33,7 @@ def get_generator_types_capacity_multipliers(
     Mapping capacity multiplier to a generator type
 
     Capacity multiplier is simply an efficiency for a given generator type if generator_capacity_cost
-    is set to 'netto' and 1.0 if it is set to 'brutto',
+    is set to 'netto' and 1.0 if it is set to 'brutto'.
     """
     if generator_capacity_cost == "brutto":
         return {tgen_idx: 1.0 for tgen_idx in tgen.eff}
@@ -66,3 +69,44 @@ def get_generators_capacity_multipliers(
     raise RuntimeError(
         f"incorrect generator_capacity_cost, given {generator_capacity_cost}, but expected 'brutto' or 'netto'"
     )
+
+
+def calculate_storage_adjusted_generation(
+    generation_result_df: pd.DataFrame,
+    storages_generation_efficiency: dict[int, float],
+    storages_idxs: bidict[int, str | int],
+) -> dict[str, pd.DataFrame]:
+    """
+    Adjusts generation results for each storage by applying storage efficiency factors.
+
+    This function takes a DataFrame containing generation results.
+    Each storage's generation data is adjusted by multiplying it with the corresponding
+    efficiency factor. The function returns a dictionary where each key is the storage name and the
+    corresponding value is a DataFrame with the adjusted generation data for that storage.
+
+    Args:
+        generation_result_df (pd.DataFrame):
+            A DataFrame containing generation results with an index of 'stor' (storage name)
+            and other relevant data.
+
+        storages_generation_efficiency (dict[int, float]):
+            A dictionary mapping storage IDs (int) to their corresponding efficiency factors (float).
+
+        storages_idxs (dict[int, str]):
+            A dictionary mapping storage IDs (int) to human-readable storage names (str).
+
+    Returns:
+        dict[str, pd.DataFrame]:
+            A dictionary where each key is a storage name (str), and each value is a DataFrame
+            with the generation results adjusted by the storage's efficiency factor.
+    """
+    storage_name_storage_gen_eff_dict = {
+        storages_idxs[idx]: storages_generation_efficiency[idx]
+        for idx in storages_generation_efficiency
+    }
+    generation_dict = {
+        stor_name: df.reset_index(["stor"], drop=True).unstack().droplevel(0, axis=1)
+        * storage_name_storage_gen_eff_dict[stor_name]
+        for stor_name, df in generation_result_df.groupby("stor")
+    }
+    return generation_dict

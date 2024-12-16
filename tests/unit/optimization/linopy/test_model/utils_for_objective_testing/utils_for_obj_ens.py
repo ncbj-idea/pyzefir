@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import numpy as np
 
 from pyzefir.optimization.linopy.objective_builder.ens_penalty_builder import (
     EnsPenaltyCostObjectiveBuilder,
@@ -30,16 +31,26 @@ def objective_ens(
     if not parameters.scenario_parameters.ens_penalty_cost:
         return 0.0
 
-    ens = EnsPenaltyCostObjectiveBuilder(
+    et_penalty_cost = EnsPenaltyCostObjectiveBuilder(
         indices, parameters, None, None
     )._get_ens_penalty()
 
-    return sum(
-        [
-            results.bus_results.bus_ens[bus][year].sum()
-            * ens
+    expr = 0.0
+    for et, penalty_cost in et_penalty_cost.items():
+        bus_et = np.array(
+            list(
+                {
+                    indices.BUS.mapping[bus]
+                    for bus, e_type in parameters.bus.et.items()
+                    if et == e_type
+                }
+            )
+        )
+        expr += sum(
+            sum(results.bus_results.bus_ens[bus][year].sum() for bus in bus_et)
+            * penalty_cost
             * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()[year]
-            for bus in indices.BUS.ii
-            for year in results.bus_results.bus_ens[bus].columns
-        ]
-    )
+            for year in indices.Y.ii
+        )
+
+    return expr

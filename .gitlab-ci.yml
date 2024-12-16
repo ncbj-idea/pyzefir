@@ -1,0 +1,13 @@
+---
+include:
+  - project: cae/zefirlib/pyzefir-cicd
+    file: pyzefir-gitlab-cicd.yml
+
+
+fast_integration_tests:
+  extends: ipy_test_tox
+  script:
+    - tox -e fast_integration
+
+variables:
+  IPY_BUMPVERSION_AUTO: 'true'

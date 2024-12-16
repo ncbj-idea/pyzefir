@@ -24,12 +24,28 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class LBSParameters(ModelParameters):
+    """
+    Class representing the local balancing stack parameters.
+
+    This class holds parameters related to local balancing stacks, including the buses
+    connected to these stacks and the aggregated consumer indices they are linked to.
+    It is crucial for managing local balancing in energy distribution networks.
+    """
+
     def __init__(
         self,
         local_balancing_stacks: NetworkElementsDict,
         aggregated_consumers: NetworkElementsDict,
         indices: Indices,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - local_balancing_stacks (NetworkElementsDict): The dictionary of local balancing stacks.
+            - aggregated_consumers (NetworkElementsDict): The dictionary of aggregated consumers.
+            - indices (Indices): The indices used to map local balancing stack properties.
+        """
         self.bus_out = self.get_bus_out(
             local_balancing_stacks, indices.BUS, indices.LBS
         )
@@ -46,6 +62,17 @@ class LBSParameters(ModelParameters):
         bus_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> dict[int, dict[str, int]]:
+        """
+        Returns outgoing buses connected to the local balancing stack.
+
+        Args:
+            - local_balancing_stacks (NetworkElementsDict[LocalBalancingStack]): local balancing stack
+            - bus_idx (IndexingSet): index of bus
+            - lbs_idx (IndexingSet): index of local balancing stack
+
+        Returns:
+            - dict[int, dict[str, int]]: buses connected to the lbs
+        """
         return {
             ii: {
                 et: bus_idx.inverse[bus]
@@ -60,6 +87,17 @@ class LBSParameters(ModelParameters):
         aggr_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> dict[int, int]:
+        """
+        Returns connected aggregators to the local balancing stack.
+
+        Args:
+            - aggregated_consumers (NetworkElementsDict[AggregatedConsumer]): aggregated consumers
+            - aggr_idx (IndexingSet): index of aggregator
+            - lbs_idx (IndexingSet): index of local balancing stack
+
+        Returns:
+            - dict[int, int]: dict of connected aggregators to the lbs
+        """
         return {
             lbs_idx.inverse[lbs_name]: aggr_id
             for aggr_id, aggr_name in aggr_idx.mapping.items()
@@ -72,6 +110,17 @@ class LBSParameters(ModelParameters):
         bus_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> dict[int, dict[str, set[int]]]:
+        """
+        Returns buses connected to the local balancing stack.
+
+        Args:
+            - local_balancing_stacks (NetworkElementsDict[LocalBalancingStack]): local balancing stacks
+            - bus_idx (IndexingSet): index of bus
+            - lbs_idx (IndexingSet): index of local balancing stack
+
+        Returns:
+            - dict[int, dict[str, set[int]]]: dict of buses connected to the lbs
+        """
         return {
             ii: {
                 et: {bus_idx.inverse[bus] for bus in buses}

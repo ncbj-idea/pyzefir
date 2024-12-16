@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -118,10 +102,12 @@ def test_demand_chunks(
         for period in dch_param.periods[dem_idx]:
             p_start, p_end = period[0], period[-1]
             h_range = range(p_start, p_end + 1)
-            from_gen = _get_from_gen(
-                gen_dch, energy_type, dem_name, gen_names, h_range, years
+            from_gen = _demand_chunk_generation_sum(
+                gen_dch, dem_name, gen_names, h_range, years
             )
-            from_stor = _get_from_stor(stor_dch, dem_name, stor_names, h_range, years)
+            from_stor = _demand_chunk_generation_sum(
+                stor_dch, dem_name, stor_names, h_range, years
+            )
             demand = np.array(dem_val[row_idx][: len(engine.indices.Y.ord)])
             row_idx += 1
             assert np.all(abs(from_gen + from_stor - demand) < TOL)
@@ -136,38 +122,18 @@ def _load_tags_to_network(
         set_network_elements_parameters(network.storages, {unit: {"tags": unit_tag}})
 
 
-def _get_from_gen(
-    gen_dch_et: dict[str, dict[str, dict[str, pd.DataFrame]]],
-    energy_type: str,
+def _demand_chunk_generation_sum(
+    gen_dch: dict[str, dict[str, pd.DataFrame]],
     dem_name: str,
-    gen_names: set[str],
+    unit_names: set[str],
     h_range: range,
     years: np.ndarray,
 ) -> np.ndarray:
     return np.array(
         [
             sum(
-                gen_dch_et[energy_type][dem_name][gen_name][y][h]
-                for gen_name in gen_names
-                for h in h_range
-            )
-            for y in years
-        ]
-    )
-
-
-def _get_from_stor(
-    stor_dch: dict[str, dict[str, pd.DataFrame]],
-    dem_name: str,
-    stor_names: set[str],
-    h_range: range,
-    years: np.ndarray,
-) -> np.ndarray:
-    return np.array(
-        [
-            sum(
-                stor_dch[dem_name][stor_name][y][h]
-                for stor_name in stor_names
+                gen_dch[unit_name][dem_name][y][h]
+                for unit_name in unit_names
                 for h in h_range
             )
             for y in years

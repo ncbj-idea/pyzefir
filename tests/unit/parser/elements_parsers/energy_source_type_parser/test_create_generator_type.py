@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from typing import Literal
 
 import numpy as np
@@ -56,6 +40,7 @@ from tests.unit.parser.elements_parsers.utils import assert_equal
                 "minimal_power_utilization": pd.Series(
                     data=[0.2] * 24, index=np.arange(24)
                 ),
+                "disable_dump_energy": True,
             },
             id="no_optional_parameters_provided",
         ),
@@ -73,8 +58,9 @@ def test_create_generator_type(
             "life_time",
             "power_utilization",
             "minimal_power_utilization",
+            "disable_dump_energy",
         ],
-        data=[name, 0, 15, 0.9, 0.2],
+        data=[name, 0, 15, 0.9, 0.2, True],
     )
     energy_source_type_df = (
         energy_source_type_parser._prepare_energy_source_parameters()

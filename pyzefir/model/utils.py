@@ -1,20 +1,6 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import StrEnum, auto, unique
 from types import UnionType
 
 import numpy as np
@@ -35,6 +21,7 @@ class NetworkConstants:
     generator_capacity_cost: str = "brutto"
     binary_fraction: bool = False
     ens_penalty_cost: float = 100
+    ens_energy_penalization: dict[str, float] = field(default_factory=dict)
 
 
 def _check_if_series_has_numeric_values(series: pd.Series) -> bool:
@@ -194,3 +181,16 @@ def check_interval(
         (is_upper_bound_closed and value <= upper_bound)
         or (not is_upper_bound_closed and value < upper_bound)
     )
+
+
+@unique
+class AllowedStorageGenerationLoadMethods(StrEnum):
+    milp = auto()
+
+    @classmethod
+    def has_value(cls, value: str) -> bool:
+        return value in cls._value2member_map_
+
+    @classmethod
+    def all_members(cls) -> list[str]:
+        return list(cls.__members__)

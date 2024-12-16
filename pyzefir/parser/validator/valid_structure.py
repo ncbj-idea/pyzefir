@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from dataclasses import dataclass
 from typing import Type
@@ -32,14 +16,44 @@ class InvalidStructureException(Exception):
 
 @dataclass
 class DatasetConfig:
+    """
+    Represents the configuration for a dataset, including its structure and types.
+
+    This class is used to define the necessary attributes of a dataset, including
+    the columns it contains, the dataset name, and any default types that are applicable.
+    This structure helps ensure that the dataset adheres to the expected format and types,
+    which is essential for validation and processing in data handling tasks.
+    """
+
     columns: ColumnType
+    """A mapping of column names to their respective data types."""
     dataset_name: str
+    """The name of the dataset."""
     default_type: set[DataFramesColumnsType] | None = None
+    """A set of default types for dynamic columns, if applicable. Defaults to None."""
 
 
 def get_dataset_config_from_categories(
     data_category: str, dataset_name: str
 ) -> DatasetConfig:
+    """
+    Retrieves the dataset configuration for a specified data category and dataset name.
+
+    This function searches through a predefined validation structure to find the appropriate
+    `DatasetConfig` for the given category and dataset name. If a match is not found, it raises
+    an exception to indicate that the requested configuration is invalid or missing.
+
+    Args:
+        - data_category (str): The category of the dataset to retrieve the configuration for.
+        - dataset_name (str): The specific name of the dataset within the category.
+
+    Returns:
+        - DatasetConfig: The configuration object corresponding to the specified category and dataset.
+
+    Raises:
+        - InvalidStructureException: If the specified category is not found or if no matching dataset
+            configuration exists for the provided category and name.
+    """
     dataset_validation_structure: dict[str, list[DatasetConfig] | DatasetConfig] = {
         DataCategories.FUELS: [
             DatasetConfig(
@@ -70,6 +84,7 @@ def get_dataset_config_from_categories(
                     "life_time": int,
                     "power_utilization": float,
                     "minimal_power_utilization": float,
+                    "disable_dump_energy": bool,
                 },
                 default_type={bool},
             ),
@@ -125,7 +140,15 @@ def get_dataset_config_from_categories(
                     "power_utilization": float,
                 },
                 default_type={bool},
-            )
+            ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.STORAGE_CALCULATION_SETTINGS,
+                columns={
+                    "storage_type": str,
+                    "generation_load_method": str,
+                },
+                default_type={bool},
+            ),
         ],
         DataCategories.INITIAL_STATE: [
             DatasetConfig(
@@ -230,9 +253,12 @@ def get_dataset_config_from_categories(
                     "name": str,
                     "compensation_factor": float,
                     "balancing_period_len": int,
-                    "penalization": float,
+                    "penalization_minus": float,
+                    "penalization_plus": float,
                     "relative_shift_limit": float,
                     "abs_shift_limit": float,
+                    "hourly_relative_shift_plus_limit": float,
+                    "hourly_relative_shift_minus_limit": float,
                 },
             ),
             DatasetConfig(
@@ -368,6 +394,13 @@ def get_dataset_config_from_categories(
                     "left_coeff": float,
                 },
             ),
+            DatasetConfig(
+                dataset_name=DataSubCategories.ENS_PENALIZATION,
+                columns={
+                    "energy_type": str,
+                    "penalization": float,
+                },
+            ),
         ],
         DataCategories.DEMAND: DatasetConfig(
             dataset_name=dataset_name, columns={"hour_idx": int}, default_type={float}
@@ -427,4 +460,15 @@ def get_dataset_config_from_categories(
 
 
 def get_dataset_reference(category: str, dataset_name: str) -> str:
+    """
+    Constructs a reference string for a given category and dataset name.
+
+    Args:
+        - category (str): The category of the dataset.
+        - dataset_name (str): The name of the dataset within the category.
+
+    Returns:
+        - str: A formatted string that represents the dataset reference in the form
+            "category / dataset_name".
+    """
     return f"{category} / {dataset_name}"

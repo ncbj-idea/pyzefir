@@ -30,12 +30,13 @@ _logger = logging.getLogger(__name__)
 
 class NetworkAggregator:
     """
-    Class that aggregates network structure based on the defined aggregation scheme.
+    Aggregates a network structure based on a defined time-based aggregation scheme.
 
-    Args:
-        n_years (int): number of years in the network structure.
-        n_years_aggregation (int): number of years to aggregate.
-        year_sample (np.ndarray[int], optional): array with years to sample. Defaults to None.
+    This class is designed to simplify complex network structures by reducing the number of years
+    through aggregation, based on a user-defined method and time period. The aggregation process
+    adjusts the build time, lifetime, and other key attributes of the network components to
+    reflect the combined data. It also provides functionality to adjust network constants and
+    configuration parameters in line with the aggregated structure.
     """
 
     def __init__(
@@ -45,6 +46,14 @@ class NetworkAggregator:
         year_sample: np.ndarray[int] | None = None,
         aggregation_method: str = "last",
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - n_years (int): number of years in the network structure.
+            - n_years_aggregation (int): number of years to aggregate.
+            - year_sample (np.ndarray[int], optional): array with years to sample. Defaults to None.
+        """
         if aggregation_method.upper() not in AGGREGATION_SCHEMAS.__dict__:
             raise ValueError(f"Aggregation method {aggregation_method} not supported.")
 
@@ -56,13 +65,36 @@ class NetworkAggregator:
         self._year_sample = year_sample
         self._aggregates, self._new_year_aggregation = self._generate_aggregates()
 
+    def _adjust_build_and_life_time(self, network: Network) -> None:
+        """
+        Adjusts the build and life time of the network based on n_years_aggregation parameter.
+
+        Args:
+            - network (Network): network structure to adjust.
+        """
+        if hasattr(network, "generator_types"):
+            for gen_type in network.generator_types.values():
+                gen_type.build_time = int(
+                    gen_type.build_time / self._n_years_aggregation
+                )
+                gen_type.life_time = int(gen_type.life_time / self._n_years_aggregation)
+
+        if hasattr(network, "storage_types"):
+            for key, stor_type in network.storage_types.items():
+                stor_type.build_time = int(
+                    stor_type.build_time / self._n_years_aggregation
+                )
+                stor_type.life_time = int(
+                    stor_type.life_time / self._n_years_aggregation
+                )
+
     def _generate_aggregates(self) -> tuple[pd.Series, pd.Series]:
         """
         Based on the year sample and the n_years_aggregation parameter, generates the year aggregates.
 
         Returns:
-            pd.Series: Series with years as an index and aggregates as values.
-            pd.Series: Series with aggregates as an index and number of years in each aggregate as values.
+            - pd.Series: Series with years as an index and aggregates as values.
+            - pd.Series: Series with aggregates as an index and number of years in each aggregate as values.
         """
         n_years_aggr = self._n_years_aggregation
 
@@ -73,7 +105,7 @@ class NetworkAggregator:
 
         aggregates = year_sample.copy()
 
-        aggregates.iloc[1:-1] = aggregates.iloc[1:-1].index.map(
+        aggregates.iloc[1:] = aggregates.iloc[1:].index.map(
             lambda x: int((x - 1) / n_years_aggr) * n_years_aggr + 1
         )
 
@@ -89,7 +121,7 @@ class NetworkAggregator:
         The aggregation is done in passed network object.
 
         Args:
-            network (Network): network structure to aggregate.
+            - network (Network): network structure to aggregate.
 
         """
         if self._n_years_aggregation > 1:
@@ -99,6 +131,8 @@ class NetworkAggregator:
                     self._aggregate_property(data_property, item.agg_func)
 
             network.constants = self._generate_network_constants(network.constants)
+
+            self._adjust_build_and_life_time(network)
 
             _logger.info("Network structure aggregation: Done.")
 
@@ -133,10 +167,10 @@ class NetworkAggregator:
         Generates the network constants based on the aggregated network structure.
 
         Args:
-            network_constants (NetworkConstants): network constants to update.
+            - network_constants (NetworkConstants): network constants to update.
 
         Returns:
-            NetworkConstants: New network constants.
+            - NetworkConstants: New network constants.
         """
         return NetworkConstants(
             **network_constants.__dict__
@@ -150,9 +184,10 @@ class NetworkAggregator:
         Generates the configuration parameters based on the aggregated network structure.
 
         Args:
-            config_params (ConfigParams): configuration parameters to update.
+            - config_params (ConfigParams): configuration parameters to update.
+
         Returns:
-            ConfigParams: New configuration parameters.
+            - ConfigParams: New configuration parameters.
         """
         return (
             ConfigParams(
@@ -175,6 +210,6 @@ class NetworkAggregator:
         Returns the binding between the original years and the aggregated years.
 
         Returns:
-            pd.Series: Series with original years as an index and aggregated years as values.
+            - pd.Series: Series with original years as an index and aggregated years as values.
         """
         return self._new_year_aggregation.cumsum() - 1

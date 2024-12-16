@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements import TransmissionFee
@@ -21,10 +5,33 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class TransmissionFeeParser(AbstractElementParser):
+    """
+    Parses transmission fee data from a DataFrame to create TransmissionFee objects.
+
+    This class transforms a DataFrame containing transmission fees indexed by hour into
+    a tuple of TransmissionFee instances, where each instance represents the fee associated
+    with a specific transmission line.
+    """
+
     def __init__(self, transmission_fee_df: pd.DataFrame) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - transmission_fee_df (pd.DataFrame): DataFrame containing transmission fee information, indexed by hour.
+        """
         self.transmission_fee_df = transmission_fee_df
 
     def create(self) -> tuple[TransmissionFee, ...]:
+        """
+        Creates TransmissionFee objects from the transmission fee DataFrame.
+
+        This method sets the index of the transmission fee DataFrame to the hour index and
+        creates a tuple of TransmissionFee instances for each column in the DataFrame.
+
+        Returns:
+            - tuple[TransmissionFee, ...]: A tuple of TransmissionFee instances created from the input DataFrame.
+        """
         self.transmission_fee_df.set_index("hour_idx", inplace=True)
 
         return tuple(

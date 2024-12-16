@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -367,13 +351,13 @@ def lbs_ee(local_ee_bus: Bus) -> LocalBalancingStack:
 
 
 @pytest.fixture
-def lbs2(local_heat_bus: Bus, local_ee_bus: Bus) -> LocalBalancingStack:
+def lbs2(local_heat_bus2: Bus, local_ee_bus2: Bus) -> LocalBalancingStack:
     """
     Local balancing stack connected to the grid and heating system (no local energy sources)
     """
     return LocalBalancingStack(
         name="lbs2",
-        buses_out={HEAT: local_heat_bus.name, EE: local_ee_bus.name},
+        buses_out={HEAT: local_heat_bus2.name, EE: local_ee_bus2.name},
         buses={EE: {"local_ee_bus2"}, HEAT: {"local_heat_bus2"}},
     )
 

@@ -23,17 +23,42 @@ from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
 
 
 class FractionVariables(VariableGroup):
-    """Fraction variables"""
+    """
+    Class representing the fraction variables for local balancing stacks.
+
+    This class encapsulates the fraction variables that represent the proportion of
+    local balancing stacks (LBS) allocated to each aggregated consumer
+    over different years. These variables can be binary or continuous based on the
+    specified parameters.
+    """
 
     def __init__(self, model: Model, indices: Indices, binary_fraction: bool = False):
-        self.fraction = model.add_variables(
-            lower=xr.DataArray(
-                np.full((len(indices.AGGR), len(indices.LBS), len(indices.Y)), 0),
-                dims=["aggr", "lbs", "year"],
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - model (Model): The optimization model to which the variables will be added.
+            - indices (Indices): The indices used for mapping aggregated consumers,
+              local balancing stacks, and years.
+            - binary_fraction (bool, optional): A flag indicating whether the fraction
+              variables should be binary. Defaults to False (continuous variables).
+        """
+        if binary_fraction:
+            self.fraction = model.add_variables(
                 coords=[indices.AGGR.ii, indices.LBS.ii, indices.Y.ii],
-                name="fraction",
-            ),
-            name="FRACTION",
-            binary=binary_fraction,
-        )
+                dims=["aggr", "lbs", "year"],
+                name="FRACTION",
+                binary=binary_fraction,
+            )
+        else:
+            self.fraction = model.add_variables(
+                lower=xr.DataArray(
+                    np.full((len(indices.AGGR), len(indices.LBS), len(indices.Y)), 0),
+                    dims=["aggr", "lbs", "year"],
+                    coords=[indices.AGGR.ii, indices.LBS.ii, indices.Y.ii],
+                    name="fraction",
+                ),
+                name="FRACTION",
+                binary=binary_fraction,
+            )
         """ fraction of local balancing stack in a given aggregated consumer """

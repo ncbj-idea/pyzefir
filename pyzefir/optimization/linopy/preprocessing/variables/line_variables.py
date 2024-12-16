@@ -23,9 +23,23 @@ from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
 
 
 class LineVariables(VariableGroup):
-    """Line variables"""
+    """
+    Class representing the line variables.
 
-    def __init__(self, model: Model, indices: Indices):
+    This class encapsulates the variables associated with transmission lines in the
+    energy network, including flow variables over time. These variables are crucial for
+    modeling the energy transfer capacity and constraints of the lines connecting different
+    nodes in the network.
+    """
+
+    def __init__(self, model: Model, indices: Indices) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - model (Model): The optimization model to which the line variables will be added.
+            - indices (Indices): The indices used for mapping line, hour, and year parameters.
+        """
         self.flow = model.add_variables(
             lower=xr.DataArray(
                 np.full((len(indices.LINE), len(indices.H), len(indices.Y)), 0),

@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from collections.abc import MutableMapping
 from typing import Generic, Iterator, TypeVar
@@ -141,7 +126,13 @@ class NetworkElementsDict(MutableMapping, Generic[TNetworkDictElement]):
 
 class Network:
     """
-    A class representing a network.
+    A class representing the structure and elements of an energy network.
+
+    This class manages various network components such as buses, generators, storages, lines, and fees, while
+    also handling properties like energy and emission types. It provides methods to add and validate different
+    elements of the network, ensuring that each component adheres to the network’s configuration requirements.
+    The `Network` class also supports structured storage of network constants and elements, making it adaptable
+    to various energy system simulations.
     """
 
     def __init__(

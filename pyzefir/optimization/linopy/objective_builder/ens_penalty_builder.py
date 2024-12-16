@@ -24,52 +24,106 @@ _logger = logging.getLogger(__name__)
 
 
 class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class for building the Energy Not Supplied (ENS) penalty cost objective.
+
+    This class calculates the penalty cost associated with ENS in the energy system model,
+    ensuring that any penalties related to unmet energy demand are properly accounted for.
+    If no ENS penalty is defined in the parameters, it returns 0. The penalty is derived
+    from various cost components such as variable costs, DSR costs, capex, and opex.
+    """
+
     def build_expression(self) -> LinearExpression | float:
+        """
+        Builds the ENS penalty cost expression if an ENS penalty is defined.
+
+        This method either returns the ENS penalty cost expression, built from various
+        cost factors associated with ENS penalties, or returns 0 if no such penalty
+        is defined in the model's parameters.
+
+        Returns:
+            - LinearExpression | float: ENS penalty cost expression or 0.0 if not defined.
+        """
         if self._ens_penalty_defined():
             return self.build_ens_penalty_expression()
         else:
             return 0.0
 
+    def _h_scale(self) -> float:
+        """Alias for hourly scale from scenario parameters."""
+        return self.parameters.scenario_parameters.hourly_scale
+
     @staticmethod
     def _get_max_or_zero(data: dict[str | int, np.ndarray | float]) -> float:
+        """
+        Returns the maximum value of provided data, or 0 if data is empty.
+
+        Args:
+            - data (dict[str | int, np.ndarray | float]): Input data for which to compute max.
+
+        Returns:
+            - float: Maximum value in the data, or 0.0 if empty.
+        """
         result = np.array(list(data.values()))
         return result.max(initial=0.0)
 
-    @property
-    def _h_scale(self) -> float:
-        """alias for hourly scale"""
-        return self.parameters.scenario_parameters.hourly_scale
-
     def _ens_penalty_defined(self) -> bool:
-        """true if the value of ens_penalty_cost is not np.nan (if it was specified by the user)"""
-        return not np.isnan(self.parameters.scenario_parameters.ens_penalty_cost)
+        """Returns True if the ENS penalty cost dictionary is not empty."""
+        return bool(self.parameters.scenario_parameters.ens_penalty_cost)
 
     def build_ens_penalty_expression(self) -> LinearExpression | float:
-        _logger.info("Building ens penalty cost objective...")
-        penalty_cost = self._get_ens_penalty()
-        _logger.info("Ens penalty set to {}".format(penalty_cost))
-        _logger.info("Ens penalty cost objective: Done")
-        return (
-            self.variables.bus.bus_ens
-            * penalty_cost
-            * self.indices.years_aggregation_array
-        ).sum()
+        """
+        Builds the ENS penalty cost expression based on energy types and penalty costs.
 
-    def _get_ens_penalty(self) -> float:
-        ens_penalty_multiplier = self.parameters.scenario_parameters.ens_penalty_cost
-        return (
-            max(
-                self._get_max_var_cost(),
-                self._get_max_dsr_cost(),
-                self._get_max_opex_cost(),
-                self._get_max_capex_cost(),
-                self._get_max_transmission_fee_cost(),
+        This method computes the ENS penalty cost by identifying the energy types (ETs)
+        associated with buses, applying penalty coefficients, and scaling them by various
+        parameters such as the year aggregation array.
+
+        Returns:
+            - LinearExpression | float: Computed ENS penalty cost expression.
+        """
+        _logger.info("Building ens penalty cost objective...")
+        _logger.info("Ens penalty cost objective: Done")
+        et_penalty_cost = self._get_ens_penalty()
+        expr = 0.0
+        for et, penalty_cost in et_penalty_cost.items():
+            bus_et = np.array(
+                [bus for bus, e_type in self.parameters.bus.et.items() if et == e_type]
             )
-            * ens_penalty_multiplier
+            expr += (
+                self.variables.bus.bus_ens.isel(bus=bus_et)
+                * penalty_cost
+                * self.indices.years_aggregation_array
+            ).sum()
+        _logger.info("Ens penalty set to {}".format(et_penalty_cost))
+        return expr
+
+    def _get_ens_penalty(self) -> dict[str, float]:
+        """
+        Retrieves ENS penalty costs for each energy type based on base costs.
+
+        Returns:
+            - dict[str, float]: ENS penalty cost for each energy type.
+        """
+        base_cost = max(
+            self._get_max_var_cost(),
+            self._get_max_dsr_cost(),
+            self._get_max_opex_cost(),
+            self._get_max_capex_cost(),
+            self._get_max_transmission_fee_cost(),
         )
+        return {
+            energy_type: ens_penalty_coefficient * base_cost
+            for energy_type, ens_penalty_coefficient in self.parameters.scenario_parameters.ens_penalty_cost.items()
+        }
 
     def _get_max_var_cost(self) -> float:
-        """get max varying cost (fuel cost + env cost) per one energy unit produced"""
+        """
+        Retrieves the maximum variable cost per unit of energy produced.
+
+        Returns:
+            - float: Maximum variable cost per unit of energy.
+        """
         result = 0.0
         for fuel_idx in self.indices.FUEL.mapping:
             result += self._fuel_max_emission_cost_per_energy_unit(
@@ -78,15 +132,31 @@ class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
         return result
 
     def _fuel_cost_per_energy_unit(self, fuel_idx: int) -> float:
-        """get fuel cost per one unit of energy (energy in fuel)"""
+        """
+        Retrieves fuel cost per unit of energy for the specified fuel.
+
+        Args:
+            - fuel_idx (int): Index of the fuel type.
+
+        Returns:
+            - float: Fuel cost per unit of energy.
+        """
         fuel_energy_per_unit = self.parameters.fuel.energy_per_unit[fuel_idx]
         fuel_cost_per_unit = self.parameters.fuel.unit_cost[fuel_idx]
         return (
             fuel_cost_per_unit.max(initial=0.0) / fuel_energy_per_unit
-        ) * self._h_scale
+        ) * self._h_scale()
 
     def _fuel_max_emission_cost_per_energy_unit(self, fuel_idx: int) -> float:
-        """max amount of emission fees that needs to be paid from one unit of end energy (energy in fuel)"""
+        """
+        Retrieves the maximum emission cost per unit of energy for the specified fuel.
+
+        Args:
+            - fuel_idx (int): Index of the fuel type.
+
+        Returns:
+            - float: Maximum emission cost per unit of energy.
+        """
         result = 0.0
         energy_per_unit = self.parameters.fuel.energy_per_unit[fuel_idx]
         for emission_type_idx, emission_per_unit in self.parameters.fuel.u_emission[
@@ -103,27 +173,52 @@ class EnsPenaltyCostObjectiveBuilder(ObjectiveBuilder):
                 result += (
                     (energy_per_unit / emission_per_unit)
                     * max_emission_cost
-                    * self._h_scale
+                    * self._h_scale()
                 )
 
         return result
 
     def _get_max_capex_cost(self) -> float:
-        """max capex cost taken from all generators and storage types"""
-        return self._get_max_or_zero(
-            self.parameters.tgen.capex | self.parameters.tstor.capex
+        """
+        Retrieves the maximum capital expenditure (capex) cost from generators and storage.
+
+        Returns:
+            - float: Maximum capex cost.
+        """
+        return max(
+            self._get_max_or_zero(self.parameters.tgen.capex),
+            self._get_max_or_zero(self.parameters.tstor.capex),
         )
 
     def _get_max_opex_cost(self) -> float:
-        """max opex cost taken from all generators and storage types"""
-        return self._get_max_or_zero(
-            self.parameters.tgen.opex | self.parameters.tstor.opex
+        """
+        Retrieves the maximum operational expenditure (opex) cost from generators and storage.
+
+        Returns:
+            - float: Maximum opex cost.
+        """
+        return max(
+            self._get_max_or_zero(self.parameters.tgen.opex),
+            self._get_max_or_zero(self.parameters.tstor.opex),
         )
 
     def _get_max_dsr_cost(self) -> float:
-        """max dsr cost taken from all generators and storage types (scaled by hourly_scale)"""
-        return self._get_max_or_zero(self.parameters.dsr.penalization) * self._h_scale
+        """
+        Retrieves the maximum demand-side response (DSR) cost scaled by hourly scale.
+
+        Returns:
+            - float: Maximum DSR cost.
+        """
+        return (
+            self._get_max_or_zero(self.parameters.dsr.penalization_minus)
+            * self._h_scale()
+        )
 
     def _get_max_transmission_fee_cost(self) -> float:
-        """max transmission fee value (scaled by hourly_scale)"""
-        return self._get_max_or_zero(self.parameters.tf.fee) * self._h_scale
+        """
+        Retrieves the maximum transmission fee cost scaled by hourly scale.
+
+        Returns:
+            - float: Maximum transmission fee cost.
+        """
+        return self._get_max_or_zero(self.parameters.tf.fee) * self._h_scale()

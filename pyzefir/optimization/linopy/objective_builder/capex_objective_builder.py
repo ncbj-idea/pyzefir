@@ -34,12 +34,46 @@ _logger = logging.getLogger(__name__)
 
 
 class CapexObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class responsible for constructing the capital expenditure (capex)
+    objective for energy generators and storage systems.
+
+    This class builds the capex objective by aggregating costs associated
+    with global (non-location-specific) and local (location-based) assets.
+    It calculates capex for both types of assets using various parameters
+    such as capacity increases, lifetime, and discount rates, ensuring that
+    the correct amortization and year-based factors are applied.
+    """
 
     def build_expression(self) -> LinearExpression:
+        """
+        Builds the local capital expenditure objective for generators and
+        storage technologies at specific locations.
+
+        Local capex accounts for investments in assets that are tied to
+        specific locations or aggregations. This method calculates capex
+        costs for each asset type, applying location-specific multipliers
+        and other relevant parameters such as technology type and capacity.
+
+        Returns:
+            - LinearExpression: The total local capex for generators and storages.
+        """
         _logger.info("Building capex objective...")
         return self.global_capex() + self.local_capex()
 
     def local_capex(self) -> LinearExpression:
+        """
+        Builds the local capital expenditure objective for generators and
+        storage technologies at specific locations.
+
+        Local capex accounts for investments in assets that are tied to
+        specific locations or aggregations. This method calculates capex
+        costs for each asset type, applying location-specific multipliers
+        and other relevant parameters such as technology type and capacity.
+
+        Returns:
+            - LinearExpression: The total local capex for generators and storages.
+        """
         generator_capex = self._local_capex(
             tcap_plus=self.variables.tgen.tcap_plus,
             unit_type_param=self.parameters.tgen,
@@ -58,6 +92,19 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         return generator_capex + storage_capex
 
     def global_capex(self) -> LinearExpression:
+        """
+        Builds the global capital expenditure objective for generators and
+        storage systems.
+
+        Global capex represents investments in technologies that are not
+        tied to specific locations. The method calculates total investment
+        costs for such global technologies by considering parameters such
+        as capacity increases, lifetime, and multipliers, adjusted for
+        discount rates and other factors across multiple years.
+
+        Returns:
+            - LinearExpression: The total global capex for generators and storages.
+        """
         generator_capex = self._global_capex(
             cap_plus=self.variables.gen.cap_plus,
             unit_type_param=self.parameters.tgen,
@@ -90,16 +137,19 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         multipliers: dict[int, float] | None = None,
     ) -> LinearExpression | float:
         """
-        Total investment cost for global (non-lbs) technologies for all years
+        Computes the total global investment cost for non-location-based (non-lbs) technologies over multiple years.
 
         Args:
-            cap_plus (Variable): capex increase labeled by unit index
-            unit_type_param (GeneratorTypeParameters | StorageTypeParameters): technology type index
-            unit_type_idx: dict[int, int]: technology index of a given unit index
-            non_lbs_unit_idxs: set[int]: set of non-lbs (global) units
+            cap_plus (Variable): Capex increase variable indexed by unit.
+            unit_type_param (GeneratorTypeParameters | StorageTypeParameters):
+                Parameters describing the technology type (generators or storages).
+            unit_type_idx (dict[int, int]): Mapping of unit index to technology type index.
+            non_lbs_unit_idxs (set[int]): Set of indices corresponding to non-lbs (global) units.
+            multipliers (dict[int, float] | None): Optional multipliers to adjust capex for
+                specific technology types. Defaults to None.
 
         Returns:
-            Linear expression of capex cost
+            - LinearExpression | float: Expression representing the total global capex.
 
         """
         disc_rate = self.expr.discount_rate(
@@ -138,23 +188,24 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         y_idxs: IndexingSet,
     ) -> LinearExpression | float:
         """
-        Capex for a given year for global (non-lbs) technologies
-        Takes a single year index as a single argument s_idx, calculates the corresponding capex cost in this year
-        The function also requires the whole set of years, given by y_idxs
+        Computes the yearly capex for a global (non-lbs) technology.
 
+        This method calculates the investment cost for a single year, for
+        a specific technology unit, taking into account the amortization
+        over the lifetime of the technology. The calculation is based on
+        yearly capacity increases, discount rates, and amortization indicators.
 
         Args:
-            capex (ndarray): yearly capex cost parameter
-            cap_plus (Variable): capex increase labeled by unit index
-            disc_rate (ndarray): yearly discount rate
-            lt (int): life time of a given technology
-            s_idx (int): single year index, specifying the year for capex calculation
-            ut_idx (int): technology type index
-            aggr_idx (int): index of a given aggregate
-            y_idxs (IndexingSet): set of years
+            - capex (np.ndarray): Yearly capex cost array.
+            - cap_plus (Variable): Variable representing capex increase for each unit.
+            - disc_rate (np.ndarray): Yearly discount rate array.
+            - lt (int): Lifetime of the technology.
+            - s_idx (int): Index of the year for which to calculate the capex.
+            - u_idx (int): Index of the technology unit.
+            - y_idxs (IndexingSet): Set of all year indices for which to calculate capex.
 
         Returns:
-            Linear expression of a yearly investment cost
+            - LinearExpression | float: Expression representing the yearly capex cost.
         """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
             lt=lt, yy=y_idxs
@@ -178,17 +229,18 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         multipliers: dict[int, float] | None = None,
     ) -> LinearExpression | float:
         """
-        Total investment cost for local (lbs) technologies for all years
+        Computes the total local investment cost for location-based (lbs) technologies over multiple years.
 
         Args:
-            tcap_plus (Variable): capex increase labeled by unit type index and aggregate index
-            unit_type_param (GeneratorTypeParameters | StorageTypeParameters): technology type index
-            unit_type_idx: dict[int, int]: technology index of a given unit index
-            non_lbs_unit_idxs: set[int]: set of non-lbs (global) units
+            - tcap_plus (Variable): Capex increase variable indexed by unit type and location.
+            - unit_type_param (GeneratorTypeParameters | StorageTypeParameters):
+                Parameters describing the technology type (generators or storages).
+            - aggr_map (dict[..., set]): Mapping of aggregate index to technology types.
+            - multipliers (dict[int, float] | None): Optional multipliers to adjust capex for
+                specific technology types. Defaults to None.
 
         Returns:
-            Linear expression of capex cost
-
+            - LinearExpression | float: Expression representing the total local capex.
         """
         disc_rate = self.expr.discount_rate(
             self.parameters.scenario_parameters.discount_rate
@@ -228,22 +280,26 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         y_idxs: IndexingSet,
     ) -> LinearExpression | float:
         """
-        Capex for a given year for local (lbs) technologies
-        Takes a single year index as a single argument s_idx, calculates the corresponding capex cost in this year
-        The function also requires the whole set of years, given by y_idxs
+        Computes the yearly capex for a location-based (lbs) technology.
+
+        This method calculates the investment cost for a single year for
+        location-specific assets, taking into account capacity expansions,
+        discount rates, amortization, and location-based factors. The yearly
+        cost is computed by amortizing the total capex over the asset's
+        lifetime and applying discount rates.
 
         Args:
-            capex (ndarray): yearly capex cost parameter
-            tcap_plus (Variable): capex increase labeled by unit type index and aggregate index
-            disc_rate (ndarray): yearly discount rate
-            lt (int): life time of a given technology
-            s_idx (int): single year index, specifying the year for capex calculation
-            ut_idx (int): technology type index
-            aggr_idx (int): index of a given aggregate
-            y_idxs (IndexingSet): set of years
+            - capex (np.ndarray): Yearly capex cost array.
+            - tcap_plus (Variable): Variable representing capex increase for each unit.
+            - disc_rate (np.ndarray): Yearly discount rate array.
+            - lt (int): Lifetime of the technology.
+            - s_idx (int): Index of the year for which to calculate the capex.
+            - ut_idx (int): Index of the technology type.
+            - aggr_idx (int): Aggregate index representing the location.
+            - y_idxs (IndexingSet): Set of all year indices for which to calculate capex.
 
         Returns:
-            Linear expression of a yearly investment cost
+            - LinearExpression | float: Expression representing the yearly capex cost.
         """
         am_indicator = CapexObjectiveBuilder._amortization_matrix_indicator(
             lt=lt, yy=y_idxs
@@ -265,16 +321,14 @@ class CapexObjectiveBuilder(ObjectiveBuilder):
         yy: IndexingSet,
     ) -> np.ndarray:
         """
-        Indicator matrix for y-index range in capex expression specifying the summation in capex expression
-        The resulting matrix is composed of 0 and 1; zero means there is no capex contribution from the corresponding
-        element
+        Generates the amortization matrix indicator for use in capex calculations.
 
         Args:
-            lt (int): unit lifetime
-            yy (IndexingSet): year indices
+            - lt (int): Lifetime of the asset.
+            - yy (IndexingSet): Set of year indices over which to calculate amortization.
 
         Returns:
-            np.ndarray
+            - np.ndarray: Amortization matrix indicator.
         """
 
         return np.array(

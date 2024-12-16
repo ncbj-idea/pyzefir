@@ -38,6 +38,9 @@ from tests.unit.optimization.linopy.test_model.utils_for_objective_testing.utils
 from tests.unit.optimization.linopy.test_model.utils_for_objective_testing.utils_for_obj_dsr import (
     objective_dsr,
 )
+from tests.unit.optimization.linopy.test_model.utils_for_objective_testing.utils_for_obj_ens import (
+    objective_ens,
+)
 from tests.unit.optimization.linopy.test_model.utils_for_objective_testing.utils_for_obj_opex import (
     objective_opex,
 )
@@ -160,4 +163,5 @@ def _test_objective(
     expected_obj += objective_opex(indices, parameters, results)
     expected_obj += objective_varcost(indices, parameters, results)
     expected_obj += objective_dsr(indices, parameters, results)
+    expected_obj += objective_ens(indices, parameters, results)
     assert abs(results.objective_value - expected_obj) < TOL

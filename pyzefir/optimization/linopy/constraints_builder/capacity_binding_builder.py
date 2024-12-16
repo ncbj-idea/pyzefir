@@ -24,12 +24,31 @@ _logger = logging.getLogger(__name__)
 
 
 class CapacityBindingBuilder(PartialConstraintsBuilder):
+    """
+    A class for building capacity binding constraints for generators in an energy model.
+
+    This class focuses on creating constraints that ensure generators grouped under
+    the same capacity binding name maintain equal capacity across specific time periods.
+    It defines a method for ramp-up constraints to enforce this binding.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Build constraints including:
+        - ramp up constraints
+        """
         _logger.info("Ramp constraints builder is working...")
         self.ramp_up_constraint()
         _logger.info("Ramp constraints builder is finished!")
 
     def ramp_up_constraint(self) -> None:
+        """
+        Establish capacity binding constraints for generators.
+
+        Groups generators by capacity binding names and ensures that
+        generators in the same group have equal capacity by adding
+        constraints between a reference generator and others in the group.
+        """
         grouped_gens = defaultdict(list)
         for gen_idx, cb_name in self.parameters.gen.capacity_binding.items():
             grouped_gens[cb_name].append(gen_idx)

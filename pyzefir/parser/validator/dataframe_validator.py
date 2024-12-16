@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from itertools import zip_longest
 from typing import Type
@@ -40,6 +24,14 @@ class DataFrameValidatorGroupException(
 
 
 class DataFrameValidator:
+    """
+    A class to validate the structure of a Pandas DataFrame against a defined expected structure.
+
+    This class ensures that the DataFrame's columns conform to the expected names and types specified
+    in a valid structure. It checks for both static and dynamic columns, collecting any discrepancies
+    as exceptions to facilitate debugging.
+    """
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -47,6 +39,16 @@ class DataFrameValidator:
         valid_structure: DatasetConfig,
         dataset_reference: str,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - df (pd.DataFrame): The DataFrame to be validated.
+              dataframe_structure (dict[str, str]): A mapping of DataFrame column names to their corresponding
+              pandas types.
+            - valid_structure (DatasetConfig): An object that defines the expected structure of the DataFrame.
+            - dataset_reference (str): A reference string for identifying the dataset being validated.
+        """
         self.dataframe_structure = self._translate_pandas_type_to_python_type(
             dataframe_structure, dataset_reference
         )
@@ -55,6 +57,16 @@ class DataFrameValidator:
         self._df = df
 
     def validate(self) -> None:
+        """
+        Validates the structure of the given DataFrame against the expected structure.
+
+        This method checks if the DataFrame's columns match the required structure and raises an exception
+        if any discrepancies are found. It gathers all validation errors and raises a grouped exception
+        for easier debugging.
+
+        Raises:
+            - DataFrameValidatorGroupException: If any validation errors occur during the process.
+        """
         exception_list: list[DataFrameValidatorException] = []
         self._check_dataframe_structure(exception_list=exception_list)
         if exception_list:
@@ -70,6 +82,15 @@ class DataFrameValidator:
         column_name: str,
         exception_list: list[DataFrameValidatorException],
     ) -> None:
+        """
+        Checks the validity of dynamic columns in the DataFrame.
+
+        Args:
+            - column_type (Type[DataFramesColumnsType] | None): The detected type of the dynamic column.
+            - column_name (str): The name of the dynamic column being checked.
+            - exception_list (list[DataFrameValidatorException]): A list to which any validation exceptions
+                will be appended.
+        """
         if not self.valid_structure.default_type:
             exception_list.append(
                 DataFrameValidatorException(
@@ -96,11 +117,20 @@ class DataFrameValidator:
         column_name: str,
     ) -> bool:
         """
-        Checks whether type_a is float and columns contains only NaN then return True
-        (we allowed empty columns at this step)
-        Checks whether type b matches type a.
-        Note the order of arguments i.e. int matches float,
-        but float does not match int (you can't cast float to int without an information loss)
+        Checks whether type_a matches type_b or if type_a is float and the column contains only NaNs.
+
+        This function allows for the possibility of empty columns (all NaN values) when type_a is float,
+        as empty columns are acceptable at this stage. It ensures that int can match float but not the
+        other way around to avoid information loss.
+
+        Args:
+            - type_a (DataFramesColumnsType): The type to be matched against.
+            - type_b (DataFramesColumnsType): The type to check against.
+            - df (pd.DataFrame): The DataFrame containing the column data.
+            - column_name (str): The name of the column being checked.
+
+        Returns:
+            - bool: True if the types match or if the conditions for empty columns are met; False otherwise.
         """
         if type_a is float and df[column_name].isnull().all():
             _logger.debug(f"Dataframe column {column_name} it's empty")
@@ -115,6 +145,17 @@ class DataFrameValidator:
         valid_type: DataFramesColumnsType,
         exception_list: list[DataFrameValidatorException],
     ) -> None:
+        """
+        Checks the validity of static columns in the DataFrame.
+
+        Args:
+            - column_name (str): The name of the static column being checked.
+            - column_type (DataFramesColumnsType): The detected type of the column.
+            - valid_column_name (str): The expected name of the column.
+            - valid_type (DataFramesColumnsType): The expected type of the column.
+            - exception_list (list[DataFrameValidatorException]): A list to which any validation exceptions
+                will be appended.
+        """
         if column_name != valid_column_name:
             if column_name in self.valid_structure.columns:
                 exception_list.append(
@@ -166,6 +207,10 @@ class DataFrameValidator:
                 2aa. If yes, that means that the column is correct, but misplaced. Then we check its type.
                 2ab. If no, then the given column is not in a valid_structure.
             2b. If yes, we just have to check if its type is correct
+
+        Args:
+            - exception_list (list[DataFrameValidatorException]): A list to which any validation exceptions
+                will be appended.
         """
         for column_name, valid_column_name in zip_longest(
             self.dataframe_structure, self.valid_structure.columns
@@ -187,6 +232,19 @@ class DataFrameValidator:
     def _translate_pandas_type_to_python_type(
         dataframe_structure: dict[str, str], dataset_reference: str
     ) -> dict[str, DataFramesColumnsType]:
+        """
+        Translates pandas DataFrame column types to Python types.
+
+        Args:
+            - dataframe_structure (dict[str, str]): A dictionary mapping column names to their pandas types.
+            - dataset_reference (str): A reference string for the dataset being processed.
+
+        Returns:
+            - dict[str, DataFramesColumnsType]: A dictionary mapping column names to their Python types.
+
+        Raises:
+            - DataFrameValidatorException: If an unknown column type is encountered.
+        """
         translated_structure: dict[str, DataFramesColumnsType] = dict()
         for column_name, pandas_type_name in dataframe_structure.items():
             match pandas_type_name:

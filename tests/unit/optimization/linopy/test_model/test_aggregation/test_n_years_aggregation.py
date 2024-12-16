@@ -49,7 +49,10 @@ from tests.unit.optimization.linopy.utils import TOL
 
 
 def assert_correct_objective(
-    indices: Indices, parameters: OptimizationParameters, results: Results
+    indices: Indices,
+    parameters: OptimizationParameters,
+    results: Results,
+    tol: float = TOL,
 ) -> None:
     expected_obj = objective_capex(indices, parameters, results)
     expected_obj += objective_opex(indices, parameters, results)
@@ -57,7 +60,7 @@ def assert_correct_objective(
     expected_obj += objective_dsr(indices, parameters, results)
     expected_obj += objective_ens(indices, parameters, results)
     expected_obj += objective_generation_compensation(indices, parameters, results)
-    assert abs(results.objective_value - expected_obj) < TOL
+    assert np.isclose(results.objective_value, expected_obj, rtol=tol)
 
 
 @pytest.mark.parametrize("n_years", [1, 2, 3, 4, 5])

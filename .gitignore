@@ -6,3 +6,4 @@ pyzefir.egg-info
 .DS_Store
 .tox
 build
+docs/_build

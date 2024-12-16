@@ -414,7 +414,7 @@ def test_capacity_bound_validate_sense(
                 left_coefficient=1.0,
             ),
             [],
-            id="happy_path_upper_edge",
+            id="happy_path_2",
         ),
         pytest.param(
             CapacityBound(
@@ -422,14 +422,10 @@ def test_capacity_bound_validate_sense(
                 left_technology="gen_A",
                 right_technology="gen_B",
                 sense="EQ",
-                left_coefficient=1.1,
+                left_coefficient=20.24,
             ),
-            [
-                NetworkValidatorException(
-                    "The provided left coefficient '1.1' is not valid. It must be between <0.0 and 1.0>."
-                )
-            ],
-            id="coeff above 1",
+            [],
+            id="happy_path_3",
         ),
         pytest.param(
             CapacityBound(
@@ -441,7 +437,7 @@ def test_capacity_bound_validate_sense(
             ),
             [
                 NetworkValidatorException(
-                    "The provided left coefficient '-0.1' is not valid. It must be between <0.0 and 1.0>."
+                    "The provided left coefficient '-0.1' is not valid. It must be positive number"
                 )
             ],
             id="coeff negative",
@@ -481,7 +477,7 @@ def test_capacity_bound_validate_left_coefficient(
                 left_technology="Generator_1",
                 right_technology="Generator_2",
                 sense="REQ",
-                left_coefficient=1.24,
+                left_coefficient=-1.24,
             ),
             [
                 NetworkValidatorException(
@@ -494,7 +490,7 @@ def test_capacity_bound_validate_left_coefficient(
                     "The provided sense 'REQ' is not valid. Valid senses are: ['EQ', 'LEQ']."
                 ),
                 NetworkValidatorException(
-                    "The provided left coefficient '1.24' is not valid. It must be between <0.0 and 1.0>."
+                    "The provided left coefficient '-1.24' is not valid. It must be positive number"
                 ),
             ],
             id="all_attributes_with_errors",

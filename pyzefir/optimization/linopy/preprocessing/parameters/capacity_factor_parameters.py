@@ -23,9 +23,22 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class CapacityFactorParameters(ModelParameters):
-    """Profiled carrier parameters (sun, wind, etc.)"""
+    """
+    Class representing profiled carrier parameters (sun, wind, etc.).
+
+    This class is designed to manage capacity factor profiles for different energy carriers, such as solar and wind.
+    It fetches and stores hourly capacity factor profiles, allowing for the analysis of energy generation potential
+    based on varying conditions throughout the day and year.
+    """
 
     def __init__(self, capacity_factors: NetworkElementsDict, indices: Indices) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - capacity_factors (NetworkElementsDict): Dictionary containing capacity factor elements.
+            - indices (Indices): Indices for the capacity factors.
+        """
         self.profile = self.fetch_element_prop(
             capacity_factors, indices.CF, "profile", sample=indices.H.ii
         )

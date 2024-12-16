@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from abc import ABC
 from typing import Any, Iterable, TypeVar
 
@@ -117,13 +101,13 @@ class ModelParameters(ABC):
         element_idx: IndexingSet,
         idx: IndexingSet,
         prop_name: str,
-    ) -> dict[int, int]:
+    ) -> dict[int, int | None]:
         result = dict()
-        for element_idx, element_name in element_idx.mapping.items():
-            element = elements[element_name]
+        for _element_idx, element_name in element_idx.mapping.items():
+            element = elements[str(element_name)]
             element_type = types[element.energy_source_type]
             prop = getattr(element_type, prop_name)
-            result[element_idx] = idx.inverse[prop] if prop is not None else None
+            result[_element_idx] = idx.inverse[prop] if prop is not None else None
 
         return result
 
@@ -163,9 +147,12 @@ class ModelParameters(ABC):
         res = dict()
         for dsr_name, dsr_content in dsr.items():
             markers = np.asarray(hours)[:: dsr_content.balancing_period_len]
+            dsr_idx = indices.DSR.inverse[dsr_name]
             if hours[-1] not in markers:
-                markers = np.append(markers, hours[-1])
-            res[indices.DSR.inverse[dsr_name]] = [
+                markers = np.append(markers, hours[-1] + 1)
+            res[dsr_idx] = [
                 range(markers[idx], markers[idx + 1]) for idx in range(len(markers) - 1)
             ]
+            if hours[-1] not in res[dsr_idx][-1]:
+                res[dsr_idx] += [range(hours[-1], hours[-1] + 1)]
         return res

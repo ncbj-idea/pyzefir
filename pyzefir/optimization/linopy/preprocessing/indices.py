@@ -29,11 +29,23 @@ from pyzefir.optimization.opt_config import OptConfig
 
 class IndexingSet:
     """
-    Indexing given sequence of strings or ints with sequence of consecutive integers, for example
-    ['a', 'b', 'c'] -> IndexingSet(ord=[0,1,2], mapping={0: 'a', 1: 'b', 2: 'c'})
+    Indexing given sequence of strings or ints with a sequence of consecutive integers.
+
+    For example, the input ['a', 'b', 'c'] results in:
+    IndexingSet(ord=[0, 1, 2], mapping={0: 'a', 1: 'b', 2: 'c'})
+
+    This class provides an efficient way to manage and retrieve indices
+    associated with a collection of unique elements.
     """
 
     def __init__(self, iis: np.ndarray, name: str | None = None) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - iis (np.ndarray): A 1D array of unique strings or integers to index.
+            - name (str, optional): An optional name for the indexing set. Defaults to None.
+        """
         self.validate_input(iis)
         self._ord = np.arange(iis.shape[0])
         self._ii = iis
@@ -42,6 +54,12 @@ class IndexingSet:
 
     @staticmethod
     def validate_input(iis: np.ndarray) -> None:
+        """
+        Validates provided array. If it is of shape 1, or if it contains duplicates, it raises ValueError.
+
+        Args:
+            - iis (np.ndarray): input to be validated
+        """
         if not len(iis.shape) == 1:
             raise ValueError("IndexingSet: 1D array required")
         if not np.unique(iis).shape == iis.shape:
@@ -54,11 +72,22 @@ class IndexingSet:
         """
         return self._name
 
+    @name.setter
+    def name(self, new_name: str) -> None:
+        """
+        Setter for the 'name' property.
+        """
+        if not isinstance(new_name, str):
+            raise ValueError("Name must be a string")
+        self._name = new_name
+
     @property
     def ord(self) -> np.ndarray:
         """
         Ordering indices of a given indexing set.
-        :return: np.ndarray
+
+        Returns:
+            - np.ndarray
         """
         return self._ord
 
@@ -66,7 +95,9 @@ class IndexingSet:
     def ii(self) -> np.ndarray:
         """
         Original indices
-        :return: np.ndarray
+
+        Returns:
+            - np.ndarray
         """
         return self._ii
 
@@ -74,7 +105,9 @@ class IndexingSet:
     def mapping(self) -> bidict[int, str | int]:
         """
         Mapping ord[element] -> element
-        :return: dict[int, str | int]
+
+        Returns:
+            - bidict[int, str | int]: mapping
         """
         return self._mapping
 
@@ -82,32 +115,73 @@ class IndexingSet:
     def inverse(self) -> bidict[str | int, int]:
         """
         Inverse mapping element -> ord[element]
-        :return: dict[str | int, int]
+
+        Returns:
+             - dict[str | int, int]: inverse mapping
         """
         return self._mapping.inverse
 
     def __len__(self) -> int:
         """
         Size (len) of the indexing set
-        :return: int
+
+        Returns:
+             - int: size of the indexing set
         """
         return self._ord.shape[0]
 
     def __bool__(self) -> bool:
+        """
+        Returns True if length of the object is greater than 0, returns False otherwise.
+        """
         return len(self) > 0
+
+    def remove(self, element: str | int) -> None:
+        """
+        Usuwa podany element z indeksu.
+        """
+        if element not in self._mapping.inverse:
+            raise ValueError(f"Element '{element}' nie istnieje w indeksie.")
+        idx_to_remove = self._mapping.inverse[element]
+        del self._mapping[idx_to_remove]
+        self._ii = np.delete(self._ii, idx_to_remove)
+        self._ord = self._ord[self._ord != idx_to_remove]
 
     @classmethod
     def create_from_network_elements_dict(
         cls, network_elements: NetworkElementsDict, name: str | None = None
     ) -> Self:
+        """
+        Create an object from network elements dict class.
+
+        Args:
+            - network_elements (NetworkElementsDict): network elements
+            - name (str, optional): name of the created object. Defaults to None
+        """
         return cls(array(list(network_elements.keys())), name=name)
 
 
 @dataclass
 class Indices:
-    """Indexing sets"""
+    """
+    Class representing the indexing sets for various components in the energy network model.
+
+    This class encapsulates the indexing sets required for modeling different elements of the
+    energy network, including generators, storages, demand chunks, and more. It serves as a
+    mapping between the original identifiers of these elements and a sequence of consecutive
+    integers for efficient computation and indexing within the optimization model.
+    """
 
     def __init__(self, network: Network, opt_config: OptConfig) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - network (Network): The network object containing elements like generators, storages,
+              and transmission lines.
+            - opt_config (OptConfig): The optimization configuration that includes parameters
+              related to time and sampling of hours and years.
+        """
         self.H = IndexingSet(opt_config.hours[opt_config.hour_sample], "HOUR")
         """ hour index """
         self.Y = IndexingSet(opt_config.years[opt_config.year_sample], "YEAR")
@@ -199,6 +273,17 @@ class Indices:
         )
 
     def _init_aggr_gen_indices(self, network: Network) -> tuple[dict, dict]:
+        """
+        Initializes aggregated consumer generator and generator type indices.
+
+        Args:
+            - network (Network): The network object containing elements of the model.
+
+        Returns:
+            - tuple[dict, dict]: A tuple containing two dictionaries:
+              - aggregated consumer generator indices
+              - aggregated consumer generator type indices
+        """
         aggr_gens = {
             idx: {
                 self.GEN.inverse[gen_name]
@@ -224,6 +309,15 @@ class Indices:
         return aggr_gens, aggr_tgens
 
     def _init_aggr_stor_indices(self, network: Network) -> tuple[dict, dict]:
+        """
+        Initializes aggregated consumer storage and storage type indices.
+
+        Args:
+            - network (Network): class representation of the model
+
+        Returns:
+            - tuple[dict, dict]: aggregated consumer storage and storage type indices
+        """
         aggr_stors = {
             idx: {
                 self.STOR.inverse[stor_name]
@@ -357,4 +451,10 @@ class Indices:
 
     @property
     def years_aggregation_array(self) -> xr.DataArray:
+        """
+        Returns year aggregation array.
+
+        Returns:
+            - xr.DataArray: year aggregation array
+        """
         return self._YEAR_AGGREGATION_DATA_ARRAY

@@ -27,7 +27,20 @@ _logger = logging.getLogger(__name__)
 
 
 class GenerationFractionConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    Class for building generation fraction constraints within an optimization model.
+
+    This class is responsible for constructing constraints that regulate the
+    generation fractions for different energy types and tags. It establishes
+    minimum and maximum generation fraction constraints based on specified
+    parameters and the relationships between generators and storage units.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Builds constraints including:
+        - minimum and maximum generation fraction constraints
+        """
         _logger.info("Generation fraction constraints builder is working...")
         self.min_max_generation_fraction_constraints()
         _logger.info("Generation fraction  builder is finished!")
@@ -35,6 +48,14 @@ class GenerationFractionConstraintsBuilder(PartialConstraintsBuilder):
     def min_max_generation_fraction_constraints(
         self,
     ) -> None:
+        """
+        Constructs minimum and maximum generation fraction constraints.
+
+        For each generation fraction index, this method retrieves the relevant
+        parameters such as maximum and minimum generation fractions, energy type,
+        and associated tags. It adds the constraints to the model based on the
+        available years and multipliers for each constraint type (min or max).
+        """
         for idx in self.indices.GF.ord:
             max_gen_frac = self.parameters.gf.max_generation_fraction[idx]
             min_gen_frac = self.parameters.gf.min_generation_fraction[idx]
@@ -112,6 +133,21 @@ class GenerationFractionConstraintsBuilder(PartialConstraintsBuilder):
         multiplier: xr.DataArray,
         constraint_type: str,
     ) -> None:
+        """
+        Adds generation constraints to the model.
+
+        Args:
+            - idx (int): index for the generation fraction
+            - et (int): energy type index
+            - tag_gen_idxs (set[int]): set of tag generator indices
+            - sub_tag_gen_idxs (set[int]): set of subtag generator indices
+            - tag_stor_idxs (set[int]): set of storage indices
+            - sub_tag_stor_idxs (set[int]): set of subtag storage indices
+            - years (np.ndarray): array of years
+            - fraction_type (str): type of fraction
+            - multiplier (xr.DataArray): array of multipliers
+            - constraint_type (str): type of constraint (min or max)
+        """
         lhs = self._expr_gen(
             et, sub_tag_gen_idxs, sub_tag_stor_idxs, years, fraction_type
         )
@@ -125,12 +161,32 @@ class GenerationFractionConstraintsBuilder(PartialConstraintsBuilder):
 
     @staticmethod
     def _unit_of_given_tag(unit_tags: dict[int, set[int]], tag_idx: int) -> set[int]:
-        """for given tag_idx and subtag_idx methods returns gen_idx | stor_idx containing provided tags"""
+        """
+        Retrieves the indices of units (generators or storages) that contain a specific tag.
+
+        Args:
+            - unit_tags (dict[int, set[int]]): Dictionary mapping unit indices to their associated tags.
+            - tag_idx (int): Index of the tag to search for.
+
+        Returns:
+            - set[int]: A set of unit indices that contain the specified tag.
+        """
         return {gen_idx for gen_idx, tag_set in unit_tags.items() if tag_idx in tag_set}
 
     def _get_tags(
         self, tag: int, sub_tag: int
     ) -> tuple[set[int], set[int], set[int], set[int]]:
+        """
+        Retrieves generator and storage indices associated with a specified tag and subtag.
+
+        Args:
+            - tag (int): Index of the primary tag.
+            - sub_tag (int): Index of the subtag.
+
+        Returns:
+            - tuple[set[int]]: A tuple containing sets of indices for tag generators,
+                subtag generators, tag storages, and subtag storages.
+        """
         tag_gen_idxs = GenerationFractionConstraintsBuilder._unit_of_given_tag(
             self.parameters.gen.tags, tag
         )
@@ -154,11 +210,32 @@ class GenerationFractionConstraintsBuilder(PartialConstraintsBuilder):
         fraction_type: str,
         multiplier: xr.DataArray | None = None,
     ) -> LinearExpression | float:
-        """generation of generators and storages in a given tag"""
+        """
+        Calculates the total generation for generators and storages associated with a specified energy type.
+
+        This method sums the generation contributions from both generators and storage
+        units for a given energy type, applying any multipliers as necessary. It
+        can also aggregate the results on a yearly basis if specified.
+
+        Args:
+            - et (int): Index of the energy type.
+            - gen_idxs (set[int]): Set of generator indices to consider.
+            - stor_idxs (set[int]): Set of storage indices to consider.
+            - years (np.ndarray): Array of relevant years for the calculations.
+            - fraction_type (str): Type of fraction, which determines how to aggregate results.
+            - multiplier (xr.DataArray | None): Optional array of multipliers for scaling the results.
+
+        Returns:
+            - LinearExpression | float: The total generation expression, which may be a
+                linear expression or a float value.
+        """
         gen_et_var = self.variables.gen.gen_et
         stor_et_var = self.variables.stor.gen
+        et_name = self.indices.ET.mapping[et]
 
-        gen_part = gen_et_var.isel(gen=list(gen_idxs), et=et, year=years).sum("gen")
+        gen_part = sum(
+            gen_et_var[gen_idx][et_name].isel(year=years) for gen_idx in gen_idxs
+        )
         stor_part = sum(
             stor_et_var.isel(stor=stor_idx, year=years)
             * self.parameters.stor.gen_eff[stor_idx]

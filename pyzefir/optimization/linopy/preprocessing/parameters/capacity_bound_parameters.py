@@ -23,7 +23,14 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class CapacityBoundParameters(ModelParameters):
-    """Capacity bound parameters"""
+    """
+    Class representing capacity bound parameters in an energy network model.
+
+    This class encapsulates the capacity constraints between different technologies
+    (generators and storages) by defining their left-hand side (LHS) and right-hand
+    side (RHS) types, indices, senses, and coefficients based on the provided capacity
+    bounds.
+    """
 
     def __init__(
         self,
@@ -31,6 +38,17 @@ class CapacityBoundParameters(ModelParameters):
         indices: Indices,
         generators: NetworkElementsDict,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - capacity_bounds (NetworkElementsDict): A dictionary mapping capacity
+                bound names to their respective capacity bound objects.
+            - indices (Indices): An object containing indices for capacity bounds,
+                generators, and storages.
+            - generators (NetworkElementsDict): A dictionary mapping generator
+                names to their respective Generator objects.
+        """
         self.lhs_type: dict[int, str] = dict()
         self.rhs_type: dict[int, str] = dict()
         self.lhs_idx: dict[int, int] = dict()

@@ -1,26 +1,15 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from pyzefir.model.network import Network
+from pyzefir.model.network_elements import DSR
+from pyzefir.model.utils import NetworkConstants
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import CO2, EE, GRID, HEAT, HS, PM10
+from tests.unit.optimization.linopy.test_model.test_aggregation.test_n_years_aggregation import (
+    assert_correct_objective,
+)
 from tests.unit.optimization.linopy.test_model.utils import (
     create_default_opt_config,
     run_opt_engine,
@@ -1367,3 +1356,61 @@ def test_hourly_scale_factor(
         rtol=1e-1,
         atol=0.0,
     )
+
+
+@pytest.mark.parametrize(
+    ("ens_penalization"),
+    [
+        pytest.param(
+            {"electricity": np.nan, "heat": np.nan},
+            id="all energy types",
+        ),
+        pytest.param(
+            {"electricity": 1.5},
+            id="one energy type",
+        ),
+        pytest.param(
+            {},
+            id="empty dict",
+        ),
+        pytest.param(
+            {"electricity": 1.5, "heat": 0.0},
+            id="zero ens for one type",
+        ),
+    ],
+)
+def test_ens_per_energy_type(
+    network: Network, ens_penalization: dict[str, float]
+) -> None:
+    opt_config = create_default_opt_config(
+        hour_sample=np.arange(50), year_sample=np.arange(5)
+    )
+
+    set_network_elements_parameters(
+        network.buses, {"local_ee_bus": {"dsr_type": "dsr_1"}}
+    )
+    network.dsr.update(
+        {
+            "dsr_1": DSR(
+                name="dsr_1",
+                balancing_period_len=20,
+                compensation_factor=0.1,
+                penalization_minus=5,
+                penalization_plus=0.0,
+                abs_shift_limit=0.5,
+                relative_shift_limit=0.5,
+            )
+        }
+    )
+
+    for et, use_ens_per_type in ens_penalization.items():
+        if use_ens_per_type:
+            network.aggregated_consumers["aggr"].yearly_energy_usage[et] *= 1e6
+
+    constants = network.constants.__dict__
+    network.constants = NetworkConstants(
+        **constants | {"ens_energy_penalization": ens_penalization}
+    )
+
+    engine = run_opt_engine(network, opt_config, ens=np.nan)
+    assert_correct_objective(engine.indices, engine.parameters, engine.results)

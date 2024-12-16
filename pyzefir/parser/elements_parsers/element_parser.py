@@ -1,25 +1,19 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from abc import ABC, abstractmethod
 
 from pyzefir.model.network_element import NetworkElement
 
 
 class AbstractElementParser(ABC):
+    """
+    Abstract base class for parsers that create NetworkElement instances.
+
+    This class defines the interface for all element parsers that will handle
+    the creation of NetworkElement objects. Subclasses are required to implement
+    the `create` method, which should return a tuple of NetworkElement instances.
+    """
+
     @abstractmethod
-    def create(self) -> tuple[NetworkElement, ...]:
+    def create(
+        self,
+    ) -> tuple[NetworkElement, ...] | tuple[tuple[NetworkElement, ...], ...]:
         raise NotImplementedError

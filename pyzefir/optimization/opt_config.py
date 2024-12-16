@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 from pathlib import Path
 from typing import Any
@@ -59,7 +44,7 @@ class OptConfig:
         self.years: ndarray = years if isinstance(years, ndarray) else arange(years)
         """ sequence of all years """
         self.sol_dump_path: Path | None = sol_dump_path
-        """ path where *.sol file will be dumped """
+        """ path where .sol file will be dumped """
         self.opt_logs_dump_path: Path | None = opt_logs_dump_path
         """ path where linopy log file will be dumped """
         self.discount_rate: ndarray = (
@@ -97,11 +82,12 @@ class OptConfig:
 
     def validate(self) -> None:
         """
-        validate if discount_rate, hours and years are 1D arrays
-        validate if discount_rate and years have the same shape
-        validate ens type
-        validate if money_scale is >= 1
-        validate if year_sample is consecutive
+        This method validates parameters including:
+            - validate if discount_rate, hours and years are 1D arrays
+            - validate if discount_rate and years have the same shape
+            - validate ens type
+            - validate if money_scale is >= 1
+            - validate if year_sample is consecutive
         """
         exception_list: list[OptConfigError] = []
         if (

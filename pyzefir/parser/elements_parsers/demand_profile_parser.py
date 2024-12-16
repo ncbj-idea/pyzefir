@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements import DemandProfile
@@ -21,13 +5,39 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class DemandProfileParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of DemandProfile.
+
+    This class takes a dictionary of DataFrames containing demand data and processes
+    it to generate DemandProfile instances. Each demand profile is created by normalizing
+    the data and organizing it into a structured format that associates the profile name
+    with its corresponding demand values.
+    """
+
     def __init__(
         self,
         demand_dict: dict[str, pd.DataFrame],
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - demand_dict (dict[str, pd.DataFrame]): A dictionary mapping demand profile names
+                to their corresponding DataFrames.
+        """
         self.demand_dict = demand_dict
 
     def create(self) -> tuple[DemandProfile, ...]:
+        """
+        Creates and returns a tuple of DemandProfile instances.
+
+        This method processes each DataFrame in the demand dictionary to create DemandProfile
+        objects. It sets the index of each demand DataFrame to "hour_idx" and converts the
+        demand data into a dictionary format that associates hours with normalized demand values.
+
+        Returns:
+            - tuple[DemandProfile, ...]: A tuple containing the created DemandProfile instances.
+        """
         demand_profiles: list[DemandProfile] = list()
         for name, demand_df in self.demand_dict.items():
             demand_profile = DemandProfile(

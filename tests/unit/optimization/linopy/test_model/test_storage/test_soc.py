@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pytest
 
@@ -69,6 +53,8 @@ def test_state_of_charge(
             }
         },
     )
+    # Now we dump gen * eff but soc used pure gen so we have to deviate by eff to gen "pure gen"
+    storage_generation_eff = 0.85
 
     opt_config = create_default_opt_config(
         hour_sample, year_sample=np.array([0, 1, 2, 3, 4])
@@ -81,7 +67,7 @@ def test_state_of_charge(
         engine.results.storages_results.soc["ee_storage"],
         engine.results.storages_results.load["ee_storage"]
         * engine.parameters.stor.load_eff[u_idx],
-        engine.results.storages_results.gen["ee_storage"],
+        engine.results.storages_results.gen["ee_storage"] / storage_generation_eff,
     )
     e_loss = engine.parameters.tstor.energy_loss[t_idx]
     h_last = engine.indices.H.ord[-1]

@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -213,18 +197,20 @@ def test_generation_upper_bound_and_power_utilization(
 
 
 @pytest.mark.parametrize(
-    ("hour_sample", "year_sample"),
+    ("hour_sample", "year_sample", "disable_dump_energy"),
     [
-        (np.arange(50), np.arange(N_YEARS)),
-        (np.arange(100, 150), np.array([0, 1])),
-        (np.array([3, 10, 13, 24, 45]), np.array([0, 1, 2])),
-        (np.array([1000, 2000, 2345, 8567]), np.array([0, 1, 2, 3, 4])),
+        (np.arange(50), np.arange(N_YEARS), True),
+        (np.arange(50), np.arange(N_YEARS), False),
+        (np.arange(100, 150), np.array([0, 1]), False),
+        (np.array([3, 10, 13, 24, 45]), np.array([0, 1, 2]), False),
+        (np.array([1000, 2000, 2345, 8567]), np.array([0, 1, 2, 3, 4]), False),
     ],
 )
 def test_max_generation(
     hour_sample: np.ndarray,
     year_sample: np.ndarray,
     network: Network,
+    disable_dump_energy: bool,
     aggr: AggregatedConsumer,
     coal_power_plant: Generator,
     biomass_heat_plant: Generator,
@@ -232,12 +218,14 @@ def test_max_generation(
     """
     For base_capacity set to minimal feasible value test, if max(unit generation) == unit capacity in each year, also
     test if gen * eff[et] == gen[et].
+    Test of dump energy not used if disabled
     """
 
     coal_power_plant_type = network.generator_types[coal_power_plant.energy_source_type]
     biomass_heat_plant_type = network.generator_types[
         biomass_heat_plant.energy_source_type
     ]
+    biomass_heat_plant_type.disable_dump_energy = disable_dump_energy
 
     biomass_heat_plant.unit_base_cap = minimal_unit_cap(
         demand=network.demand_profiles[aggr.demand_profile],
@@ -295,9 +283,12 @@ def test_max_generation(
         ).reshape((len(hour_sample), len(year_sample))),
     )
 
-    for gen in [biomass_heat_plant, coal_power_plant]:
-        assert np.allclose(dump_et[gen.name][HEAT].values, 0)
-        assert np.allclose(dump_et[gen.name][EE].values, 0)
+    if disable_dump_energy:
+        assert len(dump_et) == 1
+    else:
+        assert np.allclose(dump_et[biomass_heat_plant.name][HEAT].values, 0)
+        assert np.allclose(dump_et[biomass_heat_plant.name][EE].values, 0)
+        assert np.allclose(dump_et[coal_power_plant.name][EE].values, 0)
 
 
 @pytest.mark.parametrize(

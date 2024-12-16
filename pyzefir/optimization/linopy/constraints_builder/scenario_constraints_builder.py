@@ -46,7 +46,28 @@ _logger = logging.getLogger(__name__)
 
 
 class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    Class for building scenario constraints in an optimization model.
+
+    This class is responsible for constructing a variety of constraints
+    related to fuel consumption, energy source capacities, emissions,
+    and power reserves. It ensures that the model adheres to defined limits
+    and conditions for various scenarios.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Builds constraints including:
+        - maximum fuel consumption constraints
+        - maximum fraction constraints
+        - minimum fraction constraints
+        - maximum fraction increase constraints
+        - maximum fraction decrease constraints
+        - energy source type capacity constraints
+        - energy source capacity constraints
+        - emission constraints
+        - power reserve constraints
+        """
         _logger.info("Scenario constraints builder is working...")
         self.max_fuel_consumption_constraints()
         self.max_fraction_constraints()
@@ -60,6 +81,12 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.info("Scenario constraints builder is finished!")
 
     def max_fuel_consumption_constraints(self) -> None:
+        """
+        Adds maximum fuel consumption constraints.
+
+        This method ensures that the total fuel consumption does not exceed
+        the maximum fuel availability for each fuel type and year.
+        """
         for fuel_idx in self.indices.FUEL.mapping.keys():
             if fuel_idx not in self.parameters.fuel.availability or all(
                 np.isnan(self.parameters.fuel.availability[fuel_idx])
@@ -87,18 +114,32 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build max fuel consumption constraints: Done")
 
     def energy_source_type_capacity_constraints(self) -> None:
+        """
+        Builds capacity constraints for energy source types.
+
+        This method constructs constraints based on the types of energy sources,
+        including generators and storage units. It ensures that capacity
+        limits are respected for each energy source type.
+        """
         _logger.debug("Building energy source type capacity constraints...")
         self._generator_type_capacity_constraints()
         self._storage_type_capacity_constraints()
         _logger.debug("Build energy source type capacity constraints: Done")
 
     def energy_source_capacity_constraints(self) -> None:
+        """
+        Builds capacity constraints for individual energy sources.
+
+        This method constructs constraints that enforce minimum and maximum
+        capacity limits for generators and storage units.
+        """
         _logger.debug("Building energy source capacity constraints...")
         self._storage_capacity_constraints()
         self._generator_capacity_constraints()
         _logger.debug("Build energy source capacity constraints: Done")
 
     def _generator_type_capacity_constraints(self) -> None:
+        """Builds generator type capacity constraints."""
         self._add_cap_constraints_per_energy_source_type(
             energy_source_idx=self.indices.GEN,
             energy_source_to_type_dict=self.parameters.gen.tgen,
@@ -109,6 +150,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build generator type capacity constraints: Done")
 
     def _storage_type_capacity_constraints(self) -> None:
+        """Builds storage type capacity constraints."""
         self._add_cap_constraints_per_energy_source_type(
             energy_source_idx=self.indices.STOR,
             energy_source_to_type_dict=self.parameters.stor.tstor,
@@ -119,6 +161,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build storage type capacity constraints: Done")
 
     def _generator_capacity_constraints(self) -> None:
+        """Builds generator capacity constraints."""
         self._add_cap_constraints_per_energy_source(
             energy_source_idx=self.indices.GEN,
             parameters=self.parameters.gen,
@@ -128,6 +171,7 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build generator capacity constraints: Done")
 
     def _storage_capacity_constraints(self) -> None:
+        """Builds storage capacity constraints."""
         self._add_cap_constraints_per_energy_source(
             energy_source_idx=self.indices.STOR,
             parameters=self.parameters.stor,
@@ -143,6 +187,17 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         variables: GeneratorVariables | StorageVariables,
         element_name: str,
     ) -> None:
+        """
+        Adds capacity constraints per energy source.
+
+        Unit capacity must be greater than minimal capacity and lower than max capacity.
+
+        Args:
+            - energy_source_idx (IndexingSet): index of the energy source
+            - parameters (StorageParameters | GeneratorParameters): parameters of the energy source
+            - variables (GeneratorVariables | StorageVariables): variables of the energy source
+            - element_name (str): name of the energy source
+        """
         for idx in energy_source_idx.mapping.keys():
             for year in self.indices.Y.mapping.keys() - [0]:
                 unit_min_capacity = parameters.unit_min_capacity[idx][year]
@@ -193,6 +248,18 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         variables: GeneratorVariables | StorageVariables,
         element_name: str,
     ) -> None:
+        """
+        Adds capacity constraints per energy source type.
+
+        Energy source type capacity must be greater than minimal capacity and lower than maximum capacity.
+
+        Args:
+            - energy_source_idx (IndexingSet): index of the energy source
+            - energy_source_to_type_dict (dict[int, int]): mapping from energy source to energy type
+            - type_parameters (GeneratorTypeParameters | StorageTypeParameters): generator or storage type parameters
+            - variables (GeneratorVariables | StorageVariables): generator or storage variables
+            - element_name (str): name of the element
+        """
         for type_idx in dict.fromkeys(energy_source_to_type_dict.values()):
             energy_sources_idx = [
                 energy_source_idx
@@ -268,6 +335,13 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
                     )
 
     def min_fraction_constraints(self) -> None:
+        """
+        Adds minimum fraction constraints.
+
+        This method ensures that the variable minimum fraction is greater than
+        or equal to the specified minimum fractions for each aggregator and
+        lower bound set.
+        """
         min_fraction = self.parameters.aggr.min_fraction
         for aggr_idx, fraction_dict in min_fraction.items():
             for lbs_idx, fraction_series in fraction_dict.items():
@@ -290,6 +364,13 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build min fraction constraints: Done")
 
     def max_fraction_constraints(self) -> None:
+        """
+        Adds maximum fraction constraints.
+
+        This method ensures that the variable maximum fraction is less than
+        or equal to the specified maximum fractions for each aggregator and
+        lower bound set.
+        """
         max_fraction = self.parameters.aggr.max_fraction
         for aggr_idx, fraction_dict in max_fraction.items():
             for lbs_idx, fraction_series in fraction_dict.items():
@@ -312,6 +393,13 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build max fraction constraints: Done")
 
     def max_fraction_increase_constraints(self) -> None:
+        """
+        Adds maximum fraction increase constraints.
+
+        This method ensures that the increase in variable fractions is
+        constrained by the specified limits for each aggregator and lower
+        bound set.
+        """
         max_fraction_increase = self.parameters.aggr.max_fraction_increase
         for aggr_idx, fraction_dict in max_fraction_increase.items():
             for lbs_idx, fraction_series in fraction_dict.items():
@@ -337,6 +425,13 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build max fraction increase constraints: Done")
 
     def max_fraction_decrease_constraints(self) -> None:
+        """
+        Adds maximum fraction decrease constraints.
+
+        This method ensures that the decrease in variable fractions is
+        constrained by the specified limits for each aggregator and lower
+        bound set.
+        """
         max_fraction_decrease = self.parameters.aggr.max_fraction_decrease
         for aggr_idx, fraction_dict in max_fraction_decrease.items():
             for lbs_idx, fraction_series in fraction_dict.items():
@@ -362,6 +457,12 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build max fraction decrease constraints: Done")
 
     def emission_constraints(self) -> None:
+        """
+        Adds emission constraints.
+
+        This method ensures that total emissions do not exceed the
+        allowed limits based on fuel consumption and emission rates.
+        """
         for et in self.parameters.scenario_parameters.rel_em_limit.keys():
             if not np.isnan(
                 self.parameters.scenario_parameters.base_total_emission[et]
@@ -404,18 +505,26 @@ class ScenarioConstraintsBuilder(PartialConstraintsBuilder):
         _logger.debug("Build emission constraints: Done")
 
     def power_reserve_constraint(self) -> None:
+        """
+        Adds power reserve constraints.
+
+        This method ensures that the generation reserve if always bigger than reserve parameter
+        """
         power_reserves = self.parameters.scenario_parameters.power_reserves
         if power_reserves:
-            cap = self.variables.gen.cap
-            gen_et = self.variables.gen.gen_et
-            gens_of_tag = invert_dict_of_sets(self.parameters.gen.tags)
-            for energy_type, tag_to_reserve in power_reserves.items():
-                et = self.indices.ET.inverse[energy_type]
-                for tag, reserve in tag_to_reserve.items():
-                    self.model.add_constraints(
-                        cap.isel(gen=list(gens_of_tag[tag])).sum(["gen"])
-                        - gen_et.isel(gen=list(gens_of_tag[tag]), et=et).sum(["gen"])
-                        >= reserve,
-                        name=f"ENERGY_TYPE_{et}_TAG_{tag}_POWER_RESERVE_CONSTRAINT",
+            gen_reserve_et = self.variables.gen.gen_reserve_et
+            generators_of_tags = invert_dict_of_sets(self.parameters.gen.tags)
+            for energy_type, reserve in power_reserves.items():
+                for tag, reserve_value in reserve.items():
+                    frozen_generation = sum(
+                        [
+                            gen_reserve_et[tag][gen_idx][energy_type]
+                            for gen_idx in generators_of_tags[tag]
+                        ]
                     )
+                    self.model.add_constraints(
+                        frozen_generation >= reserve_value,
+                        name=f"ENERGY_TYPE_{energy_type}_TAG_{tag}_POWER_RESERVE_CONSTRAINT",
+                    )
+            _logger.debug("Build power reserve constraints: Done")
         _logger.debug("Build power reserve constraints: Done")

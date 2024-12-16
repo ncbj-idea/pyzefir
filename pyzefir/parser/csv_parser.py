@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from pathlib import Path
 
@@ -40,10 +24,36 @@ class CsvParserException(Exception):
 
 
 class CsvParser:
+    """
+    Handles loading and validation of CSV files into DataFrames.
+
+    This class is responsible for parsing CSV files from specified paths, validating their
+    structure against predefined configurations, and loading them into a dictionary format
+    for further data processing. It ensures that the data is correctly formatted and raises
+    exceptions if required files are missing or the data is invalid.
+    """
+
     def __init__(self, path_manager: CsvPathManager) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - path_manager (CsvPathManager): Manages the paths to the CSV files.
+        """
         self._path_manager = path_manager
 
     def load_dfs(self) -> dict[str, dict[str, pd.DataFrame]]:
+        """
+        Loads DataFrames from CSV files categorized under main categories.
+
+        This method iterates over the main categories, retrieves DataFrames for each category,
+        and returns them in a nested dictionary structure. It logs a debug message upon successful
+        upload of all DataFrames, ensuring the entire set is valid.
+
+        Returns:
+            - dict[str, dict[str, pd.DataFrame]]: A dictionary containing DataFrames categorized
+              by their respective categories and dataset names.
+        """
         name_df_dict: dict[str, dict[str, pd.DataFrame]] = dict()
         for category in DataCategories.get_main_categories():
             name_df_dict[category] = self._get_dfs_from_category(category=category)
@@ -51,6 +61,15 @@ class CsvParser:
         return name_df_dict
 
     def _get_dfs_from_category(self, category: str) -> dict[str, pd.DataFrame]:
+        """
+        Retrieves DataFrames for a specified category.
+
+        Args:
+            - category (str): The category for which to load DataFrames.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary of DataFrames indexed by dataset names.
+        """
         category_dict = dict()
         if category in DataCategories.get_dynamic_categories():
             for csv_path in self._path_manager.get_path(category).glob("*.csv"):
@@ -77,6 +96,17 @@ class CsvParser:
     def _read_and_validate_csv_file(
         category: str, dataset_name: str, csv_path: Path
     ) -> pd.DataFrame:
+        """
+        Reads and validates a CSV file, returning a DataFrame.
+
+        Args:
+            - category (str): The category of the dataset.
+            - dataset_name (str): The name of the dataset.
+            - csv_path (Path): The path to the CSV file.
+
+        Returns:
+            - pd.DataFrame: A DataFrame containing the loaded data.
+        """
         if not csv_path.is_file():
             if dataset_name in get_optional_datasets_from_categories(category):
                 columns = get_dataset_config_from_categories(

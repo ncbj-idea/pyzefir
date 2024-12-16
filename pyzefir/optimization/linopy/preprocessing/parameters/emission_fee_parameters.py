@@ -25,7 +25,12 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class EmissionFeeParameters(ModelParameters):
-    """Emission fee parameters"""
+    """
+    Class representing the emission fee parameters.
+
+    This class manages the parameters associated with emission fees, including the types of emissions
+    and their corresponding prices. It allows for scaling of prices to accommodate different scenarios.
+    """
 
     def __init__(
         self,
@@ -33,6 +38,14 @@ class EmissionFeeParameters(ModelParameters):
         indices: Indices,
         scale: float = 1.0,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - emission_fees (NetworkElementsDict): Dictionary containing emission fee elements.
+            - indices (Indices): Indices for accessing emission fee parameters.
+            - scale (float, optional): Scaling factor for emission prices. Defaults to 1.0.
+        """
         self.emission_type: dict[int, str] = self.fetch_element_prop(
             d=emission_fees, II=indices.EMF, prop="emission_type"
         )

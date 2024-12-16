@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import tempfile
 from pathlib import Path
 from typing import Type
@@ -410,9 +394,9 @@ def test_xlsx_to_csv_convert(scenario_path_str: str | None) -> None:
         "capacity_factors": 1,
         "demand_chunks": 2,
         "generator_types": 7,
-        "storage_types": 1,
+        "storage_types": 2,
         "demand_types": 2,
-        "scenarios": 16,
+        "scenarios": 17,
         "conversion_rate": 1,
         "generator_type_efficiency": 2,
     }
@@ -429,7 +413,7 @@ def test_xlsx_to_csv_convert(scenario_path_str: str | None) -> None:
         converter.convert()
 
         for dir_name in DataCategories.get_main_categories():
-            if dir_name == DataCategories.SCENARIO and scenario_path is None:
+            if dir_name == DataCategories.SCENARIO or scenario_path is None:
                 continue
             else:
                 expected_output_dir = tmp_output_path / (

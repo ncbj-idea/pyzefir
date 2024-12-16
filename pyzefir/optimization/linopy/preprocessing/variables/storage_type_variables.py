@@ -25,9 +25,24 @@ from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
 
 
 class StorageTypeVariables(VariableGroup):
-    """StorageType variables"""
+    """
+    Class representing the storage type variables.
+
+    This class encapsulates the variables related to different storage types within the
+    energy network. It includes capacity variables, capacity increases, and decreases
+    over time, which are essential for modeling the operational flexibility and dynamics
+    of storage units in the energy system.
+    """
 
     def __init__(self, model: Model, indices: Indices) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - model (Model): The optimization model to which the storage type variables will be added.
+            - indices (Indices): The indices used for mapping storage type parameters across
+              different aggregated indices and years.
+        """
         indexes = [
             (aggr_idx, aggr_stor_type_idx, year_idx)
             for aggr_idx, aggr_stor_type_idxs in indices.aggr_tstor_map.items()

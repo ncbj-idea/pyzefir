@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 import logging
@@ -39,7 +23,12 @@ class StorageValidatorExceptionGroup(NetworkValidatorExceptionGroup):
 @dataclass(kw_only=True)
 class Storage(EnergySource):
     """
-    A class that represents the Generator in the network structure
+    Represents a Storage element within the network structure.
+
+    This class extends the EnergySource class to include specific
+    attributes and validation procedures for storage elements,
+    such as their associated bus connections and energy types.
+    The storage element is attached to a single bus.
     """
 
     bus: str
@@ -50,21 +39,18 @@ class Storage(EnergySource):
     def validate(self, network: Network) -> None:
         """
         Validation procedure checking:
-        - correctness of StorageType
-        - Validates if bus attribute of Storage obj exists in network.buses,
-        - Validates if bus energy type same as storage energy type
+            - correctness of StorageType
+            - Validates if bus attribute of Storage obj exists in network.buses,
+            - Validates if bus energy type same as storage energy type
         Method validate runs following validate methods:
-        - _validate_base_energy_source
-        - _validate_storage_type
+            - _validate_base_energy_source
+            - _validate_storage_type
 
         Args:
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None.
+            - network (Network): network to which self is to be added.
 
         Raises:
-            NetworkValidatorExceptionGroup: If exception_list contains exception.
+            - NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
         _logger.debug("Validating storage object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
@@ -112,15 +98,15 @@ class Storage(EnergySource):
         - Validates storage_type type
 
         Args:
-            storage_type (StorageType): StorageType object.
-            exception_list (NetworkValidatorException): list of raised exceptions.
+            - storage_type (StorageType): StorageType object.
+            - exception_list (NetworkValidatorException): list of raised exceptions.
 
         Returns:
-            True (flag) if assigned StorageType is correct, otherwise False.
+            - bool: True if assigned StorageType is correct, otherwise False.
 
         Raises:
-            NetworkValidatorException: If storage_type is None.
-            NetworkValidatorException: If storage_type is not an instance of StorageType.
+            - NetworkValidatorException: If storage_type is None.
+            - NetworkValidatorException: If storage_type is not an instance of StorageType.
         """
 
         is_storage_type_correct = True

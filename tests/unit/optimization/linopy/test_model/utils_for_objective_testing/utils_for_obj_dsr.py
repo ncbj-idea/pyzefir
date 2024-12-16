@@ -28,7 +28,9 @@ def objective_dsr(
 ) -> float:
     if len(parameters.bus.dsr_type):
         shift_minus = results.bus_results.shift_minus
-        penalization = parameters.dsr.penalization
+        shift_plus = results.bus_results.shift_plus
+        penalization = parameters.dsr.penalization_minus
+        penalization_plus = parameters.dsr.penalization_plus
         bus_parameters = parameters.bus
         return sum(
             np.asarray(
@@ -36,6 +38,11 @@ def objective_dsr(
                 * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
             ).sum()
             * penalization[dsr_idx]
+            + np.asarray(
+                shift_plus[indices.BUS.mapping[bus_idx]]
+                * indices._YEAR_AGGREGATION_DATA_ARRAY.to_numpy()
+            ).sum()
+            * penalization_plus[dsr_idx]
             for bus_idx, dsr_idx in bus_parameters.dsr_type.items()
         )
     else:

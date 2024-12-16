@@ -72,12 +72,28 @@ from pyzefir.optimization.opt_config import OptConfig
 
 class OptimizationParameters:
     """
-    All optimization parameters.
+    Class representing all optimization parameters for the energy network model.
+
+    This class encapsulates various parameters related to different components of the
+    energy network, including fuels, generators, storage, transmission fees, and
+    aggregated consumers. It serves as a central repository for parameters that are
+    essential for the optimization process in the energy model.
     """
 
     def __init__(
         self, network: Network, indices: Indices, opt_config: OptConfig
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - network (Network): The network object containing all components of the energy system,
+              including fuels, generators, storages, and transmission lines.
+            - indices (Indices): The indices used for mapping different parameters within the optimization
+              model.
+            - opt_config (OptConfig): The optimization configuration that includes scaling factors
+              and cost-related parameters.
+        """
         self.fuel: FuelParameters = FuelParameters(
             network.fuels, indices, scale=opt_config.money_scale
         )
@@ -89,11 +105,12 @@ class OptimizationParameters:
         self.gen: GeneratorParameters = GeneratorParameters(
             network.generators,
             network.generator_types,
+            network.demand_chunks,
             indices,
         )
         """ generators parameters """
         self.stor: StorageParameters = StorageParameters(
-            network.storages, network.storage_types, indices
+            network.storages, network.storage_types, network.demand_chunks, indices
         )
         """ storages parameters """
         self.tgen: GeneratorTypeParameters = GeneratorTypeParameters(
@@ -133,7 +150,7 @@ class OptimizationParameters:
             },
             base_total_emission=network.constants.base_total_emission,
             power_reserves=network.constants.power_reserves,
-            ens_penalty_cost=network.constants.ens_penalty_cost,
+            ens_penalty_cost=network.constants.ens_energy_penalization,
             generator_capacity_cost=opt_config.generator_capacity_cost,
         )
         self.emf: EmissionFeeParameters = EmissionFeeParameters(

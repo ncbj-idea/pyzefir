@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from pathlib import Path
 
 import numpy as np
@@ -239,7 +223,8 @@ def test_network_creator_create_network() -> None:
         name="DSR_1",
         compensation_factor=0.1,
         balancing_period_len=20,
-        penalization=0.1,
+        penalization_minus=0.1,
+        penalization_plus=0.2,
         relative_shift_limit=0.1,
         abs_shift_limit=None,
     )
@@ -402,7 +387,8 @@ def test_network_creator_create_assertion_occurred() -> None:
         name="DSR_1",
         compensation_factor=0.1,
         balancing_period_len=20,
-        penalization=0.1,
+        penalization_minus=0.1,
+        penalization_plus=0.2,
         relative_shift_limit=0.1,
         abs_shift_limit=None,
     )
@@ -466,7 +452,8 @@ def test_network_creator_create_assertion_occurred() -> None:
         name="DSR_1",
         compensation_factor=0.1,
         balancing_period_len=20,
-        penalization=0.1,
+        penalization_minus=0.1,
+        penalization_plus=0.2,
         relative_shift_limit=0.1,
         abs_shift_limit=None,
     )
@@ -511,3 +498,61 @@ def test_network_creator_create_assertion_occurred() -> None:
         str(error_info.value.args[1][0].args[1][0])
         == "Emission type: SO2 does not exist in the network"
     )
+
+
+@pytest.mark.parametrize(
+    "ens_penalization_df, expected_ens_penalization_dict",
+    (
+        pytest.param(
+            pd.DataFrame({"energy_type": ["HEAT"], "penalization": [2.5]}),
+            {"HEAT": 2.5, "ELECTRICITY": 0.02},
+            id="Heat penalization 2.5",
+        ),
+        pytest.param(
+            pd.DataFrame(
+                {
+                    "energy_type": ["HEAT", "ELECTRICITY"],
+                    "penalization": [np.nan, np.nan],
+                }
+            ),
+            {"HEAT": 0.02, "ELECTRICITY": 0.02},
+            id="Both none values",
+        ),
+        pytest.param(
+            pd.DataFrame(
+                {
+                    "energy_type": ["BIOMASS", "ELECTRICITY", "WIND", "COLD"],
+                    "penalization": [15.24, 7.5, 12.2, 11.2],
+                }
+            ),
+            {"HEAT": 0.02, "ELECTRICITY": 7.5},
+            id="Many energies which not present in network",
+        ),
+        pytest.param(
+            pd.DataFrame(
+                {
+                    "energy_type": ["HEAT", "ELECTRICITY"],
+                    "penalization": [-0.012, -100.24],
+                }
+            ),
+            {"HEAT": 0.02, "ELECTRICITY": 0.02},
+            id="Both negatives",
+        ),
+    ),
+)
+def test_create_network_constants_ens_energy_penalization(
+    ens_penalization_df: pd.DataFrame,
+    expected_ens_penalization_dict: dict[str, float],
+) -> None:
+    energy_types_df = pd.DataFrame({"name": ["HEAT", "ELECTRICITY"]})
+    result = NetworkCreator._create_ens_energy_penalization(
+        ens_penalization_df, energy_types_df, 0.02
+    )
+    assert result == expected_ens_penalization_dict
+
+
+def test_create_network_constants_ens_energy_penalization_without_penalization(
+    df_dict: dict[str, dict[str, pd.DataFrame]]
+) -> None:
+    constants = NetworkCreator._create_network_constants(df_dict)
+    assert constants.ens_energy_penalization == {"HEAT": 1.5, "ELECTRICITY": 0.0}

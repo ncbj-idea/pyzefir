@@ -148,15 +148,17 @@ to use `structure-creator` do not add the section.
 ```bash
 pyzefir --help
 
-Usage: pyzefir [OPTIONS]
 Options:
-  -c, --config PATH  Path to *.ini file.  [required]
-  --help             Show this message and exit.
+  -c, --config PATH         Path to *.ini file.  [required]
+  -hcd, --hash-commit-dump  Flag to include hash commit information. (only in
+                            development mode)
+  --help                    Show this message and exit.
 ```
 #### E.g.
 
 ```bash
 pyzefir -c pyzefir/config_basic.ini
+pyzefir -c pyzefir/config_basic.ini --hash-commit-dump
 ```
 
 ### How pyzefir resources directory must look like:

@@ -28,10 +28,13 @@ from pyzefir.optimization.linopy.preprocessing.opt_variables import (
 
 
 class ExpressionHandler:
-    """Encapsulation of simple linear expressions
+    """
+    Class encapsulating simple linear expressions that describe important modeling concepts,
+    such as gross-net energy conversion, fuel usage, and fuel emissions.
 
-    Encapsulation of simple linear expressions, that describes important
-    modelling concepts (brutto-netto energy conversion, fuel usage, fuel emission etc.)
+    This class provides methods to handle various expressions related to energy generation,
+    storage, transmission, and fuel consumption, allowing for the efficient formulation of
+    the optimization model.
     """
 
     def __init__(
@@ -40,19 +43,36 @@ class ExpressionHandler:
         variables: OptimizationVariables,
         parameters: OptimizationParameters,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - indices (Indices): The indices used for mapping different variables within the model.
+            - variables (OptimizationVariables): The optimization variables relevant to the energy network.
+            - parameters (OptimizationParameters): The optimization parameters that govern the behavior
+              of the energy model.
+        """
         self.indices = indices
         self.parameters = parameters
         self.variables = variables
 
     def fraction_dem(self, bus_idx: int) -> LinearExpression | float:
-        """Fraction demand
+        """
+        Calculates the demand in a specified bus related to fractions of local technology stacks
+        in consumer aggregates.
 
-        Demand in bus related to fractions of local technology stacks in consumer aggregates.
+        This method looks up the local balancing stack (LBS) mapping for the provided bus index,
+        retrieves the associated demand and fraction for that LBS, and computes the overall demand
+        for that bus by multiplying the demand by the fraction.
 
         Args:
-            bus_idx (int): bus index
+            - bus_idx (int): The index of the bus for which to calculate the demand.
+
         Returns:
-            fraction_dem
+            - LinearExpression | float:
+                - If the bus index is found in the mapping, returns a linear expression representing
+                  the fraction demand based on the local technology stacks.
+                - If the bus index is not found, returns 0.0.
         """
         if bus_idx not in self.parameters.bus.lbs_mapping:
             return 0.0
@@ -70,50 +90,57 @@ class ExpressionHandler:
         return xr.DataArray(dem, dims=["hour", "year"]) * frac
 
     def gen_netto_g(self, gen_idx: int, energy_type: str) -> LinearExpression:
-        """Generator netto generation (taking into account losses)
+        """
+        Generator netto generation (taking into account losses).
 
         Args:
-            gen_idx (int): generator index
-            energy_type (str): type of produced energy
+            - gen_idx (int): generator index
+            - energy_type (str): type of produced energy
+
         Returns:
-            MLinExpr: Linear expression for Generator netto generation
+            - LinearExpression: linear expression for Generator netto generation
         """
         k = self.parameters.gen.eff[gen_idx][energy_type]
         v = self.variables.gen.gen.isel(gen=gen_idx)
         return self.scale(k, v)
 
     def gen_netto_st(self, st_idx: int) -> LinearExpression:
-        """Storage netto generation (taking into account generation losses)
+        """
+        Storage netto generation (taking into account generation losses).
 
         Args:
-            st_idx (int): storage index
+            - st_idx (int): storage index
+
         Returns:
-            MLinExpr: Expression for storage netto generation
+            - LinearExpression: linear expression for storage netto generation
         """
         k = self.parameters.stor.gen_eff[st_idx]
         v = self.variables.stor.gen.isel(stor=st_idx)
         return self.scale(k, v)
 
     def load_netto_st(self, st_idx: int) -> LinearExpression:
-        """Storage netto energy loading (taking into account loading losses)
+        """
+        Storage netto energy loading (taking into account loading losses).
 
         Args:
-            st_idx (int): storage index
+            - st_idx (int): storage index
+
         Returns:
-            MLinExpr: Linear expression for storage netto energy loading
+            - MLinExpr: Linear expression for storage netto energy loading
         """
         k = self.parameters.stor.load_eff[st_idx]
         v = self.variables.stor.load.isel(stor=st_idx)
         return self.scale(k, v)
 
     def netto_flow_l(self, line_idx: int) -> LinearExpression:
-        """Line netto energy flow (taking into account losses)
+        """
+        Line netto energy flow (taking into account losses).
 
         Args:
-            line_idx (int): line index
+            - line_idx (int): line index
+
         Returns:
-             MLinExpr: Linear expression for line netto flow
-        : MLinExpr
+            - LinearExpression: Linear expression for line netto flow
         """
         k, v = (
             1 - self.parameters.line.loss[line_idx],
@@ -122,12 +149,14 @@ class ExpressionHandler:
         return self.scale(k, v)
 
     def p_inst_st(self, st_idx: int) -> LinearExpression:
-        """Storage installed power
+        """
+        Return storage installed power.
 
         Args:
-            st_idx (int): storage index
+            - st_idx (int): storage index
+
         Returns:
-            MLinExpr: Linear expression for storage installed power
+            - LinearExpression: linear expression for storage installed power
         """
         k, v = (
             self.parameters.stor.p2cap[st_idx],
@@ -137,7 +166,8 @@ class ExpressionHandler:
 
     @staticmethod
     def discount_rate(yearly_rate: np.ndarray) -> np.ndarray:
-        """Vector of discount rates for each year.
+        """
+        Vector of discount rates for each year.
 
         Returns:
             np.ndarray: discount rate
@@ -146,21 +176,38 @@ class ExpressionHandler:
 
     @staticmethod
     def scale(_k: float | np.ndarray, _v: Variable) -> LinearExpression:
+        """
+        Scales variable _v by _k.
+
+        Args:
+            - _k (float): scalar
+            - _v (Variable): variable to scale
+
+        Returns:
+            - LinearExpression: scaled variable
+        """
         return _k * _v
 
     def fuel_consumption(
         self, fuel_idx: int, gen_idx: int, hourly_scale: float
     ) -> LinearExpression:
-        """Fuel consumption
+        """
+        Calculates fuel consumption for a generator.
+
+        This method checks if the specified generator uses the provided fuel type. If it does,
+        it computes the total fuel consumption by summing the generator's output over the hours
+        and scaling it based on the energy content of the fuel. The result is then adjusted
+        by the provided hourly scale.
 
         Args:
-            fuel_idx (int): fuel index
-            gen_idx (int): generator index
-            hourly_scale: (float): hourly scale
-        Returns:
-            MLinExpr: Linear expression for fuel consumption multiply by hourly scale
-        """
+            - fuel_idx (int): The index of the fuel being consumed.
+            - gen_idx (int): The index of the generator consuming the fuel.
+            - hourly_scale (float): A scaling factor for converting total fuel consumption to an hourly basis.
 
+        Returns:
+            - LinearExpression: A linear expression for fuel consumption, scaled to reflect hourly usage.
+              If the generator does not use the specified fuel, returns a linear expression of zeros.
+        """
         if self.parameters.gen.fuel[gen_idx] != fuel_idx:
             return LinearExpression(np.zeros(len(self.indices.Y)))
         return (

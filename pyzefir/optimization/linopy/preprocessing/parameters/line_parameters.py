@@ -23,7 +23,22 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class LineParameters(ModelParameters):
+    """
+    Class representing the line parameters for energy transmission systems.
+
+    This class holds various parameters associated with transmission lines, such as energy types,
+    bus connections, transmission losses, and capacity limits. It is essential for modeling
+    the performance and characteristics of lines in energy distribution networks.
+    """
+
     def __init__(self, lines: NetworkElementsDict, indices: Indices) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - lines (NetworkElementsDict): The dictionary of lines in the network.
+            - indices (Indices): The indices used to map line properties.
+        """
         self.et = self.fetch_element_prop(lines, indices.LINE, "energy_type")
         """ line energy type """
         self.bus_from = self.get_index_from_prop(lines, indices.LINE, indices.BUS, "fr")

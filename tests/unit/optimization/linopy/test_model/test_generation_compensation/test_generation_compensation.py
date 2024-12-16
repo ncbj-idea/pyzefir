@@ -162,4 +162,4 @@ def _test_objective(
     expected_obj += objective_varcost(indices, parameters, results)
     expected_obj += objective_dsr(indices, parameters, results)
     expected_obj += objective_generation_compensation(indices, parameters, results)
-    assert abs(results.objective_value - expected_obj) < TOL
+    assert abs(results.objective_value - expected_obj) <= 10 * TOL

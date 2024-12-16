@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 import os.path
 from pathlib import Path
@@ -43,12 +27,28 @@ class ExcelToCsvConverterException(Exception):
 
 
 class ExcelToCsvConverter(AbstractConverter):
+    """
+    A converter class to transform Excel (.xlsx) files into CSV format.
+
+    This class reads data from Excel files, validates the structure of the data,
+    and then writes the contents to CSV files. It supports optional categories of
+    data and handles dynamic datasets based on input files.
+    """
+
     def __init__(
         self,
         input_files_path: Path,
         output_files_path: Path,
         scenario_path: Path | None = None,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - input_files_path (Path): Directory path where input Excel files are located.
+            - output_files_path (Path): Directory path where output CSV files will be saved.
+            - scenario_path (Path | None): Optional path to a scenario file.
+        """
         self.path_manager = XlsxPathManager(
             input_path=input_files_path,
             output_path=output_files_path,
@@ -57,6 +57,13 @@ class ExcelToCsvConverter(AbstractConverter):
         self._scenario_path = scenario_path
 
     def convert(self) -> None:
+        """
+        Converts the specified Excel files to CSV format, validating data structure in the process.
+
+        This method iterates through the main data categories, checking for the presence of
+        required files and validating their structure. It handles both scenario files and default
+        input files, processing them into the appropriate CSV format.
+        """
         for category in DataCategories.get_main_categories():
             if category == DataCategories.SCENARIO and not self._scenario_path:
                 logger.debug(
@@ -86,6 +93,13 @@ class ExcelToCsvConverter(AbstractConverter):
             self._convert_xlsx_to_csv(category, xlsx_df_dict=sanitized_df_dict)
 
     def _validate(self, category: str, xlsx_df_dict: dict[str, pd.DataFrame]) -> None:
+        """
+        Validates the structure of the Excel data based on the category and provided dataframes.
+
+        Args:
+            - category (str): The category of data being validated.
+            - xlsx_df_dict (dict[str, pd.DataFrame]): A dictionary of dataframes representing sheets in the Excel file.
+        """
         if category not in DataCategories.get_dynamic_categories():
             self._validate_xlsx_structure(
                 xlsx_sheets_names=list(xlsx_df_dict.keys()), category=category
@@ -98,6 +112,13 @@ class ExcelToCsvConverter(AbstractConverter):
     def _validate_dataframes_structure(
         xlsx_df_dict: dict[str, pd.DataFrame], category: str
     ) -> None:
+        """
+        Validates the structure of each dataframe in the given dictionary against expected structures.
+
+        Args:
+            - xlsx_df_dict (dict[str, pd.DataFrame]): A dictionary of dataframes to validate.
+            - category (str): The category of data being validated.
+        """
         for sheet_name, df in xlsx_df_dict.items():
             if df.empty:
                 continue
@@ -121,6 +142,16 @@ class ExcelToCsvConverter(AbstractConverter):
     def _get_dataframe_structure(
         df: pd.DataFrame, valid_structure: DatasetConfig
     ) -> dict[str, str]:
+        """
+        Retrieves the actual structure of a given dataframe and compares it with the expected structure.
+
+        Args:
+            - df (pd.DataFrame): The dataframe whose structure is being retrieved.
+            - valid_structure (DatasetConfig): The expected structure against which the dataframe is validated.
+
+        Returns:
+            - dict[str, str]: A dictionary representing the actual structure of the dataframe.
+        """
         structure = {}
         for col, dtype in df.dtypes.items():
             if valid_structure.columns.get(col) is bool:
@@ -139,6 +170,13 @@ class ExcelToCsvConverter(AbstractConverter):
 
     @staticmethod
     def _validate_xlsx_structure(xlsx_sheets_names: list[str], category: str) -> None:
+        """
+        Validates the presence of required sheets in the Excel file against the expected sheets.
+
+        Args:
+            - xlsx_sheets_names (list[str]): List of sheet names present in the Excel file.
+            - category (str): The category of data being validated.
+        """
         valid_sheets_names: list[str] = get_datasets_from_categories(category)
         missing_spreadsheets = set(valid_sheets_names).difference(xlsx_sheets_names)
         optional_spreadsheets = set(get_optional_datasets_from_categories(category))
@@ -155,6 +193,13 @@ class ExcelToCsvConverter(AbstractConverter):
     def _convert_xlsx_to_csv(
         self, category: str, xlsx_df_dict: dict[str, pd.DataFrame]
     ) -> None:
+        """
+        Converts the provided dataframes from the Excel file into CSV files.
+
+        Args:
+            - category (str): The category of data being converted to CSV.
+            - xlsx_df_dict (dict[str, pd.DataFrame]): A dictionary of dataframes to convert.
+        """
         for sheet_name, df in xlsx_df_dict.items():
             csv_path = (
                 self.path_manager.concatenate_path_for_dynamic_dataset_name(
@@ -171,6 +216,15 @@ class ExcelToCsvConverter(AbstractConverter):
     def _sanitize_spreadsheets_names(
         xlsx_df_dict: dict[str | int, pd.DataFrame]
     ) -> dict[str, pd.DataFrame]:
+        """
+        Sanitizes the names of the Excel sheets.
+
+        Args:
+            - xlsx_df_dict (dict[str | int, pd.DataFrame]): A dictionary of dataframes keyed by sheet name.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A new dictionary with sanitized sheet names as keys.
+        """
         new_xlsx_df_dict = {}
         for sheet_name in list(xlsx_df_dict.keys()):
             sheet_name_refactored = sanitize_dataset_name(str(sheet_name))

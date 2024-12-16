@@ -24,13 +24,22 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 @dataclass
 class GenerationFractionParameters(ModelParameters):
     """
-    Generation Fraction parameters (tag, subtag, fraction_type, energy_type, min_generation_fraction,
-    max_generation_fraction)
+    Class representing the generation fraction parameters, including tags, subtags, and generation fractions.
+
+    This class encapsulates parameters related to generation fractions for various energy types, including minimum
+    and maximum generation fractions. It facilitates access to these parameters for energy modeling and analysis.
     """
 
     def __init__(
         self, generation_fractions: NetworkElementsDict, indices: Indices
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - generation_fractions (NetworkElementsDict): Dictionary containing generation fraction elements.
+            - indices (Indices): Indices for accessing properties within the generation fractions.
+        """
         self.tag = self.get_index_from_prop(
             generation_fractions, indices.GF, indices.TAGS, "tag"
         )

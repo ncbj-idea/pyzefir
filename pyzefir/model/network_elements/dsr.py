@@ -53,14 +53,31 @@ class DSR(NetworkElement):
     """
     Number of hours determining the length of the balancing period of DSR
     """
-    penalization: float
+    penalization_minus: float
     """
-    Penalization of demand shift per unit of energy [PLN / xWh]
+    Penalization of demand shift minus per unit of energy [PLN / xWh]
+    """
+    penalization_plus: float
+    """
+    Penalization of demand shift plus per unit of energy [PLN / xWh]
+    """
+    hourly_relative_shift_plus_limit: float = 1.0
+    """
+    Maximum amount of energy, that can be used for load shifting compensation.
+    Expressed as a fraction of a total net injection at a node per each hour.
+    Default value set to 1.0 to restrict the flexibility by the maximum value of the load in a given hour
+    """
+    hourly_relative_shift_minus_limit: float = 1.0
+    """
+    Maximum amount of energy, that can be shifted in each hour.
+    Expressed as a fraction of a total net injection at a node per each hour.
+    Default value set to 1.0 to prevent making the resulting load smaller than zero
     """
     relative_shift_limit: float | None = None
     """
-    Maximum total shift against total net injection at a node during this period,
-    in the both opened range (0,1)
+    Maximum value of shift minus expressed as a fraction of a total net injection
+    at a node per balancing period (limit per sum for each balancing period, not per hour).
+    Must be a number between 0 and 1.
     """
     abs_shift_limit: float | None = None
     """
@@ -70,9 +87,9 @@ class DSR(NetworkElement):
     def validate(self, network: Network) -> None:
         """
         Validation procedure checking:
-        - All attributes have correct types
-        - Compensation factor value in the both closed range [0,1]
-        - Relative shift limit value in the both opened range (0,1)
+            - All attributes have correct types
+            - Compensation factor value in the both closed range [0,1]
+            - Relative shift limit value in the both opened range (0,1)
 
         Args:
             network (Network): Network object to which this object belongs
@@ -117,5 +134,23 @@ class DSR(NetworkElement):
                 NetworkValidatorException(
                     f"The value of the relative_shift_limit is inconsistent with th expected bounds of "
                     f"the interval: 0 < {self.relative_shift_limit} < 1"
+                )
+            )
+        if not check_interval(
+            lower_bound=0, upper_bound=1, value=self.hourly_relative_shift_plus_limit
+        ):
+            exception_list.append(
+                NetworkValidatorException(
+                    f"The value of the hourly_relative_shift_plus_limit is inconsistent with th expected bounds of "
+                    f"the interval: 0 < {self.hourly_relative_shift_plus_limit} < 1"
+                )
+            )
+        if not check_interval(
+            lower_bound=0, upper_bound=1, value=self.hourly_relative_shift_minus_limit
+        ):
+            exception_list.append(
+                NetworkValidatorException(
+                    f"The value of the hourly_relative_shift_minus_limit is inconsistent with th expected bounds of "
+                    f"the interval: 0 < {self.hourly_relative_shift_minus_limit} < 1"
                 )
             )

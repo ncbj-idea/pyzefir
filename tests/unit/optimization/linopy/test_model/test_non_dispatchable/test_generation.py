@@ -1,24 +1,9 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from pyzefir.model.network import Network
+from pyzefir.optimization.linopy.preprocessing.indices import Indices
 from tests.unit.optimization.linopy.constants import N_HOURS, N_YEARS
 from tests.unit.optimization.linopy.names import EE, GRID, HEAT, HS
 from tests.unit.optimization.linopy.test_model.utils import (
@@ -79,39 +64,43 @@ from tests.unit.optimization.linopy.test_model.utils import (
             {
                 f"pp_coal_{GRID}": {
                     "gen": np.array([0.8, 0.7, 0.2, 0.5, 0.6, 0.9]).reshape((-1, 1)),
-                    "gen_ee": np.array([0.8, 0.7, 0.2, 0.5, 0.6, 0.9]).reshape((-1, 1)),
-                    "gen_heat": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        EE: np.array([0.8, 0.7, 0.2, 0.5, 0.6, 0.9]).reshape((-1, 1)),
+                    },
                     "dump": np.zeros(6).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        EE: np.zeros(6).reshape((-1, 1)),
+                    },
                 },
                 "local_pv": {
                     "gen": np.array([0.2, 0.3, 0.8, 0.5, 0.4, 0.1]).reshape((-1, 1)),
-                    "gen_ee": np.array([0.2, 0.3, 0.8, 0.5, 0.4, 0.1]).reshape((-1, 1)),
-                    "gen_heat": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        EE: np.array([0.2, 0.3, 0.8, 0.5, 0.4, 0.1]).reshape((-1, 1)),
+                    },
                     "dump": np.zeros(6).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        EE: np.zeros(6).reshape((-1, 1)),
+                    },
                 },
                 "global_solar": {
                     "gen": np.array([0.4, 0.6, 1.6, 1.0, 0.8, 0.2]).reshape((-1, 1)),
-                    "gen_heat": np.array([0.4, 0.6, 1.0, 1.0, 0.8, 0.2]).reshape(
-                        (-1, 1)
-                    ),
-                    "gen_ee": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        HEAT: np.array([0.4, 0.6, 1.0, 1.0, 0.8, 0.2]).reshape((-1, 1)),
+                    },
                     "dump": np.array([0, 0, 0.6, 0, 0, 0]).reshape((-1, 1)),
-                    "dump_heat": np.array([0, 0, 0.6, 0, 0, 0]).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        HEAT: np.array([0, 0, 0.6, 0, 0, 0]).reshape((-1, 1)),
+                    },
                 },
                 f"biomass_heat_plant_{HS}": {
                     "gen": np.array([0.6, 0.4, 0.0, 0.0, 0.2, 0.8]).reshape((-1, 1)),
-                    "gen_heat": np.array([0.6, 0.4, 0.0, 0.0, 0.2, 0.8]).reshape(
-                        (-1, 1)
-                    ),
-                    "gen_ee": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        HEAT: np.array([0.6, 0.4, 0.0, 0.0, 0.2, 0.8]).reshape((-1, 1)),
+                    },
                     "dump": np.zeros(6).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        HEAT: np.zeros(6).reshape((-1, 1)),
+                    },
                 },
             },
             id="equal efficiency, constant demand, variable non-negative capacity factor",
@@ -159,35 +148,41 @@ from tests.unit.optimization.linopy.test_model.utils import (
             {
                 f"pp_coal_{GRID}": {
                     "gen": np.array([2, 10, 3, 2, 0, 3]).reshape((-1, 1)),
-                    "gen_ee": np.array([2, 10, 3, 2, 0, 3]).reshape((-1, 1)),
-                    "gen_heat": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        EE: np.array([2, 10, 3, 2, 0, 3]).reshape((-1, 1)),
+                    },
                     "dump": np.zeros(6).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        EE: np.zeros(6).reshape((-1, 1)),
+                    },
                 },
                 "local_pv": {
                     "gen": np.array([0, 0, 5, 15, 10, 0]).reshape((-1, 1)),
-                    "gen_ee": np.array([0, 0, 1, 3, 1, 0]).reshape((-1, 1)),
-                    "gen_heat": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        EE: np.array([0, 0, 1, 3, 1, 0]).reshape((-1, 1)),
+                    },
                     "dump": np.array([0, 0, 0, 0, 5, 0]).reshape((-1, 1)),
-                    "dump_ee": np.array([0, 0, 0, 0, 1, 0]).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        EE: np.array([0, 0, 0, 0, 1, 0]).reshape((-1, 1)),
+                    },
                 },
                 "global_solar": {
                     "gen": np.array([0, 0, 3, 9, 6, 0]).reshape((-1, 1)),
-                    "gen_heat": np.array([0, 0, 0, 4.5, 3, 0]).reshape((-1, 1)),
-                    "gen_ee": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {
+                        HEAT: np.array([0, 0, 0, 4.5, 3, 0]).reshape((-1, 1)),
+                    },
                     "dump": np.array([0, 0, 3, 0, 0, 0]).reshape((-1, 1)),
-                    "dump_heat": np.array([0, 0, 1.5, 0, 0, 0]).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        HEAT: np.array([0, 0, 1.5, 0, 0, 0]).reshape((-1, 1)),
+                    },
                 },
                 f"biomass_heat_plant_{HS}": {
                     "gen": np.array([3, 1, 0.0, 0.5, 4, 5]).reshape((-1, 1)),
-                    "gen_heat": np.array([3, 1, 0.0, 0.5, 4, 5]).reshape((-1, 1)),
-                    "gen_ee": np.zeros(6).reshape((-1, 1)),
+                    "gen_et": {HEAT: np.array([3, 1, 0.0, 0.5, 4, 5]).reshape((-1, 1))},
                     "dump": np.zeros(6).reshape((-1, 1)),
-                    "dump_heat": np.zeros(6).reshape((-1, 1)),
-                    "dump_ee": np.zeros(6).reshape((-1, 1)),
+                    "dump_et": {
+                        HEAT: np.zeros(6).reshape((-1, 1)),
+                    },
                 },
             },
             id="variable demand, different efficiencies, variable capacity factor with zeros",
@@ -222,23 +217,38 @@ def test_generation_and_dump_energy(
         assert np.allclose(
             engine.results.generators_results.gen[name], expected_results[name]["gen"]
         )
-        assert np.allclose(
-            engine.results.generators_results.gen_et[name][EE],
-            expected_results[name]["gen_ee"],
+        gen_energy_types = network.generator_types[
+            network.generators[name].energy_source_type
+        ].energy_types
+        assert set(engine.results.generators_results.gen_et[name].keys()) == set(
+            network.energy_types
         )
-        assert np.allclose(
-            engine.results.generators_results.gen_et[name][HEAT],
-            expected_results[name]["gen_heat"],
+        assert set(engine.results.generators_results.dump_et[name].keys()) == set(
+            network.energy_types
         )
+        for energy_type in network.energy_types:
+            if energy_type in gen_energy_types:
+                expected_gen_et = expected_results[name]["gen_et"][energy_type]
+                expected_dump_et = expected_results[name]["dump_et"][energy_type]
+            else:
+                expected_gen_et = empty_timeseries_df(engine.indices)
+                expected_dump_et = empty_timeseries_df(engine.indices)
+            assert np.allclose(
+                engine.results.generators_results.gen_et[name][energy_type],
+                expected_gen_et,
+            )
+            assert np.allclose(
+                engine.results.generators_results.dump_et[name][energy_type],
+                expected_dump_et,
+            )
 
-        assert np.allclose(
-            engine.results.generators_results.dump[name], expected_results[name]["dump"]
-        )
-        assert np.allclose(
-            engine.results.generators_results.dump_et[name][EE],
-            expected_results[name]["dump_ee"],
-        )
-        assert np.allclose(
-            engine.results.generators_results.dump_et[name][HEAT],
-            expected_results[name]["dump_heat"],
-        )
+
+def empty_timeseries_df(indices: Indices) -> pd.DataFrame:
+    df = pd.DataFrame(
+        data=np.zeros((len(indices.H), len(indices.Y))),
+        columns=indices.Y.ii,
+        index=indices.H.ii,
+    )
+    df.columns.name = "year"
+    df.index.name = "hour"
+    return df

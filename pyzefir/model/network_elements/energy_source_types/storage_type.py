@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 import logging
@@ -27,7 +11,7 @@ from pyzefir.model.exceptions import (
     NetworkValidatorExceptionGroup,
 )
 from pyzefir.model.network_elements import EnergySourceType
-from pyzefir.model.utils import check_interval
+from pyzefir.model.utils import AllowedStorageGenerationLoadMethods, check_interval
 
 _logger = logging.getLogger(__name__)
 
@@ -43,7 +27,7 @@ class StorageTypeValidatorExceptionGroup(NetworkValidatorExceptionGroup):
 class StorageType(EnergySourceType):
     """
     A class that represents the StorageType in the network structure which stores parameters
-    defined for a given type of storages
+    defined for a given type of storages.
     """
 
     energy_type: str
@@ -76,21 +60,23 @@ class StorageType(EnergySourceType):
     Determines the percentage of the installed generator's rated power that
     can be used
     """
+    generation_load_method: str | None = None
+    """ Parameters regarding the use of a different generation counting method for this type of storage """
 
     def validate(self, network: Network) -> None:
         """
         Validation procedure checking:
-        - Validates types of the following attributes StorageType class:
-        - generation_efficiency
-        - load_efficiency
-        - cycle_length
-        - power_to_capacity
+            - validates types of the following attributes StorageType class:
+            - generation_efficiency
+            - load_efficiency
+            - cycle_length
+            - power_to_capacity
 
         Args:
-            network (Network): network to which self is to be added.
+            - network (Network): network to which self is to be added.
 
         Raises:
-            NetworkValidatorExceptionGroup: If exception_list contains exception.
+            - NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
         _logger.debug("Validating storage type object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
@@ -104,6 +90,7 @@ class StorageType(EnergySourceType):
             ("energy_type", str),
             ("energy_loss", float | int),
             ("power_utilization", float | int),
+            ("generation_load_method", str | None),
         ]:
             self._validate_attribute_type(
                 attr=attr,
@@ -132,6 +119,16 @@ class StorageType(EnergySourceType):
                     NetworkValidatorException(
                         f"The value of the {attr} is inconsistent with th expected bounds of "
                         f"the interval: 0 <= {attr_value} <= 1"
+                    )
+                )
+        if self.generation_load_method is not None:
+            if not AllowedStorageGenerationLoadMethods.has_value(
+                self.generation_load_method
+            ):
+                exception_list.append(
+                    NetworkValidatorException(
+                        f"The value of the generation_load_method {self.generation_load_method} is "
+                        f"inconsistent with allowed values: {list(AllowedStorageGenerationLoadMethods.__members__)}"
                     )
                 )
 

@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from pathlib import Path
 
@@ -37,6 +21,20 @@ _logger = logging.getLogger(__name__)
 def create_interpolated_attribute_dataframe(
     df: pd.DataFrame, index_name: str, n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame with interpolated attribute values over the specified number of years.
+
+    This function takes an input DataFrame, interpolates missing values for the specified number
+    of years, and returns a DataFrame where the attributes have been interpolated across the time range.
+
+    Args:
+        - df (pd.DataFrame): DataFrame containing the original values to interpolate from.
+        - index_name (str): Name of the column to use as the index.
+        - n_years (int): Number of years to interpolate over.
+
+    Returns:
+        - pd.DataFrame: A DataFrame with interpolated values and a new index.
+    """
     interpolated_values = interpolate_missing_df_values(
         df.iloc[:, 1:].T, expected_idx=np.arange(n_years)
     ).T
@@ -51,18 +49,44 @@ def create_interpolated_attribute_dataframe(
 def create_cost_parameters_df(
     cost_parameters: dict[str, pd.DataFrame], n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame for cost parameters with interpolated values if any data is missing.
+
+    This function takes a dictionary of cost parameters (CAPEX and OPEX), interpolates missing
+    values for the given number of years, and returns a consolidated DataFrame with the
+    interpolated CAPEX and OPEX values for each technology type.
+
+    Args:
+        - cost_parameters (dict[str, pd.DataFrame]): Dictionary containing CAPEX and OPEX cost parameters
+            for each technology type.
+        - n_years (int): Number of years to interpolate over.
+
+    Returns:
+        - pd.DataFrame: DataFrame with interpolated CAPEX and OPEX values, indexed by technology type and year.
+    """
+
     def interpolate_and_transform(df: pd.DataFrame, column_name: str) -> pd.DataFrame:
-        interpolated_df = (
-            interpolate_missing_df_values(
-                df.set_index(ScenarioSheetsColumnName.TECHNOLOGY_TYPE).T,
-                expected_idx=np.arange(n_years),
-            )
-            .T.stack()
-            .reset_index(level=1, drop=True)
-            .reset_index()
-            .rename(columns={0: column_name})
-        )
-        return interpolated_df
+        """Interpolates missing values and formats the DataFrame."""
+
+        interpolated = interpolate_missing_df_values(
+            df.set_index(ScenarioSheetsColumnName.TECHNOLOGY_TYPE).T,
+            expected_idx=np.arange(n_years),
+        ).T
+
+        interpolated = interpolated.stack().reset_index()
+        interpolated.columns = [
+            ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
+            ScenarioSheetsColumnName.YEAR_IDX,
+            column_name,
+        ]
+
+        return interpolated[
+            [
+                ScenarioSheetsColumnName.YEAR_IDX,
+                ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
+                column_name,
+            ]
+        ]
 
     capex_column = interpolate_and_transform(
         cost_parameters[ScenarioSheetsColumnName.CAPEX],
@@ -71,22 +95,34 @@ def create_cost_parameters_df(
     opex_column = interpolate_and_transform(
         cost_parameters[ScenarioSheetsColumnName.OPEX], ScenarioSheetsColumnName.OPEX
     )
-
-    result = pd.concat([capex_column, opex_column], axis=1)
-    result[ScenarioSheetsColumnName.YEAR_IDX] = result.index % n_years
-    result_columns_order = [
-        ScenarioSheetsColumnName.YEAR_IDX,
-        ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
-        ScenarioSheetsColumnName.CAPEX,
-        ScenarioSheetsColumnName.OPEX,
-    ]
-
-    return result.loc[:, ~result.columns.duplicated()][result_columns_order]
+    return pd.merge(
+        capex_column,
+        opex_column,
+        on=[
+            ScenarioSheetsColumnName.YEAR_IDX,
+            ScenarioSheetsColumnName.TECHNOLOGY_TYPE,
+        ],
+        how="outer",
+    )
 
 
 def create_yearly_demand_df(
     yearly_demand: dict[str, pd.DataFrame], n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame with yearly demand values for each energy type, interpolating missing values if needed.
+
+    This function processes yearly demand data for various energy types, interpolates missing values for
+    the given number of years, and aggregates the demand values into a single DataFrame, indexed by
+    energy type, year, and aggregate.
+
+    Args:
+        - yearly_demand (dict[str, pd.DataFrame]): Dictionary containing yearly demand data for each energy type.
+        - n_years (int): Number of years to interpolate over.
+
+    Returns:
+        - pd.DataFrame: DataFrame containing yearly demand values, organized by energy type and year.
+    """
     dfs = []
     for energy_type, df in yearly_demand.items():
         interpolated_demand = interpolate_missing_df_values(
@@ -120,6 +156,22 @@ def create_yearly_demand_df(
 def create_capacity_limits_df(
     dfs: dict[str, pd.DataFrame], column_name: str, n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame for capacity limits with interpolated values for the given number of years.
+
+    This function takes a dictionary of capacity limit DataFrames, interpolates any missing values
+    for each capacity parameter, and aggregates the data into a single DataFrame. The final DataFrame
+    includes columns for various capacity metrics (e.g., max/min capacity, capacity increases) and is
+    indexed by year and the specified column name.
+
+    Args:
+        - dfs (dict[str, pd.DataFrame]): Dictionary containing capacity limit data for different parameters.
+        - column_name (str): The name of the column to index the data by (e.g., technology or region).
+        - n_years (int): Number of years for which the data should be interpolated.
+
+    Returns:
+        - pd.DataFrame: DataFrame containing interpolated capacity limits, organized by year and the given column.
+    """
     dfs_list = [
         interpolate_missing_df_values(
             df.set_index(column_name).T, np.arange(1, n_years)
@@ -146,6 +198,21 @@ def create_capacity_limits_df(
 
 
 def create_fractions_df(fractions: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
+    """
+    Create a DataFrame for technology fractions with interpolated values.
+
+    This function processes a dictionary of fractions, where each fraction represents data associated
+    with a specific type of technology (or other classifications). It interpolates missing values in
+    the DataFrames, reshapes the data, and assigns a corresponding technology stack name. The final
+    output is a unified DataFrame containing key fraction metrics for each technology stack over time.
+
+    Args:
+        - fractions (dict[str, dict[str, pd.DataFrame]]): Dictionary containing fraction data,
+            categorized by technology type.
+
+    Returns:
+        - pd.DataFrame: DataFrame containing interpolated fraction data, organized by technology stack and year.
+    """
     result = []
 
     for lbs_type, data in fractions.items():
@@ -180,6 +247,21 @@ def create_fractions_df(fractions: dict[str, dict[str, pd.DataFrame]]) -> pd.Dat
 
 
 def create_constants_df(n_hours: int, n_years: int) -> pd.DataFrame:
+    """
+    Create a DataFrame containing constant values for the model.
+
+    This function generates a DataFrame with predefined constant values
+    that are used throughout the model. Specifically, it includes the
+    total number of hours and the total number of years, providing a
+    convenient reference for these values.
+
+    Args:
+        - n_hours (int): Total number of hours in the modeling period.
+        - n_years (int): Total number of years in the modeling period.
+
+    Returns:
+        - pd.DataFrame: DataFrame containing constants with their names and values.
+    """
     data = [
         {
             ScenarioSheetsColumnName.CONSTANTS_NAME: "N_HOURS",
@@ -196,6 +278,20 @@ def create_constants_df(n_hours: int, n_years: int) -> pd.DataFrame:
 def create_relative_emission_limits_df(
     emission_types: list[str], n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame for relative emission limits based on specified emission types.
+
+    This function initializes a DataFrame that contains columns for each type of
+    emission specified in the input list. The DataFrame is indexed by year, allowing
+    for easy management and analysis of emission limits over the given time period.
+
+    Args:
+        - emission_types (list[str]): List of emission types to be included as columns.
+        - n_years (int): Total number of years for which emission limits are defined.
+
+    Returns:
+        - pd.DataFrame: DataFrame with relative emission limits indexed by year.
+    """
     df = pd.DataFrame(
         index=pd.RangeIndex(
             start=0, stop=n_years, name=ScenarioSheetsColumnName.YEAR_IDX
@@ -208,6 +304,20 @@ def create_relative_emission_limits_df(
 def create_emission_fees_df(
     emission_fees_df: pd.DataFrame, n_years: int
 ) -> pd.DataFrame:
+    """
+    Create a DataFrame for emission fees, interpolating missing values if necessary.
+
+    This function processes the provided emission fees DataFrame by interpolating any
+    missing values across the specified number of years. The resulting DataFrame is
+    structured to facilitate further analysis and modeling of emission fees over time.
+
+    Args:
+        - emission_fees_df (pd.DataFrame): The initial DataFrame containing emission fees data.
+        - n_years (int): The total number of years for which the emission fees are defined.
+
+    Returns:
+        - pd.DataFrame: A DataFrame with interpolated emission fees, indexed by year.
+    """
     result = (
         interpolate_missing_df_values(
             values=emission_fees_df.set_index(ScenarioSheetsColumnName.EMISSION_FEE).T,
@@ -220,6 +330,21 @@ def create_emission_fees_df(
 
 
 def create_generation_compensation_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create a DataFrame for generation compensation by restructuring the provided data.
+
+    This function transforms the input generation compensation DataFrame by
+    renaming the technology type column to serve as the year index. The data is
+    transposed to arrange it correctly for further analysis, and the first row
+    is used as the new header.
+
+    Args:
+        - df (pd.DataFrame): The initial DataFrame containing generation compensation data.
+
+    Returns:
+        - pd.DataFrame: A restructured DataFrame with generation compensation values
+          indexed by year and columns representing various compensation metrics.
+    """
     df = df.rename(
         columns={
             ScenarioSheetsColumnName.TECHNOLOGY_TYPE: ScenarioSheetsColumnName.YEAR_IDX
@@ -234,6 +359,30 @@ def create_scenario_data_dict(
     n_years: int,
     n_hours: int,
 ) -> dict[ScenarioSheetName, pd.DataFrame]:
+    """
+    Create a dictionary of scenario data and associated DataFrames for analysis.
+
+    This function aggregates various pieces of scenario data into a structured
+    dictionary format. It includes capacity bounds, cost parameters, demand
+    projections, emission limits, fuel parameters, and other relevant metrics
+    for the given scenario. Each entry in the dictionary corresponds to a
+    specific aspect of the scenario data.
+
+    Args:
+        - scenario_data (ScenarioData): An instance of the ScenarioData class
+          containing input data for the scenario.
+        - capacity_bounds_df (pd.DataFrame): A DataFrame specifying the capacity
+          bounds for the scenario.
+        - n_years (int): The total number of years for which the scenario is
+          being analyzed.
+        - n_hours (int): The total number of hours for which the scenario is
+          being analyzed.
+
+    Returns:
+        - dict[ScenarioSheetName, pd.DataFrame]: A dictionary where keys are
+          ScenarioSheetName enumerations and values are DataFrames containing the
+          relevant scenario data.
+    """
     dfs_dict = {
         ScenarioSheetName.COST_PARAMETERS: create_cost_parameters_df(
             cost_parameters=scenario_data.cost_parameters, n_years=n_years
@@ -294,6 +443,7 @@ def create_scenario_data_dict(
         ScenarioSheetName.GENERATION_COMPENSATION: create_generation_compensation_df(
             scenario_data.generation_compensation
         ),
+        ScenarioSheetName.ENS_PENALIZATION: scenario_data.ens_penalization,
     }
     if not scenario_data.yearly_emission_reduction.empty:
         dfs_dict[ScenarioSheetName.YEARLY_EMISSION_REDUCTION] = (
@@ -312,6 +462,28 @@ def create_scenario(
     n_years: int,
     n_hours: int,
 ) -> None:
+    """
+    Create a scenario by processing specified data and saving it to an Excel file.
+
+    This function compiles various elements of scenario data into a structured
+    format, organizes them into a dictionary, and then writes that data to an
+    Excel file. This is useful for analyzing and sharing scenario-based
+    projections in an easily accessible format.
+
+    Args:
+        - scenario_data (ScenarioData): An instance of the ScenarioData class
+          containing the input data for the scenario.
+        - output_path (Path): The directory path where the output Excel file
+          will be saved.
+        - capacity_bounds_df (pd.DataFrame): A DataFrame containing capacity
+          bounds relevant to the scenario.
+        - scenario_name (str): A descriptive name for the scenario, used as
+          the filename for the saved Excel file.
+        - n_years (int): The total number of years over which the scenario is
+          analyzed.
+        - n_hours (int): The total number of hours considered in the scenario
+          analysis.
+    """
     _logger.debug("Creating scenario data objects ...")
     scenario_data_dict = create_scenario_data_dict(
         scenario_data=scenario_data,

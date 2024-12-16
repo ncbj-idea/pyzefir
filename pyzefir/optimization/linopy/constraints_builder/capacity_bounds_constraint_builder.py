@@ -23,7 +23,23 @@ _logger = logging.getLogger(__name__)
 
 
 class CapacityBoundsConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    A class responsible for building capacity bounds constraints for generators and storages in an energy model.
+
+    This class generates constraints to ensure that the capacities of generators and storage units
+    adhere to specified bounds. The constraints compare the capacity of one element (generator or storage)
+    to another, applying either an equality or inequality depending on the defined relationship.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Add capacity bounds constraints for generators and storages.
+
+        Iterates through defined capacity bounds and establishes
+        constraints based on the specified left-hand side (LHS)
+        and right-hand side (RHS) indices and types, applying
+        the appropriate sense (equality or inequality).
+        """
         _logger.info("Capacity bounds constraints is working...")
         years = self.indices.Y.ii[1:]
         capacity_bounds = self.parameters.capacity_bounds

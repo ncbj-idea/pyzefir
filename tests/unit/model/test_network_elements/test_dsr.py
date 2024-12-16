@@ -46,9 +46,12 @@ def network() -> Network:
                 name="DSR_2",
                 compensation_factor=10,
                 balancing_period_len=0.1,  # noqa
-                penalization=10,
+                penalization_minus=10,
+                penalization_plus=0,
                 relative_shift_limit=1.1,
                 abs_shift_limit="string",  # noqa
+                hourly_relative_shift_plus_limit=1.4,
+                hourly_relative_shift_minus_limit=-0.1,
             ),
             [
                 NetworkValidatorException(
@@ -60,7 +63,11 @@ def network() -> Network:
                     "but it is an instance of <class 'float'> instead"
                 ),
                 NetworkValidatorException(
-                    "DSR attribute 'penalization' for DSR_2 must be an instance of <class 'float'>, "
+                    "DSR attribute 'penalization_minus' for DSR_2 must be an instance of <class 'float'>, "
+                    "but it is an instance of <class 'int'> instead"
+                ),
+                NetworkValidatorException(
+                    "DSR attribute 'penalization_plus' for DSR_2 must be an instance of <class 'float'>, "
                     "but it is an instance of <class 'int'> instead"
                 ),
                 NetworkValidatorException(
@@ -74,6 +81,14 @@ def network() -> Network:
                 NetworkValidatorException(
                     "The value of the relative_shift_limit is inconsistent with th expected bounds of "
                     "the interval: 0 < 1.1 < 1"
+                ),
+                NetworkValidatorException(
+                    "The value of the hourly_relative_shift_plus_limit is inconsistent with th expected bounds of "
+                    "the interval: 0 < 1.4 < 1"
+                ),
+                NetworkValidatorException(
+                    "The value of the hourly_relative_shift_minus_limit is inconsistent with th expected bounds of "
+                    "the interval: 0 < -0.1 < 1"
                 ),
             ],
             id="DSR_is_incorrect",
@@ -91,7 +106,8 @@ def test_dsr_is_correct() -> None:
         name="DSR_1",
         compensation_factor=0.1,
         balancing_period_len=10,
-        penalization=0.6,
+        penalization_minus=0.6,
+        penalization_plus=0.5,
         relative_shift_limit=0.9,
         abs_shift_limit=None,
     )

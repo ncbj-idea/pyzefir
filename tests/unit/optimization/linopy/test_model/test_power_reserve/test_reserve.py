@@ -1,18 +1,4 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -20,13 +6,13 @@ import pytest
 
 from pyzefir.model.network import Network
 from pyzefir.model.utils import NetworkConstants
-from pyzefir.utils.functions import invert_dict_of_sets
 from tests.unit.optimization.linopy.constants import N_YEARS
 from tests.unit.optimization.linopy.test_model.utils import (
     create_default_opt_config,
     run_opt_engine,
     set_network_elements_parameters,
 )
+from tests.unit.optimization.linopy.utils import TOL
 
 
 @pytest.mark.parametrize(
@@ -41,7 +27,7 @@ from tests.unit.optimization.linopy.test_model.utils import (
         (
             {
                 "pp_coal_grid": ["tag1"],
-                "chp_coal_grid_hs": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
                 "local_pv": ["tag2"],
                 "local_pv2": ["tag2"],
             },
@@ -53,14 +39,14 @@ from tests.unit.optimization.linopy.test_model.utils import (
         (
             {
                 "pp_coal_grid": ["tag1"],
-                "chp_coal_grid_hs": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
                 "local_pv": ["tag2"],
                 "local_pv2": ["tag2"],
             },
-            {"power_reserves": {"electricity": {"tag1": 10.0, "tag2": 14.0}}},
+            {"power_reserves": {"electricity": {"tag1": 4.0, "tag2": 4.0}}},
             np.arange(10),
             0.4,
-            pd.Series([15000, 20000, 30000, 40000, 10000]),
+            pd.Series([1500, 2000, 3000, 4000, 1000]),
         ),
         (
             {
@@ -87,6 +73,30 @@ from tests.unit.optimization.linopy.test_model.utils import (
             pd.Series([15000, 20000, 30000, 40000, 10000]),
         ),
         (
+            {
+                "pp_coal_grid": ["tag1", "tag2"],
+            },
+            {"power_reserves": {"electricity": {"tag1": 10.0, "tag2": 5.0}}},
+            np.arange(10),
+            0.4,
+            pd.Series([15000, 20000, 30000, 40000, 10000]),
+        ),
+        (
+            {
+                "pp_coal_grid": ["tag1"],
+                "chp_coal_grid_hs": ["tag1", "tag2"],
+            },
+            {
+                "power_reserves": {
+                    "electricity": {"tag1": 10.0},
+                    "heat": {"tag2": 5.0},
+                }
+            },
+            np.arange(10),
+            0.4,
+            pd.Series([15000, 20000, 30000, 40000, 10000]),
+        ),
+        (
             {"pp_coal_grid": ["tag1"], "local_pv": ["tag1"], "local_pv2": ["tag1"]},
             {"power_reserves": {"electricity": {"tag1": 10.0}}},
             np.arange(10),
@@ -102,7 +112,7 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         (
             {"pp_coal_grid": ["tag1"]},
-            {"power_reserves": {"electricity": {"tag1": 39.9}}},
+            {"power_reserves": {"electricity": {"tag1": 9.9}}},
             np.arange(10),
             0.5,
             pd.Series([1000, 10, 10000, 10, 1000]),
@@ -116,14 +126,14 @@ from tests.unit.optimization.linopy.test_model.utils import (
         ),
         (
             {"pp_coal_grid": ["tag1"]},
-            {"power_reserves": {"electricity": {"tag1": 39}}},
+            {"power_reserves": {"electricity": {"tag1": 13}}},
             np.arange(10),
             0.6,
             pd.Series([50, 1000, 20, 15, 10]),
         ),
         (
-            {"pp_coal_grid": ["tag1"]},
-            {"power_reserves": {"heat": {"tag1": 39}}},
+            {"chp_coal_grid_hs": ["tag1"]},
+            {"power_reserves": {"heat": {"tag1": 5}}},
             np.arange(10),
             0.6,
             pd.Series([50, 10, 2000, 15, 10]),
@@ -173,35 +183,178 @@ def test_reserves(
 
     opt_config = create_default_opt_config(hour_sample, np.arange(N_YEARS))
     engine = run_opt_engine(network, opt_config)
-
-    power_reserves = engine.parameters.scenario_parameters.power_reserves
-    cap: dict[str, pd.DataFrame] = engine.results.generators_results.cap
-    gen_et: dict[str, dict[str, pd.DataFrame]] = (
-        engine.results.generators_results.gen_et
+    p_res_var: dict[str, dict[str, dict[str, pd.DataFrame]]] = (
+        engine.results.generators_results.gen_reserve_et
     )
-    gens_of_tag: dict[int, set[int]] = invert_dict_of_sets(engine.parameters.gen.tags)
-    gens_of_tag_str: dict[int, set[str]] = {
-        k: {engine.indices.GEN.mapping[gen_idx] for gen_idx in v}
-        for k, v in gens_of_tag.items()
-    }
+    p_res = network.constants.power_reserves
 
-    _to_test_reserve(power_reserves, cap, gen_et, gens_of_tag_str)
+    min_p_res_per_tag: dict[str, dict[str, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
+    for et in p_res:
+        for tag in p_res[et]:
+            min_p_res_per_tag[tag][et] += p_res[et][tag]
+
+    for tag_name in min_p_res_per_tag:
+        for et in min_p_res_per_tag[tag_name]:
+            result = sum(
+                p_res_var[tag_name][gen_idx][et] for gen_idx in p_res_var[tag_name]
+            ).values
+            assert np.all(result >= min_p_res_per_tag[tag_name][et])
+
+
+@pytest.mark.parametrize(
+    (
+        "gen_tags",
+        "power_reserves",
+        "hour_sample",
+        "max_capacity",
+        "ens_expected",
+        "efficiency",
+    ),
+    [
+        pytest.param(
+            {
+                "pp_coal_grid": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
+                "local_pv": ["tag2"],
+                "local_pv2": ["tag2"],
+            },
+            {"power_reserves": {"electricity": {"tag1": 2.0}}},
+            np.arange(10),
+            {
+                "pv": pd.Series([0] * 5),
+                "pp_coal": pd.Series([10] * 5),
+                "chp_coal": pd.Series([0] * 5),
+            },
+            {"local_ee_bus": False},
+            {},
+            id="small reserve",
+        ),
+        pytest.param(
+            {
+                "pp_coal_grid": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
+                "local_pv": ["tag2"],
+                "local_pv2": ["tag2"],
+            },
+            {"power_reserves": {"electricity": {"tag1": 10.0}}},
+            np.arange(10),
+            {
+                "pv": pd.Series([0] * 5),
+                "pp_coal": pd.Series([10] * 5),
+                "chp_coal": pd.Series([0] * 5),
+            },
+            {"local_ee_bus": True},
+            {"pp_coal": {"electricity": pd.Series([1.0] * 8760)}},
+            id="reserve = max capacity",
+        ),
+        pytest.param(
+            {
+                "pp_coal_grid": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
+                "local_pv": ["tag2"],
+                "local_pv2": ["tag2"],
+            },
+            {"power_reserves": {"electricity": {"tag1": 7.6}}},
+            np.arange(10),
+            {
+                "pv": pd.Series([1] * 5),
+                "pp_coal": pd.Series([10] * 5),
+                "chp_coal": pd.Series([0.5] * 5),
+            },
+            {"local_ee_bus": True},
+            {"pp_coal": {"electricity": pd.Series([0.8] * 8760)}},
+            id="small reserve, more sources",
+        ),
+        pytest.param(
+            {
+                "pp_coal_grid": ["tag1"],
+                "chp_coal_grid_hs": ["tag2"],
+                "local_pv": ["tag2"],
+                "local_pv2": ["tag2"],
+            },
+            {"power_reserves": {}},
+            np.arange(10),
+            {
+                "pv": pd.Series([0] * 5),
+                "pp_coal": pd.Series([10] * 5),
+                "chp_coal": pd.Series([0] * 5),
+            },
+            {"local_ee_bus": False},
+            {},
+            id="no reserve",
+        ),
+    ],
+)
+def test_reserves_by_examining_ens(
+    gen_tags: dict[str, list[str]],
+    power_reserves: dict[str, dict],
+    network: Network,
+    hour_sample: np.ndarray,
+    max_capacity: dict,
+    ens_expected: dict,
+    efficiency: dict,
+) -> None:
+    """
+    test power reserve in the following way:
+    1. start wit ens-free configuration
+    2. set power reserve such that there is not enough power
+    3. check if ens is active in result
+    """
+
+    set_network_elements_parameters(
+        network.aggregated_consumers,
+        {
+            "aggr": {
+                "stack_base_fraction": {
+                    "lbs": 0.5,
+                    "lbs2": 0.5,
+                },
+                "n_consumers": pd.Series([10, 12, 15, 20, 30]),
+            }
+        },
+    )
+
+    for generator_type_name, max_capacity_value in max_capacity.items():
+        network.generator_types[generator_type_name].max_capacity = max_capacity_value
+
+    for generator_type_name, eff in efficiency.items():
+        for et, eff_value in eff.items():
+            network.generator_types[generator_type_name].efficiency[et] = eff_value
+
+    for generator_name, tags in gen_tags.items():
+        network.generators[generator_name].tags = tags
+
+    constants = network.constants.__dict__
+    network.constants = NetworkConstants(**constants | power_reserves)
+
+    network.generators["chp_coal_grid_hs"].unit_base_cap = 0.0
+    network.generators["chp_coal_grid_hs"].unit_max_capacity = pd.Series([0] * 5)
+    network.generators["pp_coal_grid"].unit_base_cap = 10.0
+
+    opt_config = create_default_opt_config(hour_sample, np.arange(N_YEARS))
+    engine = run_opt_engine(network, opt_config)
+
+    for ens_bus, expected_ens_value in ens_expected.items():
+        ens_present = {
+            ens_bus: np.any(
+                np.array(engine.results.bus_results.bus_ens[ens_bus]).sum(axis=0) > TOL
+            )
+        }
+        assert ens_present == ens_expected
 
 
 def _to_test_reserve(
     power_reserves: dict[str, dict[int, float]],
-    cap: dict[str, pd.DataFrame],
-    gen_et: dict[str, dict[str, pd.DataFrame]],
+    gen_reserve_et: dict[str, dict[str, pd.DataFrame]],
     gens_of_tag_str: dict[int, set[str]],
 ) -> None:
     for energy_type, tag_to_reserve in power_reserves.items():
         for tag, reserve in tag_to_reserve.items():
-            cap_sum = sum(
-                cap[gen_name]["cap"].values for gen_name in gens_of_tag_str[tag]
-            )
             gen_sum = sum(
-                gen_et[gen_name][energy_type].values
+                gen_reserve_et[gen_name][energy_type].values
                 for gen_name in gens_of_tag_str[tag]
             )
             for h in range(gen_sum.shape[0]):
-                assert np.all(cap_sum - gen_sum[h] >= reserve)
+                assert np.all(gen_sum + TOL >= reserve)

@@ -811,15 +811,7 @@ def _expr_gen(
         )[:, years]
     if len(stor_names):
         storages_generation_expr = sum(
-            np.array(
-                [
-                    stor_gen[stor_name]
-                    * network.storage_types[
-                        network.storages[stor_name].energy_source_type
-                    ].generation_efficiency
-                    for stor_name in stor_names
-                ]
-            )
+            np.array([stor_gen[stor_name] for stor_name in stor_names])
         )[:, years]
 
     if fraction_type == "yearly":

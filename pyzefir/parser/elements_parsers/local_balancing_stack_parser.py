@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import pandas as pd
 
@@ -21,15 +6,41 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class LocalBalancingStackParser(AbstractElementParser):
+    """
+    Parses local balancing stack data from DataFrames to create LocalBalancingStack objects.
+
+    This class is responsible for transforming a DataFrame containing information about local
+    balancing stacks into a tuple of LocalBalancingStack instances. It also manages the
+    mapping between stacks and their associated buses.
+    """
+
     def __init__(
         self, stack_df: pd.DataFrame, bus_df: pd.DataFrame, stack_bus_df: pd.DataFrame
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - stack_df (pd.DataFrame): DataFrame containing local balancing stack information.
+            - bus_df (pd.DataFrame): DataFrame containing bus information.
+            - stack_bus_df (pd.DataFrame): DataFrame mapping stacks to buses.
+        """
         self.stack_df = stack_df
         self.stack_buses_mapping = self._prepare_stack_buses_mapping(
             bus_df, stack_bus_df
         )
 
     def create(self) -> tuple[LocalBalancingStack, ...]:
+        """
+        Creates LocalBalancingStack objects from the stack DataFrame.
+
+        This method applies a function to each row of the stack DataFrame to create
+        LocalBalancingStack instances, returning a tuple of all created stack objects.
+
+        Returns:
+            - tuple[LocalBalancingStack, ...]: A tuple of LocalBalancingStack instances
+                created from the input DataFrame.
+        """
         stacks = self.stack_df.apply(self._create_stack, axis=1, result_type="reduce")
         return tuple(stacks)
 
@@ -37,6 +48,16 @@ class LocalBalancingStackParser(AbstractElementParser):
         self,
         df_row: pd.Series,
     ) -> LocalBalancingStack:
+        """
+        Creates a LocalBalancingStack object from a DataFrame row.
+
+        Args:
+            - df_row (pd.Series): A Series representing a single row of the stack DataFrame.
+
+        Returns:
+            - LocalBalancingStack: An instance of the LocalBalancingStack class populated with the data
+                from the DataFrame row.
+        """
         return LocalBalancingStack(
             name=str(df_row["name"]),
             buses_out={
@@ -52,7 +73,15 @@ class LocalBalancingStackParser(AbstractElementParser):
         bus_df: pd.DataFrame, stack_bus_df: pd.DataFrame
     ) -> dict[str, dict[str, set[str]]]:
         """
-        Creates dict containing mapping (lbs, energy_type) -> set[buses]
+        Creates a mapping of local balancing stacks to their associated buses.
+
+        Args:
+            - bus_df (pd.DataFrame): DataFrame containing bus information.
+            - stack_bus_df (pd.DataFrame): DataFrame mapping stacks to buses.
+
+        Returns:
+            - dict[str, dict[str, set[str]]]: A dictionary mapping each technology stack and energy type
+                to a set of buses.
         """
         bus_df = bus_df.rename(columns={"name": "bus"})
         stack_busses_df = pd.merge(bus_df, stack_bus_df, on="bus", how="inner")

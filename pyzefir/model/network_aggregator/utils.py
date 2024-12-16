@@ -45,12 +45,25 @@ class DataProperty:
 
 class DataAggregationItem:
     """
-    Class that defines the aggregation scheme for single property of the network.
+    Defines the aggregation scheme for a single property of the network.
+
+    This class is used to specify how a particular property within the network should be
+    aggregated by providing a data source path and an aggregation function. The class
+    facilitates iteration over nested structures in the network, enabling the application
+    of the aggregation function to each relevant data element. The `ALL_ELEMENTS` constant
+    allows for aggregation across all elements in a collection when specified.
     """
 
     ALL_ELEMENTS = "__all_elements__"
 
     def __init__(self, data_source: list[str], agg_func: Any) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - data_source (list[str]): list of data aggregation items
+            - agg_func (Any): function aggregating the data
+        """
         self._data_source = data_source
         self._agg_func: Any = agg_func
 
@@ -65,10 +78,9 @@ class DataAggregationItem:
         Iterate over the source object to access the property defined by the data source.
 
         Example:
-            data_source = [
-                "aggregated_consumers", DataAggregationItem.ALL_ELEMENTS,
-                "max_fraction", DataAggregationItem.ALL_ELEMENTS
-            ]
+            data_source = ["aggregated_consumers", DataAggregationItem.ALL_ELEMENTS,
+                           "max_fraction", DataAggregationItem.ALL_ELEMENTS]
+
             source_object = network
             index = 0
             The function will iterate over
@@ -76,11 +88,11 @@ class DataAggregationItem:
             and yield DataProperty object for each element.
 
         Args:
-            source_object (Any): object to iterate over
-            index (int): index of the data source list. Defaults to 0.
+            - source_object (Any): object to iterate over
+            - index (int): index of the data source list. Defaults to 0.
 
         Yields:
-            Generator[DataProperty, None, None]: DataProperty object for the property defined by the data source.
+            - Generator[DataProperty, None, None]: DataProperty object for the property defined by the data source.
         """
         last_iteration = len(self._data_source) == index + 1
         property_name = self._data_source[index]
@@ -156,6 +168,16 @@ class DemandChunkItemWrapper(DataAggregationItem):
     def iterate_over(
         self, source_object: Any, index: int = 0
     ) -> Generator[DataProperty, None, None]:
+        """
+        Iterate over the source object to access the property defined by the data source.
+
+        Args:
+            - source_object (Any): object to iterate over
+            - index (int): index of the data source list. Defaults to 0.
+
+        Yields:
+            - Generator[DataProperty, None, None]: DataProperty object for the property defined by the data source.
+        """
         for data_property in self._base_iterate_over(source_object, index):
             data_property.value = [chunk for chunk in data_property.value]
             for i in range(len(data_property.value)):

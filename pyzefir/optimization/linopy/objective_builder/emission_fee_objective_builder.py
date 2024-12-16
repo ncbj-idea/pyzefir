@@ -24,7 +24,28 @@ _logger = logging.getLogger(__name__)
 
 
 class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class for building the emission fee objective in the energy system model.
+
+    This class calculates the total cost associated with emissions produced by generators,
+    applying emission fees based on fuel consumption and emission reduction parameters.
+    The emission fee objective accounts for yearly generator emission costs, considering
+    various emission types and their respective fees, adjusted by emission reductions.
+    """
+
     def build_expression(self) -> LinearExpression | float:
+        """
+        Constructs the total emission fee objective across all generators and years.
+
+        This method iterates through each generator and year to calculate the total cost
+        incurred from emissions, using fuel consumption data and emission fees. The
+        emission fee is computed by summing up the yearly emission costs for each generator,
+        multiplied by scaling factors based on the year. If no valid fuel or emission fee
+        data is available, the method returns 0.0.
+
+        Returns:
+            - LinearExpression | float: The total emission fee objective, or 0.0 if no fees apply.
+        """
         _logger.info("Building emission fee objective...")
         result = 0.0
         if not (
@@ -44,6 +65,22 @@ class EmissionFeeObjectiveBuilder(ObjectiveBuilder):
     def yearly_generator_emission_cost(
         self, year_idx: int, gen_idx: int, eh: ExpressionHandler
     ) -> LinearExpression | float:
+        """
+        Constructs the emission cost for a specific generator in a specific year.
+
+        This method calculates the yearly emission cost for a given generator by using
+        fuel consumption data and applying emission fees based on the type of emissions
+        generated. It considers any emission reductions that apply to the generator and
+        calculates the total cost for each type of emission produced in the given year.
+
+        Args:
+            - year_idx (int): The index of the year for which to calculate emission costs.
+            - gen_idx (int): The index of the generator for which to calculate emission costs.
+            - eh (ExpressionHandler): The expression handler used to manage fuel consumption data.
+
+        Returns:
+            - LinearExpression | float: The emission cost for the generator in the specified year or 0.0.
+        """
         fuel_idx = self.parameters.gen.fuel[gen_idx]
         if fuel_idx is None:
             return 0.0

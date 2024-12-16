@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import configparser
 from dataclasses import dataclass, field
 from itertools import repeat
@@ -33,7 +17,14 @@ class ConfigException(Exception):
 
 @dataclass(frozen=True, kw_only=True)
 class ConfigParams:
-    """Class to hold configuration parameters."""
+    """
+    Class to hold configuration parameters for model input and output.
+
+    This class encapsulates the parameters necessary for running the model, including paths
+    for input and output files, various simulation settings, and configuration options.
+    It validates these parameters upon initialization to ensure all required values are
+    provided and correctly formatted.
+    """
 
     input_path: Path
     """path to the model input data (either *.csv or *.xlsx files)"""
@@ -66,6 +57,7 @@ class ConfigParams:
     n_hours: int | None
     """ number of hours in which the simulation will be calculated (used for structure creator) """
     solver: str | None = None
+    """ name of the solver used  """
     structure_creator_input_path: Path | None = None
     """ path to the creator input files """
     format_exceptions: bool = True
@@ -80,8 +72,14 @@ class ConfigParams:
     """ indices of years to aggregate """
     aggregation_method: str | None = None
     """ method of aggregation """
-    xlsx_results: bool = False
+    xlsx_results: bool = True
     """ dump results into additional xlsx files (outside the default CSV files)"""
+    feather_results: bool = True
+    """ dump results into additional feather files (outside the default CSV files)"""
+    gurobi_parameters_path: Path | None = None
+    """ path where gurobi parameters are stored (only when gurobi solver is used)"""
+    network_validation_raise_exceptions: bool = True
+    """ raise exception when network object is validated"""
 
     def __post_init__(self) -> None:
         """Validate parameters."""
@@ -99,10 +97,22 @@ class ConfigParams:
             self.n_hours, self.n_years, self.structure_creator_input_path
         )
         validate_network_config(self.network_config)
+        validate_optional_path_to_file(
+            self.gurobi_parameters_path, ".csv", "gurobi_parameters_path"
+        )
 
 
 def validate_network_config(network_config: dict[str, Any]) -> None:
+    """
+    Validate network configuration parameters.
 
+    This function checks the network configuration dictionary for expected types and values,
+    raising a ConfigException if any parameters are invalid. Specifically, it validates that
+    'binary_fraction' is a boolean and 'ens_penalty_cost' is a float.
+
+    Args:
+        - network_config (dict[str, Any]): The network configuration dictionary to validate.
+    """
     if not isinstance(network_config["binary_fraction"], bool):
         raise ConfigException("given binary_fraction parameter must be a boolean")
 
@@ -118,7 +128,13 @@ def validate_network_config(network_config: dict[str, Any]) -> None:
 
 def validate_generator_capacity_cost(generator_capacity_cost: str) -> None:
     """
-    Validate if given value of generator_capacity_cost is correct.
+    Validate if the given value of generator_capacity_cost is correct.
+
+    This function checks whether the generator capacity cost is either 'netto' or 'brutto'.
+    If the value is invalid, it raises a ConfigException.
+
+    Args:
+        - generator_capacity_cost (str): The generator capacity cost to validate.
     """
     if generator_capacity_cost not in ["netto", "brutto"]:
         raise ConfigException(
@@ -132,7 +148,17 @@ def validate_structure_create(
     n_years: int | None,
     input_path: Path | None,
 ) -> None:
-    """Validate if are the same type and if both are int check if input_path exists"""
+    """
+    Validate the consistency of structure creation parameters.
+
+    This function ensures that both n_hours and n_years have consistent values
+    (either both are None or both are integers). If input_path is provided, it also validates the directory path.
+
+    Args:
+        - n_hours (int | None): The number of hours for the simulation.
+        - n_years (int | None): The number of years for the simulation.
+        - input_path (Path | None): Path to the input files for structure creation.
+    """
     if (n_hours is None) != (n_years is None):
         raise ConfigException(
             "Both parameters must have the same int or None value,"
@@ -143,7 +169,17 @@ def validate_structure_create(
 
 
 def validate_file_path(file_path: Path, param_name: str) -> None:
-    """Validate if the specified path points to an existing file."""
+    """
+    Validate if the specified path points to an existing file.
+
+    This function checks whether the provided file path exists and is a file.
+
+    Args:
+        - file_path (Path): The file path to validate.
+        - param_name (str): The name of the parameter for error messaging.
+
+    Raises: ConfigException if the file path does not exist or is not a file.
+    """
     if not file_path.exists():
         raise ConfigException(
             f"Path specified as {param_name} does not exist: {file_path}"
@@ -155,7 +191,20 @@ def validate_file_path(file_path: Path, param_name: str) -> None:
 
 
 def validate_dir_path(dir_path: Path, param_name: str, create: bool = False) -> None:
-    """Validate if the specified path points to an existing folder."""
+    """
+    Validate if the specified path points to a directory.
+
+    This function checks whether the provided directory path exists.
+    If the 'create' parameter is set to True and the directory does not exist, it creates the directory.
+
+    Args:
+        - dir_path (Path): The directory path to validate.
+        - param_name (str): The name of the parameter for error messaging.
+        - create (bool): Whether to create the directory if it doesn't exist [default = False].
+
+    Raises:
+        - ConfigException: If the path is not a directory
+    """
     if not dir_path.exists():
         if not create:
             raise ConfigException(
@@ -169,7 +218,19 @@ def validate_dir_path(dir_path: Path, param_name: str, create: bool = False) -> 
 
 
 def validate_suffix(path: Path, suffix: str, param_name: str) -> None:
-    """Validate if path is pointing to a file / directory with given suffix."""
+    """
+    Validate if the given path has the specified suffix.
+
+    This function checks whether the provided file or directory path has the correct suffix as defined by the user.
+
+    Args:
+        - path (Path): The file or directory path to validate.
+        - suffix (str): The expected suffix for the path.
+        - param_name (str): The name of the parameter for error messaging.
+
+    Raises:
+        - ConfigException: If the suffix does not match with expected.
+    """
     if not path.suffix == suffix:
         raise ConfigException(
             f"Path specified as {param_name} has incorrect suffix: {path.name} (expected {suffix})"
@@ -177,19 +238,50 @@ def validate_suffix(path: Path, suffix: str, param_name: str) -> None:
 
 
 def validate_config_path(config_ini_path: Path) -> None:
-    """Validate if the specified path is a valid .ini configuration file."""
+    """
+    Validate if the provided array is a 1D array.
+
+    This function checks if the given NumPy array is one-dimensional.
+    If the array is None, this validation is skipped.
+
+    Args:
+        - array (np.ndarray | None): The array to validate.
+        - param_name (str): The name of the parameter for error messaging.
+
+    Raises:
+        - ConfigException: if an array is multidimensional
+    """
     validate_file_path(config_ini_path, "config_file_path")
     validate_suffix(config_ini_path, ".ini", "config_file_path")
 
 
 def validate_sol_dump_path(path: Path) -> None:
-    """Validate specified path to *.sol file."""
+    """
+    Validate the solution dump path.
+
+    Args:
+        - sol_dump_path (Path): The path for the solution dump file.
+
+    Raises:
+        - ConfigException: If the path does not point to a file or does not exist.
+    """
     validate_dir_path(path.parent, "sol_dump_path directory")
     validate_suffix(path, ".sol", "sol_dump_path")
 
 
 def validate_1D_array(data: np.ndarray | None, param_name: str) -> None:
-    """Validate if hour_sample, year_sample or discount_rate is 1D NumPy array."""
+    """
+    Validate if the provided array is a 1D array.
+
+    This function checks if the given NumPy array is one-dimensional. If the array is None, this validation is skipped.
+
+    Args:
+        - array (np.ndarray | None): The array to validate.
+        - param_name (str): The name of the parameter for error messaging.
+
+    Raises:
+        - ConfigException: If the array is multidimensional.
+    """
     if data is not None and not data.ndim == 1:
         raise ConfigException(
             f"provided {param_name} is {data.ndim} dimensional dataset, one dimensional data is required"
@@ -197,15 +289,36 @@ def validate_1D_array(data: np.ndarray | None, param_name: str) -> None:
 
 
 def validate_input_format(input_format: str) -> None:
-    """Validate if provided input_file parameter is correct."""
-    if input_format not in ["csv", "xlsx"]:
+    """
+    Validate the input format type.
+
+    This function checks if the input format is either 'csv' or 'xlsx'.
+
+    Args:
+        - input_format (str): The input format to validate.
+
+    Raises:
+        - ConfigException: If the input format is other than 'csv' or 'xlsx'.
+    """
+    if input_format not in ["csv", "xlsx", "feather"]:
         raise ConfigException(
-            f"provided input_format {input_format} is different than valid formats: csv, xlsx"
+            f"provided input_format {input_format} is different than valid formats: csv, xlsx or feather"
         )
 
 
 def validate_csv_dump_path(csv_dump_path: Path | None, input_format: str) -> None:
-    """Validate if csv_dump_path is provided only for xlsx input_format and, if it is provided - it exists."""
+    """
+    Validate the CSV dump path based on the input format.
+
+    This function ensures that if a CSV dump path is provided, it is valid.
+
+    Args:
+        - csv_dump_path (Path | None): The path for CSV dump files.
+        - input_format (str): The input format being used.
+
+    Raises:
+        - ConfigException: If the input format is 'csv' and the CVS dump path is None.
+    """
     if input_format == "csv" and csv_dump_path is not None:
         raise ConfigException(
             "csv_dump_path should not be specified for csv input_format"
@@ -217,7 +330,17 @@ def validate_csv_dump_path(csv_dump_path: Path | None, input_format: str) -> Non
 
 
 def validate_solver_name(solver_name: str | None) -> None:
-    """Validate if solver_name is correct."""
+    """
+    Validate if the provided solver name is correct.
+
+    This function checks whether the given solver name is available in the linopy library.
+
+    Args:
+        - solver_name (str | None): The name of the solver to validate.
+
+    Raises:
+        - ConfigException: If the solver name is not None and is not present in the list of available solvers.
+    """
     if solver_name is not None and solver_name not in linopy.available_solvers:
         raise ConfigException(
             f"provided solver_name {solver_name} is different than valid solvers: {linopy.available_solvers}"
@@ -225,21 +348,57 @@ def validate_solver_name(solver_name: str | None) -> None:
 
 
 def validate_n_years_aggregation(n_years_aggregation: int) -> None:
-    """Validate if n_years_aggregation is positive integer."""
+    """
+    Validate if the number of years for aggregation is a positive integer.
+
+    Args:
+        - n_years_aggregation (int): The number of years to aggregate, which must be a positive integer.
+
+    Raises:
+        - ConfigException: If the number of years for aggregation is not greater than zero.
+    """
     if n_years_aggregation <= 0:
         raise ConfigException(
             f"n_years_aggregation should be positive integer, but given: {n_years_aggregation}"
         )
 
 
+def validate_optional_path_to_file(
+    path: Path | None, suffix: str, param_name: str
+) -> None:
+    if path is not None:
+        validate_dir_path(path.parent, param_name)
+        validate_suffix(path, suffix, param_name)
+
+
 def load_vector_from_csv(path: Path, param_name: str) -> np.ndarray:
-    """Load 1 dimensional dataset (as 1D NumPy array) from given path."""
+    """
+    Load a 1-dimensional dataset as a NumPy array from the given CSV file.
+
+    This function validates the file's existence and checks for the correct file suffix before loading the data.
+    It then reads a CSV file specified by the path and returns its contents as a 1D NumPy array.
+
+    Args:
+        - path (Path): The path to the CSV file.
+        - param_name (str): The name of the parameter for error messaging.
+
+    Returns:
+        - np.ndarray: A 1-dimensional NumPy array containing the data from the CSV file.
+    """
     validate_file_path(path, param_name)
     validate_suffix(path, ".csv", param_name)
     return pd.read_csv(path, header=None, sep=";").values.squeeze()
 
 
 class ConfigLoader:
+    """
+    Load and validate configuration settings from (.ini) file.
+
+    This class is responsible for loading configurations from a specified (.ini) file and validating
+    the structure and parameters contained within. It ensures that all required sections and parameters
+    are present and correctly formatted.
+    """
+
     _req, _opt, _any = "required", "optional", {"any"}
     _configurable_solvers = {"gurobi", "cplex", "highs", "glpk"}
     _mandatory_sections = {
@@ -250,6 +409,8 @@ class ConfigLoader:
             "opt_logs_path": _opt,
             "csv_dump_path": _opt,
             "xlsx_results": _opt,
+            "feather_results": _opt,
+            "gurobi_parameters_path": _opt,
         },
     }
     _optional_sections = {
@@ -263,6 +424,7 @@ class ConfigLoader:
             "generator_capacity_cost": _opt,
             "n_years_aggregation": _opt,
             "aggregation_method": _opt,
+            "network_validation_raise_exceptions": _opt,
         },
         "create": {"n_years": _opt, "n_hours": _opt, "input_path": _opt},
         "debug": {
@@ -277,8 +439,15 @@ class ConfigLoader:
     _default_csv_dump_path_name = "model-csv-input"
     _default_opt_log = "opt.log"
     _default_sol = "results.sol"
+    _default_gurobi_parameters = "gurobi_parameters.csv"
 
     def __init__(self, config_ini_path: Path) -> None:
+        """
+        Initalizes the class.
+
+        Args:
+            - config_ini_path (Path): The path to the (.ini) configuration file.
+        """
         validate_config_path(config_ini_path)
         self.config = configparser.ConfigParser()
         self.config.optionxform = str  # type: ignore
@@ -286,7 +455,7 @@ class ConfigLoader:
         self._validate_config_file_structure()
 
     def _validate_config_file_structure(self) -> None:
-        """Validate sections and parameters in loaded *.ini file."""
+        """Validate sections and parameters in the loaded .ini file."""
         if set(self._mandatory_sections) - set(self.config.sections()) or not set(
             self.config.sections()
         ).issubset(self._sections):
@@ -305,6 +474,7 @@ class ConfigLoader:
         self._validate_section_structure()
 
     def _validate_section_structure(self) -> None:
+        """Validate the structure of each section in the configuration file."""
         for section in self.config.sections():
             given_keys, allowed_keys = (
                 set(self.config[section]),
@@ -330,6 +500,15 @@ class ConfigLoader:
 
     @staticmethod
     def try_parse_config_option(string: str) -> float | int | bool | str:
+        """
+        Try to parse a configuration option from string to appropriate type.
+
+        Args:
+            - string (str): The configuration option string to parse.
+
+        Returns:
+            - float | int | bool | str: The parsed value in its appropriate type.
+        """
         if string.lower() == "true":
             return True
         if string.lower() == "false":
@@ -345,7 +524,15 @@ class ConfigLoader:
         return string
 
     def load(self) -> ConfigParams:
-        """Create ConfigParams obj from given *.ini file."""
+        """
+        Create a ConfigParams object from the loaded (.ini) file.
+
+        This method extracts parameters from the configuration file and creates a ConfigParams object,
+        ensuring that all required values are populated. It also handles default values for optional parameters.
+
+        Returns:
+            - ConfigParams: An instance of ConfigParams containing the loaded settings.
+        """
         output_path = Path(self.config.get("output", "output_path"))
         return ConfigParams(
             input_path=Path(self.config.get("input", "input_path")),
@@ -420,15 +607,35 @@ class ConfigLoader:
             aggregation_method=self.config.get(
                 "optimization", "aggregation_method", fallback="last"
             ),
+            gurobi_parameters_path=self._get_path(
+                "output",
+                "gurobi_parameters_path",
+                None,
+            ),
+            network_validation_raise_exceptions=self.config.getboolean(
+                "optimization", "network_validation_raise_exceptions", fallback=True
+            ),
         )
 
     def _get_log_level(self) -> int:
+        """
+        Get the log level based on the configuration settings.
+
+        Returns:
+            - int: The corresponding log level as an integer.
+        """
         config_log_level = self.config.get("debug", "log_level", fallback="")
         if (log_level := LOG_LEVEL_MAPPING.get(config_log_level.lower())) is not None:
             return log_level
         return DEFAULT_LOG_LEVEL
 
     def _load_network_config(self) -> dict[str, Any]:
+        """
+        Load network configuration settings from the optimization section.
+
+        Returns:
+            - dict[str, Any]: A dictionary containing network configuration parameters.
+        """
         network_config: dict[str, Any] = {}
         if "optimization" not in self.config.sections():
             self.config.add_section("optimization")
@@ -445,6 +652,15 @@ class ConfigLoader:
         return network_config
 
     def _load_parameter_from_csv(self, parameter: str) -> np.ndarray | None:
+        """
+        Load a parameter value from a CSV file specified in the configuration.
+
+        Args:
+            - parameter (str): The name of the parameter to load.
+
+        Returns:
+            - np.ndarray | None: The loaded parameter as a NumPy array, or None if the path is not specified.
+        """
         path = self._get_path("parameters", parameter)
         return (
             load_vector_from_csv(path, param_name=parameter)
@@ -463,5 +679,16 @@ class ConfigLoader:
     def _get_path(
         self, section: str, key: str, default: Path | None = None
     ) -> Path | None:
+        """
+        Retrieve a path from the specified section and key in the configuration.
+
+        Args:
+            - section (str): The section of the configuration to query.
+            - key (str): The key in the section to retrieve the value for.
+            - default (Path | None): The default value to return if the key is not found or the value is empty.
+
+        Returns:
+            - Path | None: The retrieved path, or None if not found and default is not provided.
+        """
         path_str = self.config[section].get(key, "")
         return Path(path_str) if path_str.strip() else default

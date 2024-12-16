@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements.emission_fee import EmissionFee
@@ -21,15 +5,41 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class EmissionFeeParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of EmissionFee.
+
+    This class takes DataFrames containing emission fee data and emission type data
+    and processes them to generate EmissionFee instances. Each EmissionFee object is
+    constructed from the input data, which includes the name, price, and associated
+    emission type for each fee.
+    """
+
     def __init__(
         self,
         emission_type_df: pd.DataFrame,
         emission_fee_df: pd.DataFrame,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - emission_type_df (pd.DataFrame): DataFrame mapping emission fee names to their types.
+            - emission_fee_df (pd.DataFrame): DataFrame containing emission fee data indexed by year.
+        """
         self.emission_fee_df = emission_fee_df.set_index("year_idx")
         self.emission_type_df = emission_type_df.set_index("emission_fee").squeeze()
 
     def create(self) -> tuple[EmissionFee, ...]:
+        """
+        Creates and returns a tuple of EmissionFee instances.
+
+        This method processes the emission fee DataFrame to create EmissionFee objects.
+        It extracts the necessary attributes such as name, price, and emission type from
+        the DataFrames, ensuring that the prices are converted to float for each emission fee.
+
+        Returns:
+            - tuple[EmissionFee, ...]: A tuple containing the created EmissionFee instances.
+        """
         return tuple(
             EmissionFee(
                 name=str(name),

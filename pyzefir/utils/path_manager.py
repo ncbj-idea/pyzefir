@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import logging
 from dataclasses import dataclass, fields
 from pathlib import Path
@@ -31,6 +15,13 @@ class CsvPathManagerException(Exception):
 
 @dataclass(frozen=True)
 class DataCategories:
+    """
+    Class representing various data categories for the system.
+
+    This class defines constants for different data categories used in the application.
+    It provides methods to validate directory names and retrieve lists of main, dynamic, and optional categories.
+    """
+
     INITIAL_STATE: str = "initial_state"
     STRUCTURE: str = "structure"
     CAPACITY_FACTORS: str = "capacity_factors"
@@ -45,6 +36,18 @@ class DataCategories:
 
     @classmethod
     def check_directory_name(cls, value: str) -> None:
+        """
+        Check if the provided value is a valid data category name.
+
+        This method verifies if the given value corresponds to any defined fields in the DataCategories class.
+        If the value is not valid, a warning is logged and a DataCategoriesException is raised.
+
+        Args:
+            - value (str): The directory name to be checked.
+
+        Raises:
+            - DataCategoriesException: If the value is not a valid data category name.
+        """
         if not any(getattr(cls, f.name) == value for f in fields(cls)):
             logger.warning(f"Incorrect {cls.__name__} field: {value}")
             raise DataCategoriesException(
@@ -53,6 +56,12 @@ class DataCategories:
 
     @staticmethod
     def get_main_categories() -> list[str]:
+        """
+        Retrieve the main data categories.
+
+        Returns:
+            - list[str]: A list of main data categories.
+        """
         return [
             DataCategories.INITIAL_STATE,
             DataCategories.STRUCTURE,
@@ -69,6 +78,12 @@ class DataCategories:
 
     @staticmethod
     def get_dynamic_categories() -> list[str]:
+        """
+        Retrieve the dynamic data categories.
+
+        Returns:
+            - list[str]: A list of dynamic data categories.
+        """
         return [
             DataCategories.DEMAND,
             DataCategories.CONVERSION_RATE,
@@ -78,6 +93,12 @@ class DataCategories:
 
     @staticmethod
     def get_optional_categories() -> list[str]:
+        """
+        Retrieve the optional data categories.
+
+        Returns:
+            - list[str]: A list of optional data categories.
+        """
         return [
             DataCategories.STORAGE,
             DataCategories.GENERATOR_TYPE_EFFICIENCY,
@@ -86,6 +107,14 @@ class DataCategories:
 
 @dataclass(frozen=True)
 class DataSubCategories:
+    """
+    Represents various subcategories of data relevant to the application.
+
+    This class defines a collection of constants that categorize different types of data
+    used within the application. Each constant corresponds to a specific aspect of the data,
+    making it easier to manage and reference throughout the code.
+    """
+
     EMISSION_PER_UNIT: str = "Emission_Per_Unit"
     ENERGY_PER_UNIT: str = "Energy_Per_Unit"
     PROFILES: str = "Profiles"
@@ -133,9 +162,22 @@ class DataSubCategories:
     YEARLY_EMISSION_REDUCTION: str = "Yearly_Emission_Reduction"
     CAPACITY_BOUNDS: str = "Capacity_Bounds"
     MINIMAL_POWER_UTILIZATION: str = "Minimal_Power_Utilization"
+    ENS_PENALIZATION: str = "ENS_Penalization"
+    STORAGE_CALCULATION_SETTINGS: str = "Storage_Calculation_Settings"
 
     @classmethod
     def check_directory_name(cls, value: str) -> None:
+        """
+        Validates the given subcategory name against the defined subcategories.
+
+        This method checks if the provided value corresponds to any of the subcategory constants.
+
+        Args:
+            - value (str): The subcategory name to be validated.
+
+        Raises:
+            - DataCategoriesException: If the provided value is not a valid subcategory.
+        """
         if not any(getattr(cls, f.name) == value for f in fields(cls)):
             logger.warning(f"Incorrect {cls.__name__} field: {value}")
             raise DataCategoriesException(
@@ -144,6 +186,23 @@ class DataSubCategories:
 
 
 def get_datasets_from_categories(data_category: str) -> list[str]:
+    """
+    Retrieve datasets corresponding to a specific data category.
+
+    This function returns a list of dataset identifiers associated with the provided
+    data category. The mapping between data categories and datasets is predefined.
+
+    Args:
+        - data_category (str): The data category for which datasets are to be retrieved.
+            Must be one of the predefined categories in the datasets_in_categories mapping.
+
+    Returns:
+        - list[str]: A list of dataset identifiers associated with the specified data category.
+
+    Raises:
+        - KeyError: If the provided data_category is not found in the predefined mapping,
+            a KeyError is raised after logging a warning message.
+    """
     datasets_in_categories = {
         DataCategories.FUELS: [
             DataSubCategories.EMISSION_PER_UNIT,
@@ -161,7 +220,10 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.POWER_UTILIZATION,
             DataSubCategories.MINIMAL_POWER_UTILIZATION,
         ],
-        DataCategories.STORAGE: [DataSubCategories.PARAMETERS],
+        DataCategories.STORAGE: [
+            DataSubCategories.PARAMETERS,
+            DataSubCategories.STORAGE_CALCULATION_SETTINGS,
+        ],
         DataCategories.INITIAL_STATE: [
             DataSubCategories.TECHNOLOGY,
             DataSubCategories.TECHNOLOGYSTACK,
@@ -202,6 +264,7 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.GENERATION_COMPENSATION,
             DataSubCategories.YEARLY_EMISSION_REDUCTION,
             DataSubCategories.CAPACITY_BOUNDS,
+            DataSubCategories.ENS_PENALIZATION,
         ],
         DataCategories.DEMAND_CHUNKS: [DataSubCategories.DEMAND_CHUNKS],
     }
@@ -214,9 +277,24 @@ def get_datasets_from_categories(data_category: str) -> list[str]:
 
 
 def get_optional_datasets_from_categories(data_category: str) -> list[str]:
+    """
+    Retrieve optional datasets corresponding to a specific data category.
+
+    This function returns a list of optional dataset identifiers associated with the provided
+    data category. The mapping between data categories and optional datasets is predefined.
+
+    Args:
+        - data_category (str): The data category for which optional datasets are to be retrieved.
+            Must be one of the predefined categories in the datasets_in_categories mapping.
+
+    Returns:
+        - list[str]: A list of optional dataset identifiers associated with the specified data category.
+            If the provided data category does not exist, an empty list is returned.
+    """
     datasets_in_categories = {
         DataCategories.STORAGE: [
             DataSubCategories.PARAMETERS,
+            DataSubCategories.STORAGE_CALCULATION_SETTINGS,
         ],
         DataCategories.STRUCTURE: [
             DataSubCategories.STORAGES,
@@ -225,6 +303,7 @@ def get_optional_datasets_from_categories(data_category: str) -> list[str]:
             DataSubCategories.YEARLY_EMISSION_REDUCTION,
             DataSubCategories.CAPACITY_BOUNDS,
             DataSubCategories.GENERATION_FRACTION,
+            DataSubCategories.ENS_PENALIZATION,
         ],
     }
 
@@ -232,7 +311,23 @@ def get_optional_datasets_from_categories(data_category: str) -> list[str]:
 
 
 class CsvPathManager:
+    """
+    Manages the paths for CSV files organized by data categories and scenarios.
+
+    This class provides functionality to construct file paths based on a specified directory,
+    data categories, and optional scenario names. It ensures that paths are generated correctly
+    and can validate data categories and dataset names.
+    """
+
     def __init__(self, dir_path: Path, scenario_name: str | None = None) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - dir_path (Path): The root directory path where CSV files are stored.
+            - scenario_name (str | None): An optional name of the scenario to be used in the path.
+                Defaults to None if not provided.
+        """
         self._dir_path = dir_path
         self._scenario_name = scenario_name
 
@@ -241,10 +336,33 @@ class CsvPathManager:
 
     @property
     def dir_path(self) -> Path:
+        """
+        Returns the root directory path, logging the access.
+
+        Returns:
+            - Path: The root directory path for the CSV files.
+        """
         logger.debug(f"Csv root dir path is {self._dir_path}")
         return self._dir_path
 
     def get_path(self, data_category: str, dataset_name: str | None = None) -> Path:
+        """
+        Constructs the path for a specific dataset in a given data category.
+
+        This method logs the current directory path when accessed, which can be useful for debugging.
+        The returned path is used as the base for constructing paths for specific datasets.
+
+        Args:
+            - data_category (str): The category of the data.
+            - dataset_name (str | None): The specific dataset name within the category.
+                If None, returns the path to the category.
+
+        Returns:
+            - Path: The constructed path for the specified dataset.
+
+        Raises:
+            - DataCategoriesException: If the provided data_category is invalid.
+        """
         DataCategories.check_directory_name(data_category)
         if dataset_name:
             if data_category == DataCategories.SCENARIO and self._scenario_name:
@@ -266,11 +384,34 @@ class CsvPathManager:
     def concatenate_path_for_dynamic_dataset_name(
         self, category: str, dataset_name: str
     ) -> Path:
+        """
+        Constructs a complete path for a dynamic dataset name.
+
+        Args:
+            - category (str): The data category of the dataset.
+            - dataset_name (str): The name of the dataset.
+
+        Returns:
+            - Path: The full path to the CSV file for the dynamic dataset.
+        """
         root_path = self.get_path(data_category=category)
         return root_path.joinpath(f"{dataset_name}.csv")
 
     @staticmethod
     def _get_file_name_from_dict(data_category: str, dataset_name: str) -> str:
+        """
+        Generates the filename for a given dataset within a data category.
+
+        Args:
+            - data_category (str): The category of the data (e.g., 'fuels').
+            - dataset_name (str): The specific dataset name (e.g., 'emission_per_unit').
+
+        Returns:
+            - str: The filename for the dataset, formatted as '{dataset_name}.csv'.
+
+        Raises:
+            - CsvPathManagerException: If the dataset name is not part of the defined structure.
+        """
         try:
             DataSubCategories.check_directory_name(dataset_name)
             return f"{dataset_name}.csv"
@@ -282,9 +423,26 @@ class CsvPathManager:
 
 
 class XlsxPathManager(CsvPathManager):
+    """
+    Manages paths for Excel files organized by data categories and scenarios.
+
+    This class extends the CsvPathManager to handle both input and output paths specifically for
+    XLSX files. It ensures that paths for both input and output data are generated correctly,
+    while maintaining the scenario structure if applicable.
+    """
+
     def __init__(
         self, input_path: Path, output_path: Path, scenario_name: str | None = None
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - input_path (Path): The path where input XLSX files are located.
+            - output_path (Path): The path where output CSV files will be stored.
+            - scenario_name (str | None): An optional name of the scenario to be used in paths.
+                Defaults to None if not provided.
+        """
         super().__init__(output_path)
         self._input_path = input_path
         self._scenario_name = scenario_name
@@ -294,15 +452,42 @@ class XlsxPathManager(CsvPathManager):
 
     @property
     def input_path(self) -> Path:
+        """
+        Returns the input path for XLSX files.
+
+        Returns:
+            - Path: The path where input XLSX files are located.
+        """
         logger.debug(f"Input path is {self._input_path}")
         return self._input_path
 
     @property
     def output_path(self) -> Path:
+        """
+        Returns the output path for CSV files.
+
+        Returns:
+            - Path: The path where output CSV files will be stored.
+        """
         logger.debug(f"Output path is {self._dir_path}")
         return self._dir_path
 
     def get_input_file_path(self, data_category: str) -> Path:
+        """
+        Constructs the path for an input XLSX file corresponding to a data category.
+
+        This method validates the provided data category and generates the complete path to the
+        corresponding input XLSX file. It raises an exception if the data category is invalid.
+
+        Args:
+            - data_category (str): The category of the data (e.g., 'scenario', 'fuels').
+
+        Returns:
+            - Path: The constructed path for the specified input XLSX file.
+
+        Raises:
+            - DataCategoriesException: If the provided data_category is invalid.
+        """
         DataCategories.check_directory_name(data_category)
         target_path = self._input_path.joinpath(f"{data_category}.xlsx")
 

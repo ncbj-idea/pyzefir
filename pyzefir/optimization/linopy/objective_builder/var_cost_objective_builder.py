@@ -24,7 +24,28 @@ _logger = logging.getLogger(__name__)
 
 
 class VarCostObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class for building the variable cost objective.
+
+    This class constructs the objective function representing the
+    variable costs incurred by generators based on their fuel consumption
+    and associated fuel costs. It aggregates the variable costs across
+    all generators defined in the system.
+    """
+
     def build_expression(self) -> LinearExpression | float:
+        """
+        Builds the variable cost objective.
+
+        This method calculates the total variable cost by summing the
+        variable costs for each generator that has an associated fuel type.
+        If a generator does not have a fuel type, it is excluded from the
+        total cost calculation.
+
+        Returns:
+            - LinearExpression | float: The total variable cost
+              calculated from all generators' variable costs.
+        """
         _logger.info("Building variable cost objective...")
         expr = 0.0
         for gen_idx in self.indices.GEN.ord:
@@ -34,6 +55,22 @@ class VarCostObjectiveBuilder(ObjectiveBuilder):
         return expr
 
     def generator_var_cost(self, gen_idx: int) -> LinearExpression | float:
+        """
+        Calculates the variable cost for a given generator.
+
+        This method computes the variable cost incurred by a specific
+        generator based on its fuel consumption and the cost of the fuel.
+        It forms a data array representing the cost per year and aggregates
+        the total cost over the defined time period.
+
+        Args:
+            - gen_idx (int): The index of the generator for which the
+              variable cost is being calculated.
+
+        Returns:
+            - LinearExpression | float: The calculated variable cost for
+              the specified generator.
+        """
         fuel_idx = self.parameters.gen.fuel[gen_idx]
         hourly_scale = self.parameters.scenario_parameters.hourly_scale
         cost = self.parameters.fuel.unit_cost[fuel_idx]

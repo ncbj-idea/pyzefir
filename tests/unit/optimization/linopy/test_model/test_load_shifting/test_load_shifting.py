@@ -54,10 +54,31 @@ from tests.unit.optimization.linopy.utils import TOL
                 "dsr_1": {
                     "bus": "local_ee_bus",
                     "balancing_period_len": 20,
-                    "compensation_factor": 0.1,
+                    "compensation_factor": 1,
                     "penalization": 5,
+                    "penalization_plus": -10,
+                    "abs_shift_limit": 500,
+                    "relative_shift_limit": 0.5,
+                    "hourly_relative_shift_minus_limit": 0.5,
+                    "hourly_relative_shift_plus_limit": 0.55,
+                }
+            },
+            pd.Series([10, 10, 10, 10, 10]),
+            np.arange(100),
+            1,
+        ),
+        (
+            {
+                "dsr_1": {
+                    "bus": "local_ee_bus",
+                    "balancing_period_len": 20,
+                    "compensation_factor": 0.8,
+                    "penalization": 5,
+                    "penalization_plus": 0,
                     "abs_shift_limit": 0.5,
                     "relative_shift_limit": 0.5,
+                    "hourly_relative_shift_minus_limit": 0.3,
+                    "hourly_relative_shift_plus_limit": 0.1,
                 }
             },
             pd.Series([10, 10, 10, 10, 10]),
@@ -71,8 +92,11 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 20,
                     "compensation_factor": 0.1,
                     "penalization": 5,
+                    "penalization_plus": 0,
                     "abs_shift_limit": 0.5,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 0.4,
+                    "hourly_relative_shift_plus_limit": 0.2,
                 }
             },
             pd.Series([10, 10, 10, 10, 10]),
@@ -86,8 +110,11 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 20,
                     "compensation_factor": 0.1,
                     "penalization": 5,
+                    "penalization_plus": 0,
                     "abs_shift_limit": None,
                     "relative_shift_limit": 0.7,
+                    "hourly_relative_shift_minus_limit": 0.0,
+                    "hourly_relative_shift_plus_limit": None,
                 }
             },
             pd.Series([10, 10, 10, 10, 10]),
@@ -101,8 +128,11 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 20,
                     "compensation_factor": 0.1,
                     "penalization": 5,
+                    "penalization_plus": 2,
                     "abs_shift_limit": None,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 0.3,
+                    "hourly_relative_shift_plus_limit": 0.7,
                 }
             },
             pd.Series([10, 10, 10, 10, 10]),
@@ -114,10 +144,13 @@ from tests.unit.optimization.linopy.utils import TOL
                 "dsr_1": {
                     "bus": "local_ee_bus",
                     "balancing_period_len": 20,
-                    "compensation_factor": 0.1,
+                    "compensation_factor": 1,
                     "penalization": 10,
+                    "penalization_plus": 50,
                     "abs_shift_limit": 0.5,
                     "relative_shift_limit": 0.5,
+                    "hourly_relative_shift_minus_limit": 0.3,
+                    "hourly_relative_shift_plus_limit": None,
                 }
             },
             pd.Series([10, 30, 10, 15, 50]),
@@ -131,16 +164,22 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 10,
                     "compensation_factor": 0.5,
                     "penalization": 5,
+                    "penalization_plus": 1,
                     "abs_shift_limit": 50,
                     "relative_shift_limit": 0.4,
+                    "hourly_relative_shift_minus_limit": 0.9,
+                    "hourly_relative_shift_plus_limit": 0.9,
                 },
                 "dsr_2": {
                     "bus": "local_ee_bus2",
                     "balancing_period_len": 12,
                     "compensation_factor": 0.7,
                     "penalization": 4,
+                    "penalization_plus": 2,
                     "abs_shift_limit": 40,
-                    "relative_shift_limit": 0.5,
+                    "relative_shift_limit": 1,
+                    "hourly_relative_shift_minus_limit": 0.9,
+                    "hourly_relative_shift_plus_limit": 0.9,
                 },
             },
             pd.Series([100, 20, 30, 10, 100]),
@@ -154,16 +193,22 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 25,
                     "compensation_factor": 0.5,
                     "penalization": 5,
+                    "penalization_plus": 3,
                     "abs_shift_limit": 50,
                     "relative_shift_limit": 0.4,
+                    "hourly_relative_shift_minus_limit": 0.39,
+                    "hourly_relative_shift_plus_limit": 0.41,
                 },
                 "dsr_2": {
                     "bus": "local_ee_bus2",
                     "balancing_period_len": 25,
                     "compensation_factor": 0.7,
                     "penalization": 4,
+                    "penalization_plus": 4,
                     "abs_shift_limit": 40,
                     "relative_shift_limit": 0.5,
+                    "hourly_relative_shift_minus_limit": 0.41,
+                    "hourly_relative_shift_plus_limit": 0.39,
                 },
             },
             pd.Series([100, 20, 30, 10, 100]),
@@ -177,16 +222,22 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 25,
                     "compensation_factor": 0.5,
                     "penalization": 5,
+                    "penalization_plus": 0,
                     "abs_shift_limit": 50,
                     "relative_shift_limit": 0.4,
+                    "hourly_relative_shift_minus_limit": 0.1,
+                    "hourly_relative_shift_plus_limit": 0.2,
                 },
                 "dsr_2": {
                     "bus": "local_ee_bus2",
                     "balancing_period_len": 25,
                     "compensation_factor": 0.7,
                     "penalization": 4,
+                    "penalization_plus": 0,
                     "abs_shift_limit": 40,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 0.2,
+                    "hourly_relative_shift_plus_limit": None,
                 },
             },
             pd.Series([100, 20, 30, 10, 100]),
@@ -200,16 +251,22 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 25,
                     "compensation_factor": 0.5,
                     "penalization": 5,
+                    "penalization_plus": 2,
                     "abs_shift_limit": None,
                     "relative_shift_limit": 0.4,
+                    "hourly_relative_shift_minus_limit": 0.2,
+                    "hourly_relative_shift_plus_limit": None,
                 },
                 "dsr_2": {
                     "bus": "local_ee_bus2",
                     "balancing_period_len": 25,
                     "compensation_factor": 0.7,
                     "penalization": 4,
+                    "penalization_plus": 10,
                     "abs_shift_limit": None,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 0.2,
+                    "hourly_relative_shift_plus_limit": None,
                 },
             },
             pd.Series([100, 20, 30, 10, 100]),
@@ -223,16 +280,22 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 25,
                     "compensation_factor": 0.5,
                     "penalization": 5,
+                    "penalization_plus": 2,
                     "abs_shift_limit": None,
                     "relative_shift_limit": 0.4,
+                    "hourly_relative_shift_minus_limit": 1.0,
+                    "hourly_relative_shift_plus_limit": 0.9,
                 },
                 "dsr_2": {
                     "bus": "local_ee_bus2",
                     "balancing_period_len": 25,
                     "compensation_factor": 0.7,
                     "penalization": 4,
+                    "penalization_plus": 3,
                     "abs_shift_limit": None,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 1.0,
+                    "hourly_relative_shift_plus_limit": None,
                 },
             },
             pd.Series([100, 20, 30, 10, 100]),
@@ -246,8 +309,11 @@ from tests.unit.optimization.linopy.utils import TOL
                     "balancing_period_len": 20,
                     "compensation_factor": 0.1,
                     "penalization": 5,
+                    "penalization_plus": 4,
                     "abs_shift_limit": 0.5,
                     "relative_shift_limit": None,
+                    "hourly_relative_shift_minus_limit": 0.0,
+                    "hourly_relative_shift_plus_limit": None,
                 }
             },
             pd.Series([10, 10, 10, 10, 10]),
@@ -279,9 +345,16 @@ def test_load_shifting(
                     name=dsr_name,
                     balancing_period_len=dsr_params["balancing_period_len"],
                     compensation_factor=dsr_params["compensation_factor"],
-                    penalization=dsr_params["penalization"],
+                    penalization_minus=dsr_params["penalization"],
+                    penalization_plus=dsr_params["penalization_plus"],
                     abs_shift_limit=dsr_params["abs_shift_limit"],
                     relative_shift_limit=dsr_params["relative_shift_limit"],
+                    hourly_relative_shift_minus_limit=dsr_params[
+                        "hourly_relative_shift_minus_limit"
+                    ],
+                    hourly_relative_shift_plus_limit=dsr_params[
+                        "hourly_relative_shift_plus_limit"
+                    ],
                 )
             }
         )
@@ -328,13 +401,15 @@ def test_load_shifting(
     compensation_factor = parameters.dsr.compensation_factor
     relative_shift_limit = parameters.dsr.relative_shift_limit
     abs_shift_limit = parameters.dsr.abs_shift_limit
+    hourly_relative_shift_plus_limit = parameters.dsr.hourly_relative_shift_plus_limit
+    hourly_relative_shift_minus_limit = parameters.dsr.hourly_relative_shift_minus_limit
 
     _test_objective(indices, parameters, results)
 
     for bus_idx, dsr_idx in engine.parameters.bus.dsr_type.items():
         if bus_idx in engine.parameters.bus.lbs_mapping:
-            intervals = parameters.dsr.balancing_periods[dsr_idx]
-            net_load = _bus_net_load(parameters, results, indices, bus_idx)
+            intervals = list(parameters.dsr.balancing_periods[dsr_idx])
+            net_load = np.asarray(_bus_net_load(parameters, results, indices, bus_idx))
             bus_name = indices.BUS.mapping[bus_idx]
             for interval in intervals:
                 for y in indices.Y.ord:
@@ -345,7 +420,7 @@ def test_load_shifting(
                         interval,
                         compensation_factor[dsr_idx],
                     )
-                    if dsr_idx in relative_shift_limit.keys():
+                    if dsr_idx in relative_shift_limit:
                         _test_relative_shift_limit(
                             y,
                             shift_minus[bus_name],
@@ -353,6 +428,22 @@ def test_load_shifting(
                             relative_shift_limit[dsr_idx],
                             net_load,
                         )
+
+                    if dsr_idx in hourly_relative_shift_plus_limit:
+                        _test_relative_shift_limit_hourly(
+                            y,
+                            shift_plus[bus_name],
+                            hourly_relative_shift_plus_limit[dsr_idx],
+                            net_load,
+                        )
+
+                    _test_relative_shift_limit_hourly(
+                        y,
+                        shift_minus[bus_name],
+                        hourly_relative_shift_minus_limit[dsr_idx],
+                        net_load,
+                    )
+
                     if dsr_idx in abs_shift_limit.keys():
                         _test_absolute_shift_limit(
                             y, shift_minus[bus_name], interval, abs_shift_limit[dsr_idx]
@@ -376,9 +467,9 @@ def _test_compensation_constraints(
     interval: list[int],
     compensation_factor: float,
 ) -> None:
-    lhs = sum(shift_plus[y][h] for h in interval)
-    rhs = compensation_factor * sum(shift_minus[y][h] for h in interval)
-    assert np.isclose(lhs, rhs, atol=TOL)
+    vec_lhs = np.array([shift_plus[y][h] for h in interval])
+    vec_rhs = compensation_factor * np.array([shift_minus[y][h] for h in interval])
+    assert np.isclose(vec_lhs.sum(), vec_rhs.sum(), atol=TOL)
 
 
 def _test_relative_shift_limit(
@@ -386,15 +477,22 @@ def _test_relative_shift_limit(
     shift_minus: pd.DataFrame,
     interval: list[int],
     relative_shift_limit: float,
-    net_load: np.ndarray | float,
+    net_load: np.ndarray,
 ) -> None:
     lhs = sum(shift_minus[y][h] for h in interval)
-    if isinstance(net_load, float):
-        net_load_sum = net_load
-    else:
-        net_load_sum = net_load[interval, y].sum()
-    rhs = relative_shift_limit * net_load_sum
+    rhs = relative_shift_limit * sum(net_load[h, y] for h in interval)
     assert bool(lhs <= rhs + TOL)
+
+
+def _test_relative_shift_limit_hourly(
+    y: int,
+    shift_var: pd.DataFrame,
+    relative_shift_limit_hourly: float,
+    net_load: np.ndarray,
+) -> None:
+    lhs = shift_var[y].values
+    rhs = relative_shift_limit_hourly * net_load[:, y]
+    assert np.all(lhs <= rhs + TOL)
 
 
 def _test_absolute_shift_limit(

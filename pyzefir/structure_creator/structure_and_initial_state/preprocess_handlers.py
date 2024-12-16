@@ -22,10 +22,27 @@ from pyzefir.structure_creator.structure_and_initial_state.utils import (
 
 
 class LocalLbsHandler:
+    """
+    A handler class for creating and managing local LBS (Local Bus Subsystem) dataframes.
+
+    This class provides functionality to aggregate and merge various dataframes related to
+    local bus subsystems, including technologies, buses, capacities, lines, and capacity bounds.
+    The resulting structured DataFrame can be utilized for energy modeling and analysis.
+    """
+
     @staticmethod
     def create_local_lbs_data(
         lbs_type: dict[str, dict[str, pd.DataFrame]]
     ) -> pd.DataFrame:
+        """
+        Create local lbs dataframes by merging individual lbs types.
+
+        Args:
+            - lbs_type (dict[str, dict[str, pd.DataFrame]]): dictionary of lbs types with corresponding dataframes
+
+        Returns:
+            - pd.DataFrame: local lbs data
+        """
         dfs: list[pd.DataFrame] = []
         for lbs_name, lbs_data in lbs_type.items():
             df = LocalLbsHandler._create_lbs_dataframe(lbs_name, lbs_data)
@@ -36,6 +53,16 @@ class LocalLbsHandler:
     def _create_lbs_dataframe(
         lbs_name: str, lbs_data: dict[str, pd.DataFrame]
     ) -> pd.DataFrame:
+        """
+        Create lbs dataframe by merging network elements.
+
+        Args:
+            - lbs_name (str): name of the lbs
+            - lbs_data (dict[str, pd.DataFrame]): lbs data
+
+        Returns:
+            - pd.DataFrame: lbs dataframe
+        """
         bus_df = LocalLbsHandler._create_flat_bus_df(
             lbs_data["TECHNOLOGY TO BUS"], lbs_data["BUSES"]
         )
@@ -70,6 +97,16 @@ class LocalLbsHandler:
     def _create_flat_bus_df(
         tech_to_bus_df: pd.DataFrame, bus_df: pd.DataFrame
     ) -> pd.DataFrame:
+        """
+        Create flat bus dataframe by merging technologies and bus dataframes.
+
+        Args:
+            - tech_to_bus_df (pd.DataFrame): technology to bus dataframe
+            - bus_df (pd.DataFrame): bus dataframe
+
+        Returns:
+            - pd.DataFrame: merged flat bus dataframe
+        """
         tech_df = tech_to_bus_df.melt(
             id_vars=["technology_id"], var_name="bus_id", value_name="value"
         )
@@ -80,6 +117,15 @@ class LocalLbsHandler:
 
     @staticmethod
     def _create_flat_capacity(capa_dict: dict[str, pd.DataFrame]) -> pd.DataFrame:
+        """
+        Create flat capacity dataframe. by merging each capacity dataframe.
+
+        Args:
+            - capa_dict (dict[str, pd.DataFrame]): dictionary of capacity dataframes
+
+        Returns:
+            - pd.DataFrame: merged flat capacity dataframe
+        """
         dfs: list[pd.DataFrame] = []
         for name, df in capa_dict.items():
             df = df.set_index("technology_id")
@@ -91,6 +137,16 @@ class LocalLbsHandler:
     def _create_flat_lines(
         lines_df: pd.DataFrame, bus_df: pd.DataFrame
     ) -> pd.DataFrame:
+        """
+        Create flat lines dataframe.
+
+        Args:
+            - lines_df (pd.DataFrame): lines dataframe
+            - bus_df (pd.DataFrame): bus dataframe
+
+        Returns:
+            - pd.DataFrame: flat lines dataframe
+        """
         index_dict = dict(zip(bus_df["bus_id"], bus_df.index))
         lines_df = lines_df.rename(columns={"energy_type": "line_energy_type"})
         lines_df.index = lines_df["bus_from_id"].map(index_dict)
@@ -98,6 +154,15 @@ class LocalLbsHandler:
 
     @staticmethod
     def _create_flat_capacity_bounds(cb_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create flat capacity bounds dataframe.
+
+        Args:
+            - cb_df (pd.DataFrame): capacity bounds dataframe
+
+        Returns:
+            - pd.DataFrame: flat capacity bounds dataframe
+        """
         cb_df.loc[:, "left_technology_name"] = cb_df.loc[:, "left_tech_id"]
         cb_df = cb_df.set_index("left_tech_id")
         cb_df = cb_df.rename(columns={"right_tech_id": "right_technology_name"})
@@ -105,8 +170,26 @@ class LocalLbsHandler:
 
 
 class GlobalSystemsHandler:
+    """
+    A handler class for managing global systems related to energy technologies and their subsystems.
+
+    This class provides functionality to create and manipulate dataframes representing
+    global energy systems, including the relationships between technologies and their
+    subsystems, transmission fees, and associated tags. The resulting structured DataFrame
+    can be utilized for energy modeling and analysis.
+    """
+
     @staticmethod
     def create_subsystem_dataframe(subsystems: dict[str, pd.DataFrame]) -> pd.DataFrame:
+        """
+        Create subsystem dataframe by merging multiple related dataframes.
+
+        Args:
+            - subsystems (dict[str, pd.DataFrame]): dictionary of subsystem related dataframes
+
+        Returns:
+             - pd.DataFrame: merged subsystem dataframe
+        """
         connection_df = GlobalSystemsHandler._create_flat_subsystem_connection_df(
             subsystems["TECHNOLOGY TO SUBSYSTEM"], subsystems["SUBSYSTEMS"]
         )
@@ -137,6 +220,17 @@ class GlobalSystemsHandler:
     def _create_flat_subsystem_connection_df(
         tech_to_sub_df: pd.DataFrame, subsystem_df: pd.DataFrame
     ) -> pd.DataFrame:
+        """
+        Create flat subsystem connection dataframe by merging technology to subsystem dataframe
+        with subsystem dataframe by subsystem id.
+
+        Args:
+            - tech_to_sub_df (pd.DataFrame): technology to subsystem dataframe
+            - subsystem_df (pd.DataFrame): subsystem dataframe
+
+        Returns:
+            - pd.DataFrame: flat subsystem connection dataframe
+        """
         tech_to_sub_df = tech_to_sub_df.melt(
             id_vars="global_tech_id", var_name="subsystem_id", value_name="value"
         )
@@ -147,6 +241,15 @@ class GlobalSystemsHandler:
 
     @staticmethod
     def _create_transmission_fees_df(tf_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create transmission fees dataframe by setting and index and adding prefix to column names.
+
+        Args:
+            - tf_df (pd.DataFrame): transmission fees dataframe
+
+        Returns:
+            - pd.DataFrame: transmission fees dataframe
+        """
         tf_df = tf_df.set_index("aggregate_id").T
         tf_df = tf_df.add_prefix(handle_prefix_name("TF"))
         return tf_df

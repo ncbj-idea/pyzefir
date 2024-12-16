@@ -23,7 +23,13 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class StorageTypeParameters(ModelParameters):
-    """Storage Type parameters"""
+    """
+    Class representing the storage type parameters.
+
+    This class holds parameters specific to different types of storage units,
+    including their capacities, costs, and efficiencies. These parameters are
+    critical for evaluating the performance and economic viability of storage technologies.
+    """
 
     def __init__(
         self,
@@ -31,6 +37,14 @@ class StorageTypeParameters(ModelParameters):
         indices: Indices,
         scale: float = 1.0,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - storage_types (NetworkElementsDict): The types of storage in the network.
+            - indices (Indices): The indices used for mapping various parameters.
+            - scale (float, optional): A scaling factor for capacity costs. Defaults to 1.0.
+        """
         self.max_capacity = self.fetch_element_prop(
             storage_types, indices.TSTOR, "max_capacity", sample=indices.Y.ii
         )

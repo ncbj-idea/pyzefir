@@ -18,16 +18,39 @@ from itertools import product
 
 import numpy as np
 import xarray as xr
-from linopy import Model
+from linopy import Model, Variable
 
+from pyzefir.model.network import Network
+from pyzefir.model.utils import AllowedStorageGenerationLoadMethods
 from pyzefir.optimization.linopy.preprocessing.indices import Indices
 from pyzefir.optimization.linopy.preprocessing.variables import VariableGroup
+from pyzefir.optimization.linopy.preprocessing.variables.demand_chunks import (
+    create_dch_vars,
+)
+from pyzefir.optimization.linopy.preprocessing.variables.utils import add_h_y_variable
 
 
 class StorageVariables(VariableGroup):
-    """Storage variables"""
+    """
+    Class representing the storage variables.
 
-    def __init__(self, model: Model, indices: Indices) -> None:
+    This class encapsulates the variables associated with energy storage units in the
+    network, including generation, load, state of charge, and capacity metrics. These
+    variables are critical for modeling the behavior and performance of storage systems
+    in energy management.
+    """
+
+    def __init__(self, model: Model, indices: Indices, network: Network) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - model (Model): The optimization model to which the storage variables will be added.
+            - indices (Indices): The indices used for mapping storage parameters across
+              different time periods and storage units.
+            - network (Network): The network representation that includes demand chunks and
+              storage elements.
+        """
         self.gen = model.add_variables(
             lower=xr.DataArray(
                 np.full((len(indices.STOR), len(indices.H), len(indices.Y)), 0),
@@ -38,26 +61,15 @@ class StorageVariables(VariableGroup):
             name="S_GEN",
         )
         """ generation """
-
-        self.gen_dch = model.add_variables(
-            lower=xr.DataArray(
-                np.full(
-                    (
-                        len(indices.DEMCH),
-                        len(indices.STOR),
-                        len(indices.H),
-                        len(indices.Y),
-                    ),
-                    0,
-                ),
-                dims=["demch", "stor", "hour", "year"],
-                coords=[indices.DEMCH.ii, indices.STOR.ii, indices.H.ii, indices.Y.ii],
-                name="gen_dch",
-            ),
-            name="S_GEN_DCH",
+        self.gen_dch = create_dch_vars(
+            model=model,
+            demand_chunks=network.demand_chunks,
+            energy_sources=network.storages,
+            indices=indices,
+            energy_source_ii=indices.STOR,
+            var_name="ST_DEM_CH",
         )
         """ generation to cover demand chunks """
-
         self.load = model.add_variables(
             lower=xr.DataArray(
                 np.full((len(indices.STOR), len(indices.H), len(indices.Y)), 0),
@@ -135,3 +147,53 @@ class StorageVariables(VariableGroup):
             name="S_CAP_BASE_MINUS",
         )
         """ base capacity decrease """
+
+        self.milp_bin = self._create_storage_binary_variables(
+            model=model,
+            indices=indices,
+            network=network,
+            method=AllowedStorageGenerationLoadMethods.milp,
+        )
+        """ binary variables indicating if a storage unit is active in a given hour and year """
+
+    def _create_storage_binary_variables(
+        self,
+        model: Model,
+        indices: Indices,
+        network: Network,
+        method: AllowedStorageGenerationLoadMethods,
+    ) -> dict[tuple[int, int], Variable]:
+        """
+        Creates binary variables for storage units in the model based on the specified generation/load method.
+
+        This method iterates through storage units in the provided indices, checks their corresponding
+        generation/load method, and if it matches the specified method, it creates a binary decision variable
+        for that storage. The variable is added to the model and stored in a dictionary with a key composed
+        of the storage index and the storage type index.
+
+        Args:
+            model (Model): The MILP model to which binary variables will be added.
+            indices (Indices): Contains mappings between storage indices and types.
+            network (Network): The network object containing information about the storages and their types.
+            method (AllowedStorageGenerationLoadMethods): The method type (e.g., MILP) that determines whether
+                                                        binary variables should be created for the storage.
+
+        Returns:
+            dict[tuple[int, int], Variable]: A dictionary where the key is a tuple of the storage index and
+                                            the storage type index, and the value is the corresponding binary
+                                            variable added to the model.
+        """
+        binary_variables_dict: dict[tuple[int, int], Variable] = {}
+        for storage_idx, storage_name in indices.STOR.mapping.items():
+            energy_source_type = network.storages[str(storage_name)].energy_source_type
+            storage_type = network.storage_types[energy_source_type]
+            if storage_type.generation_load_method == method:
+                storage_type_idx = indices.TSTOR.inverse[storage_type.name]
+                binary_variable = add_h_y_variable(
+                    model=model,
+                    indices=indices,
+                    var_name=f"{storage_name}_{method}_bin",
+                    use_binary=True,
+                )
+                binary_variables_dict[(storage_idx, storage_type_idx)] = binary_variable
+        return binary_variables_dict

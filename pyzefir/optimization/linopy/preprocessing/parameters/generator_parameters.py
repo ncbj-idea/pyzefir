@@ -20,21 +20,41 @@ import pandas as pd
 from numpy import ndarray
 
 from pyzefir.model.network import NetworkElementsDict
-from pyzefir.model.network_elements import Generator, GeneratorType
+from pyzefir.model.network_elements import DemandChunk, Generator, GeneratorType
 from pyzefir.optimization.linopy.preprocessing.indices import IndexingSet, Indices
 from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
+from pyzefir.optimization.linopy.preprocessing.parameters.utils import (
+    get_demand_chunk_unit_indices,
+)
 
 
 @dataclass
 class GeneratorParameters(ModelParameters):
-    """Generator parameters"""
+    """
+    Class representing the generator parameters, which include various characteristics related to energy generation.
+
+    This class aggregates important attributes of generators such as capacity, fuel type, and emissions.
+    It facilitates the modeling of generator behavior in an energy system by storing relevant parameters
+    that can be used for optimization and simulation.
+    """
 
     def __init__(
         self,
-        generators: NetworkElementsDict,
-        generator_types: NetworkElementsDict,
+        generators: NetworkElementsDict[Generator],
+        generator_types: NetworkElementsDict[GeneratorType],
+        demand_chunks: NetworkElementsDict[DemandChunk],
         indices: Indices,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - generators (NetworkElementsDict[Generator]): The dictionary of generators in the network.
+            - generator_types (NetworkElementsDict[GeneratorType]): The dictionary of generator types in the network.
+            - demand_chunks (NetworkElementsDict[DemandChunk]): The dictionary of demand chunks associated with
+                the generators.
+            - indices (Indices): The indices used to map generator properties.
+        """
         self.base_cap = self.fetch_element_prop(
             generators, indices.GEN, "unit_base_cap"
         )
@@ -110,6 +130,10 @@ class GeneratorParameters(ModelParameters):
         self.capacity_binding = self.fetch_element_prop(
             generators, indices.GEN, "generator_binding"
         )
+        self.demand_chunks = get_demand_chunk_unit_indices(
+            indices, generators, indices.GEN, demand_chunks
+        )
+        """ mapping gen_idx -> dem_chunk_idx """
 
     @staticmethod
     def get_frame_data_prop_from_element(
@@ -126,14 +150,14 @@ class GeneratorParameters(ModelParameters):
         specified property for the specified energy type at the specified hour index.
 
         Args:
-            generators (NetworkElementsDict[Generator]): The generators in the network.
-            generator_types (NetworkElementsDict[GeneratorType]): The generator types in the network.
-            gen_idx (IndexingSet): The set of indices for the generators.
-            h_idx (IndexingSet): The set of indices for the hours.
-            prop (str): The name of the property to retrieve.
+            - generators (NetworkElementsDict[Generator]): The generators in the network.
+            - generator_types (NetworkElementsDict[GeneratorType]): The generator types in the network.
+            - gen_idx (IndexingSet): The set of indices for the generators.
+            - h_idx (IndexingSet): The set of indices for the hours.
+            - prop (str): The name of the property to retrieve.
 
         Returns:
-            dict[int, dict[str, ndarray]]: A dictionary where the keys are the indices of the generators in the
+            - dict[int, dict[str, ndarray]]: A dictionary where the keys are the indices of the generators in the
             generators parameter and the values are dictionaries where the keys are
             the energy types and the values are numpy arrays containing the values of
             the specified property for the specified energy type at the specified

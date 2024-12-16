@@ -1,27 +1,11 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pytest
 from linopy import Model
 from numpy import arange, array, ndarray
 
 from pyzefir.model.network import Network
 from pyzefir.optimization.linopy.preprocessing.indices import IndexingSet, Indices
-from pyzefir.optimization.linopy.preprocessing.opt_variables import (
-    OptimizationVariables,
+from pyzefir.optimization.linopy.preprocessing.variables.storage_type_variables import (
+    StorageTypeVariables,
 )
 from pyzefir.optimization.opt_config import OptConfig
 from tests.unit.optimization.linopy.conftest import N_YEARS
@@ -51,23 +35,26 @@ def test_storage_type_variables(
     )  # to simulate that all tstors are connected to aggregator
     model = Model()
 
-    variables = OptimizationVariables(model, indices, opt_config).tstor
+    storage_type_variables = StorageTypeVariables(model, indices)
 
     yy = y_sample.shape[0]
-    assert variables.tcap.size == n_tstor * yy
+    assert storage_type_variables.tcap.size == n_tstor * yy
     assert all(
-        len(variables.tcap.indexes["index"][i]) == 3 for i in range(n_tstor * yy)
+        len(storage_type_variables.tcap.indexes["index"][i]) == 3
+        for i in range(n_tstor * yy)
     )
-    assert variables.tcap_plus.size == n_tstor * yy
+    assert storage_type_variables.tcap_plus.size == n_tstor * yy
     assert all(
-        len(variables.tcap_plus.indexes["index"][i]) == 3 for i in range(n_tstor * yy)
+        len(storage_type_variables.tcap_plus.indexes["index"][i]) == 3
+        for i in range(n_tstor * yy)
     )
-    assert variables.tcap_minus.size == n_tstor * yy * yy
+    assert storage_type_variables.tcap_minus.size == n_tstor * yy * yy
     assert all(
-        len(variables.tcap_minus.indexes["index"][i]) == 4 for i in range(n_tstor * yy)
+        len(storage_type_variables.tcap_minus.indexes["index"][i]) == 4
+        for i in range(n_tstor * yy)
     )
-    assert variables.tcap_base_minus.size == n_tstor * yy
+    assert storage_type_variables.tcap_base_minus.size == n_tstor * yy
     assert all(
-        len(variables.tcap_base_minus.indexes["index"][i]) == 3
+        len(storage_type_variables.tcap_base_minus.indexes["index"][i]) == 3
         for i in range(n_tstor * yy)
     )

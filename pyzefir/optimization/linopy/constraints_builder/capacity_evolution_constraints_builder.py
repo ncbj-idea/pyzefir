@@ -51,7 +51,23 @@ _logger = logging.getLogger(__name__)
 
 
 class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
+    """
+    A builder class for constructing capacity evolution constraints in energy models.
+
+    This class is responsible for building various types of constraints related to the
+    capacity evolution of generators and storages over time. It ensures that these capacity
+    changes adhere to specific parameters, such as capacity increase and decrease limits,
+    local constraints for aggregated units, and reduced capacity bounds.
+    """
+
     def build_constraints(self) -> None:
+        """
+        Build constraints including:
+        - capacity evolution constraints
+        - supplementary evolution constraints
+        - base capacity constraints
+        - generator and storage minimum and maximum power constraints
+        """
         _logger.info("Capacity evolution constraints builder is working...")
         self.capacity_evolution_constraints()
         self.supplementary_evolution_constraints()
@@ -60,6 +76,19 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         _logger.info("Capacity evolution constraints builder is finished!")
 
     def generator_n_min_max_power_constraints(self) -> None:
+        """
+        Builds and adds minimum and maximum power constraints for generators and storages to the model.
+
+        This method defines the operational power limits for each generator and storage unit based on
+        their respective minimum and maximum power levels. It ensures that units are not dispatched
+        below or above their allowed operational limits at any given time.
+
+        Constraints added by this method include:
+        - Minimum power constraints for generators and storages.
+        - Maximum power constraints for generators and storages.
+
+        These constraints are built for each time step and ensure valid dispatch levels across the simulation period.
+        """
         _logger.debug("Building power constraints...")
         self._build_n_min_max_power_constraints(
             self.indices.GEN, self.parameters.gen, self.variables.gen
@@ -72,12 +101,24 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         _logger.debug("Build power constraints: Done")
 
     def capacity_evolution_constraints(self) -> None:
+        """
+        Builds capacity evolution constraints for generators and storages over time.
+
+        This method constructs constraints that manages how the capacity of each generator and storage unit can evolve
+        across time periods. The constraints ensure that:
+        - Capacity changes (increases or decreases) with respect to the specified limits.
+        - Lifetime (lt) and build time (bt) parameters are considered in the evolution of capacity.
+        - The total available capacity remains within defined limits during the simulation.
+
+        The capacity evolution constraints are added to the model for both individual and aggregated units.
+        """
         _logger.debug("Building capacity evolution constraints...")
         self._build_capacity_evolution_constraints_gen_stor()
         self._build_local_capacity_evolution_constraints_gen_stor()
         _logger.debug("Build capacity evolution constraints: Done")
 
     def _build_capacity_evolution_constraints_gen_stor(self) -> None:
+        """Build capacity evolution constraints for generators and storages."""
         self._build_capacity_evolution_constraints(
             unit_ii=self.indices.GEN,
             unit_par=self.parameters.gen,
@@ -98,6 +139,7 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         _logger.debug("Build storage capacity evolution constraints: Done")
 
     def _build_local_capacity_evolution_constraints_gen_stor(self) -> None:
+        """Build local capacity constraints for generators and storages."""
         self._build_local_capacity_evolution_constraints(
             unit_par=self.parameters.gen,
             unit_tpar=self.parameters.tgen,
@@ -120,12 +162,23 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         _logger.debug("Build local storage capacity evolution constraints: Done")
 
     def supplementary_evolution_constraints(self) -> None:
+        """
+        Builds supplementary constraints related to capacity evolution.
+
+        This method defines and adds extra constraints, including:
+        - Reduced capacity upper bounds to restrict maximum capacity levels.
+        - Local aggregated unit constraints to ensure that constraints are respected on a regional or group level.
+
+        These constraints provide additional flexibility in modeling more complex systems where capacity limitations
+        and aggregation of units are considered.
+        """
         _logger.debug("Building supplementary evolution constraints...")
         self._build_reduced_capacity_upper_bound_constraints_gen_stor()
         self._build_local_supplementary_capacity_upper_bound_constraints_gen_stor()
         _logger.debug("Build supplementary evolution constraints: Done")
 
     def _build_reduced_capacity_upper_bound_constraints_gen_stor(self) -> None:
+        """Build reduced capacity upper bound constaints for generators and storages."""
         self._build_reduced_capacity_upper_bound_constraints(
             unit_ii=self.indices.GEN,
             unit_tpar=self.parameters.tgen,
@@ -146,7 +199,8 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
     def _build_local_supplementary_capacity_upper_bound_constraints_gen_stor(
         self,
     ) -> None:
-        """Supplementary constraints specifying the cap <-> tcap relation
+        """
+        Supplementary constraints specifying the cap <-> tcap relation
         and equivalent of reduced_capacity_upper_bound_constraints for local technologies
         The constraints separately for generators and storages
         """
@@ -174,6 +228,13 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         )
 
     def base_capacity_constraints(self) -> None:
+        """
+        Adds constraints to define the initial (base) capacities of generators and storages.
+
+        This method sets up the initial capacity values for each unit at the start of the simulation,
+        ensuring that the model starts with valid base capacity levels. These constraints form the
+        foundation for the capacity evolution process.
+        """
         for idx, val in self.parameters.gen.base_cap.items():
             self.model.add_constraints(
                 self.variables.gen.cap.isel(gen=idx, year=0) == val,
@@ -196,6 +257,22 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_var: GeneratorVariables | StorageVariables,
         unit_aggr_map: dict[int, set],
     ) -> None:
+        """
+        Define capacity evolution constraints for a given unit.
+
+        For each unit, calculates the initial capacity, capacity increases,
+        and decreases over time based on the specified parameters,
+        and adds constraints to the model to ensure capacity evolution
+        adheres to these calculations.
+
+        Args:
+            - unit_ii (IndexingSet): Indexing set for the unit.
+            - unit_par (GeneratorParameters | StorageParameters): Parameters for the unit.
+            - unit_tpar (GeneratorTypeParameters | StorageTypeParameters): Type parameters for the unit.
+            - unit_tidx (dict[int, int]): Mapping of unit indices to their type indices.
+            - unit_var (GeneratorVariables | StorageVariables): Variables associated with the unit.
+            - unit_aggr_map (dict[int, set]): Mapping of unit indices to aggregated sets.
+        """
         cap, cap_base_minus = unit_var.cap, unit_var.cap_base_minus
         cap_plus, cap_minus = unit_var.cap_plus, unit_var.cap_minus
         lbs_unit_idx = get_dict_vals(unit_aggr_map)
@@ -240,6 +317,23 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_aggr_tmap: dict[int, set],
         unit_type: str,
     ) -> None:
+        """
+        Define local capacity evolution constraints for aggregated units.
+
+        For each aggregated unit, calculates the initial capacity,
+        increases, and decreases over time based on the specified parameters,
+        and adds constraints to ensure that local capacity evolution adheres
+        to these calculations.
+
+        Args:
+            - unit_par (GeneratorParameters | StorageParameters): Parameters for the unit (generator or storage).
+            - unit_tpar (GeneratorTypeParameters | StorageTypeParameters): Type parameters for the unit.
+            - unit_tidx (dict[int, int]): Mapping of unit indices to their type indices.
+            - unit_tvar (GeneratorTypeVariables | StorageTypeVariables): Type variables associated with the unit.
+            - unit_aggr_map (dict[int, set]): Mapping of unit indices to aggregated sets.
+            - unit_aggr_tmap (dict[int, set]): Mapping of aggregated unit indices to their type indices.
+            - unit_type (str): The type of the unit (e.g., 'generator' or 'storage').
+        """
         tcap, tcap_base_minus = unit_tvar.tcap, unit_tvar.tcap_base_minus
         tcap_plus, tcap_minus = unit_tvar.tcap_plus, unit_tvar.tcap_minus
         for aggr_idx in unit_aggr_map.keys():
@@ -285,6 +379,21 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_var: GeneratorVariables | StorageVariables,
         unit_aggr_map: dict[int, set],
     ) -> None:
+        """
+        Define reduced capacity upper bound constraints for units.
+
+        For each unit, checks and sets constraints to ensure that the sum of
+        capacity decreases is zero for the current time period
+        and that the total capacity decreases do not exceed the available
+        capacity increases.
+
+        Args:
+            - unit_ii (IndexingSet): Indexing set for the units.
+            - unit_tpar (GeneratorTypeParameters | StorageTypeParameters): Type parameters for the units.
+            - unit_tidx (dict[int, int]): Mapping of unit indices to their type indices.
+            - unit_var (GeneratorVariables | StorageVariables): Variables associated with the units.
+            - unit_aggr_map (dict[int, set]): Mapping of unit indices to aggregated sets.
+        """
         cap_plus, cap_minus = unit_var.cap_plus, unit_var.cap_minus
         lbs_unit_idx = get_dict_vals(unit_aggr_map)
         for u_idx, u_name in unit_ii.mapping.items():
@@ -316,6 +425,23 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_aggr_tmap: dict[int, set],
         unit_aggr_map: dict[int, set],
     ) -> None:
+        """
+        Define local supplementary capacity upper bound constraints for aggregated units.
+
+        For each aggregated unit type, sets constraints to ensure that the sum
+        of capacity decreases (tcap_minus) is zero for the current time period
+        and that the total capacity decreases do not exceed the available
+        capacity increases (tcap_plus). Also establishes constraints for
+        capacity definitions in evolution equations.
+
+        Args:
+            - unit_tpar (GeneratorTypeParameters | StorageTypeParameters): Type parameters for the units.
+            - unit_tidx (dict[int, int]): Mapping of unit indices to their type indices.
+            - unit_var (GeneratorVariables | StorageVariables): Variables associated with the units.
+            - unit_tvar (GeneratorTypeVariables | StorageTypeVariables): Type variables associated with the units.
+            - unit_aggr_tmap (dict[int, set]): Mapping of aggregated unit indices to their type indices.
+            - unit_aggr_map (dict[int, set]): Mapping of unit indices to aggregated sets.
+        """
         cap = unit_var.cap
         tcap, tcap_plus, tcap_minus = (
             unit_tvar.tcap,
@@ -368,7 +494,14 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_par: GeneratorParameters | StorageParameters,
         unit_var: GeneratorVariables | StorageVariables,
     ) -> None:
-        """Slavkov problem"""
+        """
+        Slavkov problem. Builds minimum and maximum power constraints.
+
+        Args:
+            - unit_ii (IndexingSet): Indexing set for the units.
+            - unit_par (GeneratorParameters | StorageParameters): Type parameters for the units.
+            - unit_var (GeneratorVariables | StorageVariables): Variables associated with the units.
+        """
         for u_idx, u_name in unit_ii.mapping.items():
             for lbs_idx in self.parameters.lbs.buses.keys():
                 lbs_buses = set().union(
@@ -396,6 +529,18 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
         unit_par: GeneratorParameters | StorageParameters,
         unit_var: GeneratorVariables | StorageVariables,
     ) -> None:
+        """
+        Builds minimum and maximum power constraints for aggregated units in the system.
+
+        Args:
+            - lbs_idx (int): Index for the "lbs" dimension, representing a specific load balancing scenario.
+            - u_idx (int): Index of the unit (generator or storage) for which the constraints are being built.
+            - u_name (str): Name of the unit, used for naming the constraints.
+            - unit_par (GeneratorParameters | StorageParameters): The parameters of the unit,
+                including min/max nominal power.
+            - unit_var (GeneratorVariables | StorageVariables): The variables associated with the unit,
+                including capacity.
+        """
         aggr_idx = [
             ii
             for ii in self.indices.AGGR.ord
@@ -433,6 +578,17 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
     def _get_unit_idx_from_type(
         unit_t_idx: dict[int, int], type_idx: int, unit_in_aggr: set[int]
     ) -> list[int]:
+        """
+        Retrieves unit indices corresponding to a specified type.
+
+        Args:
+            - unit_t_idx (dict[int, int]): A dictionary mapping unit indices to their respective type indices.
+            - type_idx (int): The type index to filter units by.
+            - unit_in_aggr (set[int]): A set of unit indices that are part of a specific aggregator or group.
+
+        Returns:
+            - list[int]: A list of unit indices that match the specified type and belong to the aggregator.
+        """
         return [
             u_idx
             for u_idx, u_type_idx in unit_t_idx.items()
@@ -441,8 +597,34 @@ class CapacityEvolutionConstrBuilder(PartialConstraintsBuilder):
 
     @staticmethod
     def _s_range(y: int, lt: int, bt: int) -> range:
+        """
+        Computes a range based on the comparison of linear expressions.
+
+        Args:
+            - y (int): year
+            - lt (int): life time of the unit
+            - bt (int): build time of the unit
+
+        Returns:
+            - range: An iterator that produces a sequence of integers from
+                `max(0, y - lt - bt + 1)` to `y - bt + 1`, inclusive of
+                the lower limit and exclusive of the upper limit.
+        """
         return range(max(0, y - lt - bt + 1), y - bt + 1)
 
     @staticmethod
     def _t_range(y: int, s: int, lt: int, bt: int) -> range:
+        """
+        Computes a range based on the comparison of linear expressions.
+
+        Args:
+            - y (int): year
+            - s (int): range of years
+            - lt (int): life time of the unit
+            - bt (int): build time of the unit
+
+        Returns:
+            range: An iterator that produces a sequence of integers from `max(0, y - lt - bt + 1)` to `y - bt + 1`,
+                inclusive of the lower limit and exclusive of the upper limit.
+        """
         return range(s + bt, min(y, s + bt + lt - 1) + 1)

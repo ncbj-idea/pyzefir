@@ -16,6 +16,7 @@
 
 from linopy import Model
 
+from pyzefir.model.network import Network
 from pyzefir.optimization.linopy.preprocessing.indices import Indices
 from pyzefir.optimization.linopy.preprocessing.variables.bus_variables import (
     BusVariables,
@@ -43,24 +44,39 @@ from pyzefir.optimization.opt_config import OptConfig
 
 class OptimizationVariables:
     """
-    All optimization variables.
+    Class representing all optimization variables for the energy network model.
+
+    This class encapsulates various optimization variables associated with different
+    components of the energy network, including buses, generators, storage systems,
+    and transmission lines. These variables are essential for formulating and solving
+    the optimization problem in the energy model.
+
+    Args:
+        - model (Model): The optimization model to which the variables will be added.
+        - network (Network): The network object containing all components of the energy system,
+          including buses, generators, and storage facilities.
+        - indices (Indices): The indices used for mapping different variables within the optimization
+          model.
+        - opt_config (OptConfig): The optimization configuration that includes various parameters
+          relevant to the optimization process.
     """
 
     def __init__(
         self,
         model: Model,
+        network: Network,
         indices: Indices,
         opt_config: OptConfig,
     ) -> None:
-        self.bus = BusVariables(model, indices, opt_config)
+        self.bus = BusVariables(model, network, indices, opt_config)
         """ bus variables """
         self.frac = FractionVariables(model, indices)
         """ fraction variables """
         self.tgen = GeneratorTypeVariables(model, indices)
         """ generator type variables """
-        self.gen = GeneratorVariables(model, indices)
+        self.gen = GeneratorVariables(model, indices, network)
         """ generators variables """
-        self.stor = StorageVariables(model, indices)
+        self.stor = StorageVariables(model, indices, network)
         """ storage variables """
         self.tstor = StorageTypeVariables(model, indices)
         """ storage type variables """

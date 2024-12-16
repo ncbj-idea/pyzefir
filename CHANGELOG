@@ -1,5 +1,48 @@
 # CHANGELOG
 
+## [0.5.0] - 2024-12-16
+
+### Added
+- **Storage Types**: Added optional MILP implementation for calculating load and generation constraints for specific storage types. New spreadsheet `Storage Calculation Settings` added to configure MILP constraints.
+- **Generator Types**: Added option to disable dump energy for specific generator types. A new `disable_dump_energy` column was added to the `generator_type.xlsx` file.
+- **Load Shifting**: Added new features for load shifting, including updated constraints and objective related to `shift_plus` variables.
+- **Capacity Bounds**: Enhanced the ability to assign capacity bounds to all aggregates or specific aggregates.
+- **Gurobi Solver**: Added option to export Gurobi solver parameters after calculation. A new flag `export_gurobi_parameters` was added to the `config.ini` file.
+- **LP Dump**: Added functionality to dump LP models before solving them.
+- **Binary Exporter**: Introduced FeatherExporter to dump results in Feather binary format. A new flag feather_results in config.ini enables this feature. (ZPS-1178)
+- **ENS Penalization**: Added support for varying ENS (Energy Not Supplied) penalizations by energy type. Changes include a new spreadsheet (ENS Penalization) in Scenario.xlsx and a new ens_penalization.xlsx file in the structure creator directory. (ZPS-1158, ZPS-1167)
+- **Git Info Dumper**: Added GitInfoDumper to save commit and diff information in a git_info.txt file during postprocessing. (ZPS-942)
+- **Power Reserve Version Update**: Modified `GENERATION_ENERGY_LOSSES_CONSTRAINT` to include a new variable `gen_reserve_et` for handling power reserves, ensuring generation calculations respect the reserve constraint. Added corresponding tests.
+- **Validator Fix**: Corrected the `_validate_power_reserves_tags` function to ensure proper validation of power reserves and updated network validation tests.
+- **Cost Parameters Method Refactor**: Refactored the cost parameters handling function to resolve edge cases and ensure strict data merging.
+- **License Change**: Changed the license from AGPL3 to MIT and updated relevant files.
+- **Technology Order Issue**: Fixed the issue where two data frames were concatenated without a specified key. Changed `pd.concat` to `pd.merge` to correctly handle merging and remove duplicates.
+- **Documentation and Docstrings**: Added documentation and detailed docstrings throughout the codebase, using Sphinx to automatically generate HTML documentation.
+- **Validation Logging**: Added a configuration option to `config.ini` to allow logging errors without raising exceptions during network validation.
+- **Storage Results Dump**: Fixed an issue where storage generation results were not being generated properly. Adjusted results to account for efficiency. Added new method `calculate_storage_adjusted_generation` and refactored tests.
+
+### Fixed
+- **Compensation Constraint**: Fixed issue with missing summation in compensation constraint, which caused errors for the last hour in the interval.
+- **Capacity Bound Validator**: Updated the capacity bound validator to check if the left coefficient is positive or negative.
+- **Exception Handling**: Fixed incorrect exception message when ScenarioData load fails.
+- **CLI Run Dump Flag**: Modified CLI to only dump git_info when explicitly requested via a flag. (None)
+- **Feather Config Validation**: Fixed validation issues when using Feather format in the configuration. (None)
+- **Aggregation Build and Lifetime**: Corrected aggregation of build and lifetime values for generator and storage types. (ZPS-1169)
+- **Solution Dump for Gurobi**: Ensured that the .sol file is correctly dumped when using Gurobi as a solver. (ZPS-903)
+- **Computational Engine Memory Optimization**: Reduced memory complexity for generator, demand chunk, and bus variables, making the engine more efficient for large models. (ZPS-1141)
+- **Power Reserves Validation**: Updated the power reserves validation mechanism and fixed related validation tests.
+- **Cost Parameters Handling**: Refined the cost parameters function to handle edge cases and improve data merging.
+- **Storage Generation Results**: Corrected the storage generation results calculation to reflect accurate energy production, accounting for efficiency.
+
+### Changes
+- **Aggregation Method**: Corrected the aggregation method and curtailment calculation to ensure accurate results.
+- Updated xarray dependency from 2023.12.0 to 2024.6.0 to resolve linopy errors. (None)
+- Upgraded linopy to version 0.3.13, which resolves issues with .sol file generation. (ZPS-903)
+
+
+
+
+
 ## [0.4.32] - 2024-12-03
 
 ### Fixed

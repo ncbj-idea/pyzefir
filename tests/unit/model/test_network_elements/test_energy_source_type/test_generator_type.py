@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from typing import Any
 from unittest.mock import patch
 
@@ -144,11 +129,11 @@ def test_capacity_bound_validation(network: Network) -> None:
             get_default_generator_type(
                 series_length=default_network_constants.n_years,
                 name="gen_type_cap_fuel",
-                ramp_up=1,
+                ramp_up=1.001,
             ),
             [
                 NetworkValidatorException(
-                    "ramp_up value must be greater than 0 and less than 1, but it is 1"
+                    "ramp_up value must be greater or equal than 0 and less or equal than 1, but it is 1.001"
                 ),
             ],
         ),
@@ -613,7 +598,7 @@ def test_generation_compensation(
             1.05,
             [
                 NetworkValidatorException(
-                    "ramp_up value must be greater than 0 and less than 1, but it is 1.05"
+                    "ramp_up value must be greater or equal than 0 and less or equal than 1, but it is 1.05"
                 )
             ],
             id="up_above_value",

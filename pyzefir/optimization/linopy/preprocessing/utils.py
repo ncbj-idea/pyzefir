@@ -28,6 +28,16 @@ def create_unique_array_of_tags(
     gen_items: list[Generator | GeneratorType],
     storage_items: list[Storage | StorageType],
 ) -> np.ndarray:
+    """
+    Creates unique array of tags from a list of generators and storages.
+
+    Args:
+        - gen_items (list[Generator | GeneratorType]): list of generator objects
+        - storage_items (list[Storage | StorageType]): list of storage objects
+
+    Returns:
+        - np.ndarray: unique array of tags
+    """
     gen_tags = [t for ele in gen_items for t in ele.tags]
     stor_tags = [t for ele in storage_items for t in ele.tags]
     return np.unique(gen_tags + stor_tags)

@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 import logging
@@ -98,9 +82,13 @@ class GeneratorType(EnergySourceType):
 
     energy_curtailment_cost: pd.Series | None = None
     """ energy curtailment for generator """
+
     generation_compensation: pd.Series | None = None
     """generation compensation parameters used to decrease objective
     pd.DataFrame with hours (rows) and years (columns)"""
+
+    disable_dump_energy: bool = False
+    """disable dump energy for the generator type"""
 
     def validate(self, network: Network) -> None:
         """
@@ -108,20 +96,17 @@ class GeneratorType(EnergySourceType):
         - Validates whether at least one of capacity factor or fuel is not None
 
         Method validate runs following validate methods:
-        - _validate_fuels
-        - _validate_capacity_factor
-        - _validate_efficiency
-        - _validate_emission_reduction
-        - _validate_conversion_rate
-        - _validate_power_utilization
-        - _validate_generation_compensation
-        - _validate_ramp
+            - _validate_fuels
+            - _validate_capacity_factor
+            - _validate_efficiency
+            - _validate_emission_reduction
+            - _validate_conversion_rate
+            - _validate_power_utilization
+            - _validate_generation_compensation
+            - _validate_ramp
 
         Args:
-            network (Network): network to which self is to be added
-
-        Returns:
-            None
+            - network (Network): network to which self is to be added
 
         Raises:
             NetworkValidatorExceptionGroup: If exception_list contains exception.
@@ -129,6 +114,9 @@ class GeneratorType(EnergySourceType):
         _logger.debug("Validating generator type object: %s...", self.name)
         exception_list: list[NetworkValidatorException] = []
         self._validate_energy_source_type_base(network, exception_list)
+        self._validate_attribute_type(
+            attr="disable_dump_energy", attr_type=bool, exception_list=exception_list
+        )
         if self.capacity_factor is not None and self.fuel is not None:
             exception_list.append(
                 NetworkValidatorException(
@@ -164,9 +152,10 @@ class GeneratorType(EnergySourceType):
     @property
     def inbound_energy_type(self) -> set[str]:
         """
-        Gets set of energy types needed by the generator
+        Gets set of energy types needed by the generator.
+
         Returns:
-            set[str]: Set of energy types.
+            - set[str]: Set of energy types.
         """
         return set(self.conversion_rate) if self.conversion_rate else set()
 
@@ -179,10 +168,7 @@ class GeneratorType(EnergySourceType):
         - Validates generation compensation data type
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
         """
         if not isinstance(self.generation_compensation, pd.Series | None):
             exception_list.append(
@@ -211,11 +197,8 @@ class GeneratorType(EnergySourceType):
         - Fuel reference validation
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         if self.fuel is not None and not isinstance(self.fuel, str):
             exception_list.append(
@@ -241,11 +224,8 @@ class GeneratorType(EnergySourceType):
         - Validates if capacity_factor is not None and not exists in network.capacity_factors
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         if (
             not isinstance(self.capacity_factor, str)
@@ -280,11 +260,8 @@ class GeneratorType(EnergySourceType):
         in network.energy_types
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         if self.conversion_rate is None:
             exception_list.append(
@@ -310,11 +287,8 @@ class GeneratorType(EnergySourceType):
         - Validates if sum per each year is >= 1.0
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         if self.efficiency is None:
             exception_list.append(
@@ -366,11 +340,8 @@ class GeneratorType(EnergySourceType):
         - Validates whether emission reduction energy types exist in network.emission_types
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-            network (Network): network to which self is to be added.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
+            - network (Network): network to which self is to be added.
         """
         if not (
             isinstance(self.emission_reduction, dict)
@@ -412,6 +383,17 @@ class GeneratorType(EnergySourceType):
         curtailment_cost: pd.Series,
         exception_list: list[NetworkValidatorException],
     ) -> None:
+        """
+        Validation procedure checking:
+        - curtailment cost has any length
+        - curtailment cost length matches number of years
+
+        Args:
+            - network (Network): network to which self is to be added
+            - name (GeneratorType): name of the generator
+            - curtailment_cost (pd.Series): curtailment cost for each year
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+        """
         if (
             len(curtailment_cost)
             and len(set(curtailment_cost.index)) != network.constants.n_years
@@ -430,6 +412,17 @@ class GeneratorType(EnergySourceType):
         curtailment_cost: pd.Series,
         exception_list: list[NetworkValidatorException],
     ) -> None:
+        """
+        Validation procedure checking:
+        - curtailment cost is greater than 0
+        - length of curtailment cost matches number of years
+
+        Args:
+            - network (Network): network to which self is to be added
+            - name (GeneratorType): name of the generator
+            - curtailment_cost (pd.Series): curtailment cost for each year
+            - exception_list (list[GeneratorValidatorException]): list of exceptions
+        """
         curtailment_cost_vals = curtailment_cost.values if len(curtailment_cost) else []
         vals = [el for el in curtailment_cost_vals if is_flow_int(el)]
         if len(vals) > 0 and len(vals) != network.constants.n_years:
@@ -446,6 +439,17 @@ class GeneratorType(EnergySourceType):
         curtailment_cost: pd.Series,
         exception_list: list[NetworkValidatorException],
     ) -> None:
+        """
+        Validation procedure checking:
+        - validates curtailment cost indices
+        - validates curtailment cost values
+
+        Args:
+            - network (Network): network to which self is to be added
+            - name (GeneratorType): name of the generator
+            - curtailment_cost (pd.Series): curtailment cost for each year
+            - exception_list (list[GeneratorValidatorException]): list of exceptions
+        """
         GeneratorType._validate_curtailment_idx(
             network, name, curtailment_cost, exception_list
         )
@@ -467,10 +471,7 @@ class GeneratorType(EnergySourceType):
         - Compare if power utilization values are greater than minimal utilization values
 
         Args:
-            exception_list (NetworkValidatorException) - list of raised exceptions.
-
-        Returns:
-            None
+            - exception_list (NetworkValidatorException) - list of raised exceptions.
         """
         is_power_utilization_valid = self._validate_utilization_series(
             self.power_utilization,
@@ -500,6 +501,20 @@ class GeneratorType(EnergySourceType):
         length: int,
         exception_list: list[NetworkValidatorException],
     ) -> bool:
+        """
+        Validation procedure checking:
+        - validates series
+        - checks all values of series are greater than or equal 0
+
+        Args:
+            - series (pd.Series): series to validate
+            - name (str): name of the series
+            - length (int): length of the series
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+
+        Returns:
+            - bool: validation result
+        """
         is_series_valid: bool = validate_series(
             name=name, series=series, length=length, exception_list=exception_list
         )
@@ -521,6 +536,15 @@ class GeneratorType(EnergySourceType):
         minimal_utilization_series: pd.Series,
         exception_list: list[NetworkValidatorException],
     ) -> None:
+        """
+        Validation procedure checking:
+        - check if all values in utilization_series are greater than minimal_utilization_series
+
+        Args:
+            - utilization_series (pd.Series): series of utilization values
+            - minimal_utilization_series (pd.Series): series of minimal utilization values
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+        """
         correct_rows: pd.Series[bool] = utilization_series >= minimal_utilization_series
         if not all(correct_rows):
             incorrect_hours = correct_rows.index[~correct_rows].to_list()
@@ -532,6 +556,14 @@ class GeneratorType(EnergySourceType):
             )
 
     def _validate_ramp(self, exception_list: list[NetworkValidatorException]) -> None:
+        """
+        Validation procedure checking:
+        - check if ramp is of type float or int
+        - check if ramp is a value between 0 and 1
+
+        Args:
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+        """
         for ramp_name, ramp in {
             "ramp_down": self.ramp_down,
             "ramp_up": self.ramp_up,
@@ -542,10 +574,10 @@ class GeneratorType(EnergySourceType):
                         f"{ramp_name} value must be float or empty."
                     )
                 )
-            elif not np.isnan(ramp) and not 0 < ramp < 1:
+            elif not np.isnan(ramp) and not 0 <= ramp <= 1:
                 exception_list.append(
                     NetworkValidatorException(
                         f"{ramp_name} value must be "
-                        f"greater than 0 and less than 1, but it is {ramp}"
+                        f"greater or equal than 0 and less or equal than 1, but it is {ramp}"
                     )
                 )

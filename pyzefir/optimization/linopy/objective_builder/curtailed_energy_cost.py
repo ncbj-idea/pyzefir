@@ -24,8 +24,30 @@ _logger = logging.getLogger(__name__)
 
 
 class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class for building the objective function to calculate curtailed energy cost for generators.
+
+    This class defines the construction of the objective that calculates the cost
+    associated with curtailed energy, which is the energy generated but not used (curtailed)
+    by generators in the energy system. The objective is computed based on generator
+    curtailment variables, hourly scaling factors, and curtailment cost parameters.
+    """
+
     def build_expression(self) -> LinearExpression | float:
+        """
+        Constructs the curtailed energy cost objective for all generators.
+
+        This method creates the curtailed energy cost objective by iterating over
+        generators and applying the cost of curtailed energy to each unit. The
+        cost calculation is based on energy curtailment variables, the curtailment
+        cost per generator type, and scaling factors such as the hourly scale.
+        It sums up the curtailed energy cost across all years and generator types.
+
+        Returns:
+            - LinearExpression | float: The total curtailed energy cost expression or 0.0.
+        """
         _logger.info("Building curtailed energy cost objective...")
+        hourly_scale = self.parameters.scenario_parameters.hourly_scale
         curtailment_cost = self.parameters.tgen.energy_curtailment_cost
         gen_ett = {
             k: {self.indices.ET.inverse[et] for et in v}
@@ -36,7 +58,7 @@ class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
             for gen_idx, tgen_idx in self.parameters.gen.tgen.items()
             if tgen_idx in curtailment_cost
         }
-        result: LinearExpression = 0.0
+        result: LinearExpression | float = 0.0
         for gen_idx, tgen_idx in gen_idx_to_tgen_idx.items():
             curtailment_cost_per_year = xr.DataArray(
                 curtailment_cost[tgen_idx],
@@ -45,11 +67,12 @@ class CurtailedEnergyCostObjectiveBuilder(ObjectiveBuilder):
             )
             for et in gen_ett[gen_idx]:
                 result += (
-                    self.variables.gen.dump_et.isel(gen=gen_idx, et=et)
+                    self.variables.gen.dump_et[gen_idx][self.indices.ET.mapping[et]]
                     * self.indices.years_aggregation_array
                     * curtailment_cost_per_year
+                    * hourly_scale
                 )
         _logger.info("Curtailed energy cost objective: Done")
-        if result:
+        if isinstance(result, LinearExpression):
             return result.sum()
         return result

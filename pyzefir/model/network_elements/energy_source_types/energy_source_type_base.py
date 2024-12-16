@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 from abc import ABC
@@ -33,7 +17,7 @@ if TYPE_CHECKING:
 @dataclass(kw_only=True)
 class EnergySourceType(NetworkElement, ABC):
     """
-    An abstract class that defines the core attributes for each energy source type
+    An abstract class that defines the core attributes for each energy source type.
     """
 
     name: str
@@ -89,7 +73,8 @@ class EnergySourceType(NetworkElement, ABC):
         - if tags attribute is list of strings
 
         Args:
-            exception_list (list[NetworkValidatorException]): list of exceptions to be raised
+            - network (Network): network to validate
+            - exception_list (list[NetworkValidatorException]): list of exceptions to be raised
         """
         self._validate_name_type(exception_list)
         self._validate_tags(exception_list)
@@ -133,6 +118,12 @@ class EnergySourceType(NetworkElement, ABC):
                 )
 
     def _validate_tags(self, exception_list: list[NetworkValidatorException]) -> None:
+        """
+        Validate tags against allowed types. Store the exceptions if any occur.
+
+        Args:
+            - exception_list (list[NetworkValidatorException]): list of stored exceptions
+        """
         if not isinstance(self.tags, list) or any(
             not isinstance(t, str) for t in self.tags
         ):

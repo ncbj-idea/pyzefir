@@ -1,20 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import logging
 from pathlib import Path
 
@@ -28,6 +11,24 @@ def write_to_excel(
     output_path: Path,
     filename: str,
 ) -> None:
+    """
+    Save output data to an Excel (.xlsx) file.
+
+    This function takes a dictionary containing multiple DataFrames and writes
+    each DataFrame to a separate sheet in an Excel file. If the specified file
+    already exists, it appends new sheets or replaces existing ones.
+
+    Args:
+        - data (dict): A dictionary where keys are sheet names and values are
+          pandas DataFrames to be written to the respective sheets.
+        - output_path (Path): The directory path where the Excel file will be
+          saved. If the directory does not exist, it will be created.
+        - filename (str): The name of the Excel file (including the .xlsx extension).
+
+    Returns:
+        - None: This function does not return any value. It saves the data directly
+          to an Excel file at the specified location.
+    """
     output_path.mkdir(parents=True, exist_ok=True)
     output_path = output_path / filename
 

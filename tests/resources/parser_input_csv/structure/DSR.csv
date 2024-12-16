@@ -1,2 +1,2 @@
-name,compensation_factor,balancing_period_len,penalization,relative_shift_limit,abs_shift_limit
-dsr_1,0.1,20,0.1,0.1,
+name,compensation_factor,balancing_period_len,penalization_minus,penalization_plus,relative_shift_limit,abs_shift_limit,hourly_relative_shift_plus_limit,hourly_relative_shift_minus_limit
+dsr_1,0.1,20,0.1,0.1,0.1,,,

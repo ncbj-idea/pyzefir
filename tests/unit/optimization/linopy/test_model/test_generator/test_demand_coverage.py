@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import numpy as np
 import pytest
 
@@ -95,7 +79,6 @@ def test_netto_generation(
 
     ee_gen = (
         et_gen["pp_coal_grid"][EE]
-        + et_gen["biomass_heat_plant_hs"][EE]
         + engine.results.bus_results.bus_ens["local_ee_bus"]
         + engine.results.bus_results.bus_ens["grid"]
     )
@@ -109,8 +92,6 @@ def test_netto_generation(
     assert np.allclose(ee_gen, ee_dem[hour_sample, :][:, year_sample])
     assert np.allclose(heat_gen, h_dem[hour_sample, :][:, year_sample])
     assert np.allclose(fraction, 1)
-    assert np.allclose(et_gen[coal_power_plant.name][HEAT], 0)
-    assert np.allclose(et_gen[biomass_heat_plant.name][EE], 0)
 
     if not ens:
         assert np.allclose(

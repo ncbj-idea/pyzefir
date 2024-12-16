@@ -23,11 +23,25 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class FuelParameters(ModelParameters):
-    """Fuel parameters (coal, gas, biomass, etc.)"""
+    """
+    Class representing the fuel parameters (coal, gas, biomass, etc.).
+
+    This class encapsulates various parameters associated with different fuel types, including their emissions,
+    energy content, costs, and availability. It allows for easy access to these parameters, which can be used in
+    energy modeling and economic assessments.
+    """
 
     def __init__(
         self, fuels: NetworkElementsDict, indices: Indices, scale: float = 1.0
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - fuels (NetworkElementsDict): Dictionary containing fuel elements.
+            - indices (Indices): Indices for the fuel parameters.
+            - scale (float, optional): Scaling factor for unit costs. Defaults to 1.0.
+        """
         self.u_emission = self.fetch_element_prop(fuels, indices.FUEL, "emission")
         """ base emission per unit; fuel -> emission_type """
         self.energy_per_unit = self.fetch_element_prop(

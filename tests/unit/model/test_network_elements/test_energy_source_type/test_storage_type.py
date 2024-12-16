@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from typing import Any
 
 import numpy as np
@@ -75,6 +59,15 @@ from tests.unit.model.test_network_elements.helpers import assert_same_exception
             "StorageType attribute 'energy_type' for default must be an instance "
             "of <class 'str'>, but it is an instance of <class 'int'> instead",
             id="energy_type_wrong_type",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                generation_load_method=1.12,
+            ),
+            "StorageType attribute 'generation_load_method' for default must be an instance "
+            "of str | None, but it is an instance of <class 'float'> instead",
+            id="generation_load_method_wrong_type",
         ),
     ],
 )
@@ -255,3 +248,42 @@ def test_storage_type_happy_path(network_fixture: Network) -> None:
         series_length=default_network_constants.n_years
     )
     storage_type.validate(network_fixture)
+
+
+@pytest.mark.parametrize(
+    "storage_type, exception_value",
+    [
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                generation_load_method="multi",
+            ),
+            "The value of the generation_load_method multi is inconsistent with allowed values: ['milp']",
+            id="generation_load_method_multi_value",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                generation_load_method="None",
+            ),
+            "The value of the generation_load_method None is inconsistent with allowed values: ['milp']",
+            id="generation_load_method_None_value",
+        ),
+        pytest.param(
+            get_default_storage_type(
+                series_length=default_network_constants.n_years,
+                generation_load_method="mipl",
+            ),
+            "The value of the generation_load_method mipl is inconsistent with allowed values: ['milp']",
+            id="generation_load_method_mipl_value",
+        ),
+    ],
+)
+def test_storage_type_generation_load_method_value(
+    storage_type: StorageType,
+    exception_value: str,
+    network_fixture: Network,
+) -> None:
+    with pytest.raises(NetworkValidatorException) as e_info:
+        storage_type.validate(network_fixture)
+    assert str(e_info.value.args[1][0]) == exception_value

@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import pandas as pd
 
 from pyzefir.model.network_elements import Bus
@@ -21,13 +5,36 @@ from pyzefir.parser.elements_parsers.element_parser import AbstractElementParser
 
 
 class BusParser(AbstractElementParser):
+    """
+    Parses and processes data to create instances of Bus.
+
+    This class takes a DataFrame containing information about different buses
+    and processes it to create Bus instances. It ensures that each bus's attributes,
+    such as name, energy type, and DSR type, are properly set from the input data.
+    """
+
     def __init__(
         self,
         bus_df: pd.DataFrame,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - bus_df (pd.DataFrame): DataFrame containing information about the buses to be parsed.
+        """
         self.bus_df = bus_df
 
     def create(self) -> tuple[Bus, ...]:
+        """
+        Creates and returns a tuple of Bus instances.
+
+        This method processes the bus DataFrame and converts each row into a Bus object.
+        It handles missing values for the DSR type by setting them to None when appropriate.
+
+        Returns:
+            - tuple[Bus, ...]: A tuple containing the created Bus instances.
+        """
         return tuple(
             Bus(
                 name=str(row["name"]),

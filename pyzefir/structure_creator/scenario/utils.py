@@ -19,12 +19,42 @@ import pandas as pd
 
 
 def get_lbs_name(lbs_type: str, aggr_name: str) -> str:
+    """
+    Generate a formatted name for a given lbs type and aggregate name.
+
+    Args:
+        - lbs_type (str): The type of low-emission source.
+        - aggr_name (str): The name of the aggregate category associated with
+          the low-emission source.
+
+    Returns:
+        - str: A formatted string that combines the aggregate name and lbs type,
+          structured as "aggregate_name__lbs_type".
+    """
     return f"{aggr_name}__{lbs_type}"
 
 
 def interpolate_missing_df_values(
     values: pd.DataFrame, expected_idx: np.array
 ) -> pd.DataFrame:
+    """
+    Interpolate missing values in a DataFrame using linear interpolation.
+
+    This function takes a DataFrame and an array of expected indices. It reindexes
+    the DataFrame to align with the expected indices, filling in missing values
+    with NaN. Linear interpolation is then applied to fill these NaN values based
+    on the surrounding data points.
+
+    Args:
+        - values (pd.DataFrame): The DataFrame containing values to interpolate.
+        - expected_idx (np.array): An array of expected indices that represent the
+          desired time or sequential points for the DataFrame after interpolation.
+
+    Returns:
+        - pd.DataFrame: A new DataFrame with missing values linearly interpolated.
+          If the original DataFrame matches the expected indices and contains no
+          NaN values, it will be returned unchanged.
+    """
     if (
         values.shape[0] == len(expected_idx)
         and np.array_equal(values.index, expected_idx)

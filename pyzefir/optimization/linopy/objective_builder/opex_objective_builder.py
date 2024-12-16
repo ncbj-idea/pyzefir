@@ -25,13 +25,43 @@ _logger = logging.getLogger(__name__)
 
 
 class OpexObjectiveBuilder(ObjectiveBuilder):
+    """
+    Class for building the operational expenditure (opex) objective.
+
+    This class constructs the objective function representing the total
+    operational costs for generators and storage facilities. It computes
+    the operational expenses associated with the generation and storage
+    of energy, facilitating cost optimization in energy systems.
+    """
+
     def build_expression(self) -> LinearExpression:
+        """
+        Builds the opex objective for generators and storage facilities.
+
+        This method aggregates the operational expenditures from both
+        generators and storage units into a single objective expression
+        that can be used for optimization purposes.
+
+        Returns:
+            - LinearExpression: The total opex objective for the system.
+        """
         _logger.info("Building opex objective...")
         generators_opex = self.generator_opex()
         storages_opex = self.storage_opex()
         return generators_opex + storages_opex
 
     def generator_opex(self) -> LinearExpression:
+        """
+        Builds the opex objective specifically for generators.
+
+        This method calculates the operational expenditures for all
+        generators based on their individual operating costs and capacity
+        multipliers. It forms a data array representing the opex for
+        each generator across different years.
+
+        Returns:
+            - LinearExpression: The calculated opex for generators.
+        """
         multipliers = get_generators_capacity_multipliers(
             self.parameters.scenario_parameters.generator_capacity_cost,
             self.parameters.tgen,
@@ -53,6 +83,17 @@ class OpexObjectiveBuilder(ObjectiveBuilder):
         ).sum()
 
     def storage_opex(self) -> LinearExpression | float:
+        """
+        Builds the opex objective for storage facilities.
+
+        This method calculates the operational expenditures for all
+        storage units if they exist. It forms a data array representing
+        the opex for each storage unit across different years.
+
+        Returns:
+            - LinearExpression | float: The calculated opex for storage
+                units, or 0.0 if no storage units are defined.
+        """
         if self.indices.STOR.ord.size:
             opex = xr.DataArray(
                 [

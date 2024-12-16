@@ -25,12 +25,32 @@ _logger = logging.getLogger(__name__)
 
 
 class RampConstraintsBuilder(PartialConstraintsBuilder):
+    """
+    Class for building ramp constraints for generators in an optimization model.
+
+    This class is responsible for constructing constraints that regulate the
+    ramping behavior of generators. It ensures that the ramp up and ramp down
+    rates of generators comply with specified limits based on their capacity.
+    """
+
     def build_constraints(self) -> None:
-        _logger.info("Ramp constraints builder is working...")
+        """
+        Builds constraints including:
+        - ramp up constraints
+        """
+        _logger.info("Ramp up constraints builder is working...")
         self.ramp_up_constraint()
-        _logger.info("Ramp constraints builder is finished!")
+        _logger.info("Ramp up constraints builder is finished!")
 
     def ramp_up_constraint(self) -> None:
+        """
+        Constructs ramp up and ramp down constraints for generators.
+
+        For each generator, this method calculates the ramp up and ramp down constraints
+        based on the generator's capacity and the specified ramp rates. It ensures that
+        the changes in generation between consecutive hours do not exceed the allowed
+        ramping rates.
+        """
         for gen_idx, gen_name in self.indices.GEN.mapping.items():
             t_idx = self.parameters.gen.tgen[gen_idx]
             ramp_down = self.parameters.tgen.ramp_down[t_idx]

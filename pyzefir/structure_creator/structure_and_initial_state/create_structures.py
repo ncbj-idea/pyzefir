@@ -45,10 +45,29 @@ _logger = logging.getLogger(__name__)
 
 
 class StructureCreator:
+    """
+    A utility class for creating structure and initial state data for energy systems.
+
+    This class processes input structure data to generate structured data
+    and initial state data, saving the results in Excel format. It organizes
+    the data into appropriate structures to facilitate analysis and modeling
+    of energy systems.
+    """
+
     @staticmethod
     def create_structure_and_initial(
         input_structure: InputStructureData, output_path: Path
     ) -> pd.DataFrame:
+        """
+        Create output structure and initial state and save them in xlsx format. Returns capacity bounds dataframe.
+
+        Args:
+             - input_structure (InputStructureData):structure class based on input files
+             - output_path (Path): path to save output
+
+        Returns:
+            - pd.DataFrame: capacity bounds dataframe
+        """
         _logger.debug("Creating StructureData and InitialStateData objects ...")
         structure, init, capacity_bounds_df = StructureCreator._create_structure_data(
             input_structure=input_structure
@@ -71,6 +90,15 @@ class StructureCreator:
     def _create_structure_data(
         input_structure: InputStructureData,
     ) -> tuple[StructureData, InitialStateData, pd.DataFrame]:
+        """
+        Create structure data objects based on the input structure.
+
+        Args:
+            - input_structure (InputStructureData): input structure data
+
+        Returns:
+            - tuple[StructureData, InitialStateData, pd.DataFrame]: data structure classes
+        """
         _logger.debug("Creating initial combined local and global dataframes  ...")
         local_lbs_config_df, global_subsystem_config_df = (
             StructureCreator._preprocess_input_data(
@@ -123,18 +151,45 @@ class StructureCreator:
     def _preprocess_input_data(
         lbs_type: dict[str, dict[str, pd.DataFrame]], subsystem: dict[str, pd.DataFrame]
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Creates local lbs data and subsystem data frame for global system handler.
+
+        Args:
+            - lbs_type (dict[str, dict[str, pd.DataFrame]]): dictionary of local balancing stacks
+            - subsystem (dict[str, pd.DataFrame]): dictionary of subsystem data
+
+        Returns:
+            - tuple[pd.DataFrame, pd.DataFrame]: local lbs and subsystem data
+        """
         return LocalLbsHandler.create_local_lbs_data(
             lbs_type
         ), GlobalSystemsHandler.create_subsystem_dataframe(subsystem)
 
 
 class StructureGlobalCreator:
+    """
+    A utility class for creating global structure data for energy systems.
+
+    This class is responsible for generating and organizing global structure dataframes
+    related to technologies, generators, buses, and initial states based on the
+    provided global subsystem configurations. It facilitates the setup of the overall
+    energy system model.
+    """
+
     @staticmethod
     def _create_global_structure_data(
         structure_data: StructureData,
         initial_state_data: InitialStateData,
         global_subsystem_config_df: pd.DataFrame,
     ) -> None:
+        """
+        Create global structure data based on global technologies.
+
+        Args:
+            - structure_data (StructureData): structure data
+            - initial_state_data (InitialStateData): initial state of the model
+            - global_subsystem_config_df (pd.DataFrame): global subsystem config
+        """
         _logger.debug(
             "Creating structure and initial state dataframes based on global techs ..."
         )
@@ -173,6 +228,14 @@ class StructureGlobalCreator:
 
 
 class StructureLocalCreator:
+    """
+    A utility class for creating local structure data for energy systems.
+
+    This class provides methods to generate and adjust local structure dataframes
+    based on local technologies and configurations for each aggregate. It includes
+    functionality to filter and prepare various dataframes for use in energy modeling.
+    """
+
     @staticmethod
     def _create_local_structure_data(
         structure_data: StructureData,
@@ -185,6 +248,20 @@ class StructureLocalCreator:
         aggregate_df: pd.DataFrame,
         capacity_bounds_dfs_list: list[pd.DataFrame],
     ) -> None:
+        """
+        Create local structure data based on local technologies for each aggregate.
+
+        Args:
+            - structure_data (StructureData): structure data
+            - initial_state_data (InitialStateData): inital state of the model
+            - lbs_to_aggr_df (pd.DataFrame): local balancing stacks for aggregates
+            - local_lbs_config_dfs (Pandas.DataFrame): local lbs config
+            - subsystem_to_lbs_dfs (pd.DataFrame): subsystem to local balancing stacks
+            - lbs_to_subsystem_dfs (pd.DataFrame): local balancing stack to subsystems
+            - global_subsystem_config_dfs (pd.DataFrame): global subsystem config
+            - aggregate_df (pd.DataFrame): aggregates data
+            - capacity_bounds_dfs_list (list[pd.DataFrame]): list of capacity bound dataframes
+        """
         lbs_to_aggr_df = lbs_to_aggr_df.set_index("aggregate_id")
         aggr_config = {
             index: lbs_to_aggr_df.columns[lbs_to_aggr_df.loc[index].notna()].tolist()
@@ -256,7 +333,7 @@ class StructureLocalCreator:
                 )
             )
             capacity_bounds_df = CapacityBoundsCreator.create_capacity_bounds_df(
-                filtered_local_lbs_config_df
+                filtered_local_lbs_config_df, aggr_name
             )
             structure_data.Buses.append(local_bus_df)
             structure_data.Generators.append(local_gen_df)
@@ -284,6 +361,18 @@ class StructureLocalCreator:
         aggr_name: str,
         subsystem_df: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        Adjust lbs configuration by filtering available lbs.
+
+        Args:
+            - df (pd.DataFrame): configuration dataframe
+            - available_lbs (list[str]): list of available lbs
+            - aggr_name (str): aggregator name
+            - subsystem_df (pd.DataFrame): subsystem dataframe
+
+        Returns:
+            - pd.DataFrame: adjusted lbs config
+        """
         filtered_df = df[df["lbs"].isin(available_lbs)]
         filtered_df = pd.merge(
             filtered_df, subsystem_df.T, left_on="lbs", right_index=True, how="left"
@@ -325,12 +414,31 @@ class StructureLocalCreator:
         df_aggr: pd.DataFrame,
         df_fraction: pd.DataFrame,
     ) -> pd.DataFrame:
+        """
+        Prepare data for base fraction by merging fractions and building dataframes.
+
+        Args:
+            - df_aggr (pd.DataFrame): aggregator dataframe
+            - df_fraction (pd.DataFrame): fraction dataframe
+
+        Returns:
+            - pd.DataFrame: merged dataframe
+        """
         n_buildings_df = df_aggr.set_index("aggregate_id")[["n_buildings"]]
         df = pd.concat([df_fraction, n_buildings_df], axis=1)
         return df
 
 
 class StructureStaticCreator:
+    """
+    A utility class for creating and managing static structure dataframes
+    for energy system modeling.
+
+    This class provides static methods to create dataframes related to
+    aggregates, emissions, energy types, and more, which are essential
+    for initializing and structuring data in energy modeling workflows.
+    """
+
     @staticmethod
     def _create_static_structure_df(
         structure_data: StructureData,
@@ -343,6 +451,19 @@ class StructureStaticCreator:
         global_et: pd.Series,
         lbs_to_aggr_df: pd.DataFrame,
     ) -> None:
+        """
+        Prepare static structure dataframe.
+
+        Args:
+            - structure_data (StructureData): structure dataframe
+            - initial_state_data (InitialStateData): initial state
+            - aggregate_df (pd.DataFrame): aggregate dataframe
+            - transmission_fee_df (pd.DataFrame): transmission fee dataframe
+            - emission_df (pd.DataFrame): emissions dataframe
+            - emission_fee_type_df (pd.DataFrame): emission fee type dataframe
+            - local_et (pd.Series): local emission type
+            - global_et (pd.Series): global emission type
+        """
         aggr_df = StaticStructureCreator.create_aggregate_df(df_data=aggregate_df)
         emission_type_df = StaticStructureCreator.create_emission_type_df(
             df_data=emission_df

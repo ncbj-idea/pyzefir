@@ -24,12 +24,31 @@ from pyzefir.optimization.linopy.preprocessing.parameters import ModelParameters
 
 @dataclass
 class BusParameters(ModelParameters):
+    """
+    Class representing parameters related to buses in an energy network.
+
+    This class encapsulates properties and configurations of buses, including
+    their energy types, associated generators, storage systems, and mappings
+    to local balancing stacks.
+    """
+
     def __init__(
         self,
         buses: NetworkElementsDict[Bus],
         local_balancing_stacks: NetworkElementsDict[LocalBalancingStack],
         indices: Indices,
     ) -> None:
+        """
+        Initializes a new instance of the class.
+
+        Args:
+            - buses (NetworkElementsDict[Bus]): A dictionary mapping bus names
+                to their respective Bus objects.
+            - local_balancing_stacks (NetworkElementsDict[LocalBalancingStack]):
+                A dictionary mapping local balancing stack names to their respective LocalBalancingStack objects.
+            - indices (Indices): An object containing indices for buses,
+                generators, storage systems, lines, local balancing stacks, and demand-side responses.
+        """
         self.et = self.fetch_element_prop(buses, indices.BUS, "energy_type")
         """ bus energy type """
         self.generators = self.get_set_prop_from_element(
@@ -78,6 +97,26 @@ class BusParameters(ModelParameters):
         bus_idx: IndexingSet,
         lbs_idx: IndexingSet,
     ) -> dict[int, int]:
+        """
+        Returns mappings of bus indices to their corresponding local balancing stack indices.
+
+        This method constructs a mapping that links each bus to its associated
+        local balancing stacks based on the outgoing bus connections of each
+        local balancing stack.
+
+        Args:
+            - local_balancing_stacks (NetworkElementsDict[LocalBalancingStack]):
+              A dictionary mapping local balancing stack names to their respective
+              LocalBalancingStack objects.
+            - bus_idx (IndexingSet): Indexing set for buses, containing the mapping
+              of bus indices.
+            - lbs_idx (IndexingSet): Indexing set for local balancing stacks,
+              containing the mapping of local balancing stack indices.
+
+        Returns:
+            - Dict[int, int]: A dictionary where keys are bus indices and
+              values are the corresponding local balancing stack indices.
+        """
         return {
             bus_idx.inverse[bus_name]: lbs_id
             for lbs_id, lbs_name in lbs_idx.mapping.items()

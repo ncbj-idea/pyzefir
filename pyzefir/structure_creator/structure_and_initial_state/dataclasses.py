@@ -21,7 +21,28 @@ import pandas as pd
 
 @dataclass
 class BaseData:
+    """
+    A base data class for handling multiple DataFrames as attributes and converting them
+    into a dictionary format.
+
+    This class provides functionality to store lists of DataFrames as attributes and
+    convert those attributes into a dictionary where each key corresponds to a specific
+    attribute name (formatted appropriately) and each value is a concatenated DataFrame
+    of the respective attribute.
+    """
+
     def convert_to_dict_of_dfs(self) -> dict[str, pd.DataFrame]:
+        """
+        Convert object attributes to a dictionary of concatenated DataFrames.
+
+        This method iterates over the fields of the object, checking for attributes that
+        are lists of DataFrames. If a list is found, it concatenates those DataFrames and
+        adds them to a dictionary using a formatted version of the attribute name as the key.
+
+        Returns:
+            - dict[str, pd.DataFrame]: A dictionary where each key is a formatted attribute
+                name and each value is a concatenated DataFrame of the respective attribute.
+        """
         dfs_dict = {}
         for field_info in fields(self):
             field_name = field_info.name
@@ -32,6 +53,15 @@ class BaseData:
 
     @staticmethod
     def _handle_field_name(name: str) -> str:
+        """
+        Format field name for use as a dictionary key.
+
+        Args:
+            - name (str): The original field name to be formatted.
+
+        Returns:
+            - str: The formatted field name suitable for use as a dictionary key.
+        """
         if name == "TechnologyStack_Buses_out":
             return name
         return name.replace("__", " - ").replace("_", " ")
@@ -39,6 +69,14 @@ class BaseData:
 
 @dataclass
 class StructureData(BaseData):
+    """
+    A data class that encapsulates various structured data related to energy systems.
+
+    This class extends the BaseData class to include multiple lists of DataFrames that
+    represent different aspects of energy systems, such as energy types, emission types,
+    aggregates, and more. Each attribute is initialized to an empty list of DataFrames by default.
+    """
+
     Energy_Types: list[pd.DataFrame] = field(default_factory=list)
     Emission_Types: list[pd.DataFrame] = field(default_factory=list)
     Aggregates: list[pd.DataFrame] = field(default_factory=list)
@@ -58,15 +96,19 @@ class StructureData(BaseData):
     Generator_Binding: list[pd.DataFrame] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        """Initialize empty dataframes with specific column names."""
         self.DSR = [
             pd.DataFrame(
                 columns=[
                     "name",
                     "compensation_factor",
                     "balancing_period_len",
-                    "penalization",
+                    "penalization_minus",
+                    "penalization_plus",
                     "relative_shift_limit",
                     "abs_shift_limit",
+                    "hourly_relative_shift_plus_limit",
+                    "hourly_relative_shift_minus_limit",
                 ]
             )
         ]
@@ -77,5 +119,13 @@ class StructureData(BaseData):
 
 @dataclass
 class InitialStateData(BaseData):
+    """
+    A data class that holds initial state data for energy system modeling.
+
+    This class extends the BaseData class and includes lists of DataFrames that represent
+    the initial states of technologies and technology stacks. It serves as a structured
+    way to manage and access this data for further processing in energy modeling workflows.
+    """
+
     Technology: list[pd.DataFrame] = field(default_factory=list)
     TechnologyStack: list[pd.DataFrame] = field(default_factory=list)

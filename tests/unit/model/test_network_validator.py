@@ -1,18 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -569,3 +554,16 @@ def test_generator_capacity_cost_validation(
     actual_exception_list: list[NetworkValidatorException] = []
     GeneratorCapacityCostValidator.validate(network, actual_exception_list)
     assert_same_exception_list(actual_exception_list, exception_list)
+
+
+@mock.patch("pyzefir.model.network_validator._logger")
+def test_network_validator_not_raise_exceptions(
+    mock_logger: mock.Mock, network: Network
+) -> None:
+    network.aggregated_consumers["DOMKI"].stack_base_fraction["LKT2"] = 0
+    NetworkValidator(network=network, raise_exceptions=False).validate()
+
+    mock_logger.error.assert_called_once()
+    mock_logger.error.assert_called_with(
+        "Stack LKT2 is connected to more than one aggregated consumer"
+    )

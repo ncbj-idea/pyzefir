@@ -1,19 +1,3 @@
-# PyZefir
-# Copyright (C) 2023-2024 Narodowe Centrum Badań Jądrowych
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import annotations
 
 from abc import ABC
@@ -33,7 +17,13 @@ if TYPE_CHECKING:
 @dataclass(kw_only=True)
 class EnergySource(NetworkElement, ABC):
     """
-    A class holding individual parameters for a given element
+    Represents an individual energy source in the network.
+
+    This class holds parameters relevant to a specific energy source
+    type within the network, including capacity limits and nominal
+    power specifications. The parameters include installed capacities,
+    minimum and maximum capacities over the years, and optional tags
+    for grouping purposes.
     """
 
     energy_source_type: str
@@ -78,6 +68,15 @@ class EnergySource(NetworkElement, ABC):
         nom_power_name: str,
         exception_list: list[NetworkValidatorException],
     ) -> None:
+        """
+        Validation procedure checking:
+        - if nominal power is of type int or float
+        - if nominal power is not None and >= 0
+
+        Args:
+            - nom_power_name (str): nominal power name
+            - exception_list (list[NetworkValidatorException]): list of exceptions
+        """
         nom_power = getattr(self, nom_power_name)
         if not isinstance(nom_power, int | float | None):
             exception_list.append(
@@ -108,10 +107,10 @@ class EnergySource(NetworkElement, ABC):
         - _validate_device_nominal_power
 
         Args:
-            network (Network): network to which self is to be added
+            - network (Network): network to which self is to be added
 
         Raises:
-            NetworkValidatorExceptionGroup: If exception_list contains exception.
+            - NetworkValidatorExceptionGroup: If exception_list contains exception.
         """
         self._validate_name_type(exception_list)
         if not isinstance(self.energy_source_type, str):
